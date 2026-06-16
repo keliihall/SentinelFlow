@@ -32,6 +32,9 @@
 - GitHub Actions release gates for fmt, build, clippy with `-D warnings`, tests,
   and P5.5 smoke/consistency/full-flow/security/reliability/deployment E2E.
 - Manual and scheduled GitHub Actions performance baseline workflow.
+- Planning/task-book material is archived under `docs/planning/` so the main
+  documentation index stays focused on trial, deployment, protocol, security,
+  troubleshooting, and release artifacts.
 
 ### Hardened
 
@@ -69,6 +72,7 @@
   content during rendering.
 - CI now pins the Rust toolchain to the declared `1.85.0` baseline instead of
   floating on latest stable.
+- CI and performance workflows now have explicit 30-minute job timeouts.
 
 ### Security
 

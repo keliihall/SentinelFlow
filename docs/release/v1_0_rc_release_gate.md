@@ -1,11 +1,15 @@
 # SentinelFlow v1.0-rc Release Gate
 
 Generated: 2026-06-15T05:13:31Z
-Updated: 2026-06-16T01:26:53Z
+Updated: 2026-06-16T03:20:51Z
 
 ## Conclusion
 
 SentinelFlow v1.0-rc is releasable for a controlled single-node pilot.
+
+The final candidate commit must have a successful GitHub Actions `CI` run. This
+report records the gate set and local evidence; the authoritative automated
+status is the latest `CI` run for the target commit on `main`.
 
 This is not a broad production or public security-testing release. The pilot
 scope is limited to trusted operators, local or private deployments, safe
@@ -88,10 +92,10 @@ target/debug/sentinelflow task validate tests/fixtures/v1alpha1/valid-task-spec.
 target/debug/sentinelflow plugin validate plugins/examples/example-echo
 ```
 
-The default GitHub Actions CI runs the fmt/build/clippy/test and P5.5 E2E
-commands. The performance baseline is intentionally run by the separate manual
-or scheduled `Performance Baseline` workflow so ordinary PR CI does not become
-capacity-test bound.
+The default GitHub Actions `CI` workflow runs the fmt/build/clippy/test and
+P5.5 E2E commands on push and pull request. The performance baseline is
+intentionally run by the separate manual or scheduled `Performance Baseline`
+workflow so ordinary PR CI does not become capacity-test bound.
 
 ## Minimum Standard Review
 

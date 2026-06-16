@@ -1,7 +1,7 @@
 # SentinelFlow v1.0-rc Release Notes
 
 Generated: 2026-06-15T05:13:31Z
-Updated: 2026-06-16T01:26:53Z
+Updated: 2026-06-16T03:20:51Z
 
 ## Release Summary
 
@@ -15,7 +15,7 @@ authentication bypass, persistence, or attack-chain automation capabilities.
 
 ## Pilot Readiness
 
-The v1.0-rc release gate is split between default GitHub Actions CI and a
+The v1.0-rc release gate is split between default GitHub Actions `CI` and a
 manual/scheduled performance workflow:
 
 - Default CI runs build, format, Clippy, full workspace tests, CLI/API/Web

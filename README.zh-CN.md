@@ -409,7 +409,7 @@ Compose 会使用 `sentinelflow-workspace`、`sentinelflow-plugins`、
 
 ## 测试与发布门禁
 
-默认 GitHub Actions CI 会执行：
+默认 GitHub Actions `CI` 工作流会执行：
 
 ```sh
 cargo fmt --all -- --check

@@ -12,7 +12,7 @@ stealth probing, persistence, bypass, or attack-chain automation.
 
 ## Required Release Gates
 
-The default GitHub Actions CI workflow runs:
+The default GitHub Actions `CI` workflow runs on push and pull request:
 
 ```sh
 cargo fmt --all -- --check
@@ -27,7 +27,8 @@ tests/e2e/p5_5_reliability/run.sh
 tests/e2e/p5_5_deployment/run.sh
 ```
 
-The performance baseline is a manual or scheduled release gate:
+The performance baseline is a manual or scheduled release gate in the separate
+`Performance Baseline` workflow:
 
 ```sh
 tests/performance/run.sh

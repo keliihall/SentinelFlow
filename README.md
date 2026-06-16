@@ -201,9 +201,10 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 
 ## Release Gates
 
-The default GitHub Actions CI runs the required pre-release gates below except
-the performance baseline. The performance baseline runs in the separate
-`Performance Baseline` workflow by `workflow_dispatch` or the weekly schedule.
+The default GitHub Actions `CI` workflow runs the required pre-release gates
+below except the performance baseline. The performance baseline runs in the
+separate `Performance Baseline` workflow by `workflow_dispatch` or the weekly
+schedule.
 
 Required CI gates:
 
