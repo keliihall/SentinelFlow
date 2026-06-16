@@ -1,0 +1,31 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: example-invalid-parser
+  labels:
+    sentinelflow.io/example: "true"
+spec:
+  displayName: Example Invalid Parser
+  version: 0.1.0
+  capabilities:
+    - name: invalid.parser.fixture
+      description: Emits a local fixture through a parser that deliberately violates the normalization contract
+      risk: low
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/echo.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 5
+    outputLimitBytes: 65536
+  parser:
+    mode: builtin
+    name: fixture-invalid-output-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: local-invalid-parser-fixture-only
+

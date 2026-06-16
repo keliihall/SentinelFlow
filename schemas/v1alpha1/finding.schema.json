@@ -1,0 +1,232 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "EvidenceSpec": {
+      "additionalProperties": false,
+      "description": "Evidence attached to a finding.",
+      "properties": {
+        "data": {
+          "description": "Structured, non-sensitive evidence content."
+        },
+        "description": {
+          "description": "Human-readable evidence description.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "evidenceType": {
+          "description": "Evidence format or category.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "description",
+        "evidenceType"
+      ],
+      "type": "object"
+    },
+    "FindingKind": {
+      "enum": [
+        "Finding"
+      ],
+      "type": "string"
+    },
+    "FindingSeverity": {
+      "description": "Finding severity.",
+      "oneOf": [
+        {
+          "description": "Informational observation.",
+          "enum": [
+            "info"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Low-severity finding.",
+          "enum": [
+            "low"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Medium-severity finding.",
+          "enum": [
+            "medium"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "High-severity finding.",
+          "enum": [
+            "high"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Critical-severity finding.",
+          "enum": [
+            "critical"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "FindingSpec": {
+      "additionalProperties": false,
+      "description": "A normalized finding.",
+      "properties": {
+        "crossToolFingerprint": {
+          "description": "Stable content hash used by the baseline cross-tool strategy.",
+          "type": "string"
+        },
+        "duplicateOf": {
+          "description": "Existing finding identifier selected by persistence deduplication.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "description": "Supporting evidence.",
+          "items": {
+            "$ref": "#/definitions/EvidenceSpec"
+          },
+          "type": "array"
+        },
+        "fingerprint": {
+          "description": "Stable hash scoped to the producing tool.",
+          "type": "string"
+        },
+        "severity": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/FindingSeverity"
+            }
+          ],
+          "description": "Finding severity."
+        },
+        "summary": {
+          "description": "Human-readable summary.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "description": "Short finding title.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "summary",
+        "title"
+      ],
+      "type": "object"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "A standalone normalized finding resource.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/FindingKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/FindingSpec"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "Finding",
+  "type": "object"
+}

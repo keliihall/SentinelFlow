@@ -1,0 +1,5 @@
+version: 1
+workspaceDir: /data/.sentinelflow
+schemaRoot: /app
+logLevel: info
+apiEndpoint: http://127.0.0.1:8080

@@ -1,0 +1,29 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: example-file-import
+  labels:
+    sentinelflow.io/example: "true"
+spec:
+  displayName: Example File Import
+  version: 0.1.0
+  capabilities:
+    - name: fixture-file-import
+      description: Imports structured synthetic records supplied over stdin
+      risk: low
+      requiresApproval: false
+  runtime:
+    mode: process
+    entrypoint: runner/import.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 5
+    outputLimitBytes: 65536
+  parser:
+    mode: builtin
+    name: example-file-import-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: stdin-fixture-only

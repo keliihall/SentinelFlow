@@ -1,0 +1,234 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AuditEventKind": {
+      "enum": [
+        "AuditEvent"
+      ],
+      "type": "string"
+    },
+    "AuditEventSpec": {
+      "additionalProperties": false,
+      "description": "Audit event payload.",
+      "properties": {
+        "action": {
+          "description": "Stable action identifier.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "actor": {
+          "description": "Actor identifier, when known.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "actorId": {
+          "description": "Actor responsible for the action.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "correlationId": {
+          "description": "Cross-component correlation identifier.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "outcome": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/AuditOutcome"
+            }
+          ],
+          "description": "Result of the audited action."
+        },
+        "resourceRef": {
+          "description": "Optional related resource reference.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runId": {
+          "description": "Individual run identifier.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stepId": {
+          "description": "Step identifier within the task.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "taskId": {
+          "description": "Logical task identifier.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "description": "RFC 3339 timestamp supplied by the audit producer.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "toolId": {
+          "description": "Registered tool identifier.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "action",
+        "outcome",
+        "timestamp"
+      ],
+      "type": "object"
+    },
+    "AuditOutcome": {
+      "description": "Audit event outcome.",
+      "oneOf": [
+        {
+          "description": "The action was allowed.",
+          "enum": [
+            "allowed"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "The action was denied by policy or validation.",
+          "enum": [
+            "denied"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "The action failed after being accepted.",
+          "enum": [
+            "failed"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "The action completed successfully.",
+          "enum": [
+            "succeeded"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "An auditable protocol event.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AuditEventKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AuditEventSpec"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "AuditEvent",
+  "type": "object"
+}

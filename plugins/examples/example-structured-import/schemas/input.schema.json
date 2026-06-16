@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "content"],
+  "properties": {
+    "format": {"enum": ["json", "jsonl", "csv"]},
+    "content": {"type": "string", "maxLength": 65536}
+  }
+}
+

@@ -1,0 +1,22 @@
+{
+  "apiVersion": "sentinelflow.io/v1alpha1",
+  "kind": "Finding",
+  "metadata": {
+    "name": "synthetic-configuration-observation"
+  },
+  "spec": {
+    "title": "Synthetic configuration observation",
+    "severity": "info",
+    "summary": "A fixture-only observation used to validate protocol handling.",
+    "evidence": [
+      {
+        "evidenceType": "structured",
+        "description": "Synthetic and non-sensitive fixture evidence",
+        "data": {
+          "source": "fixture"
+        }
+      }
+    ]
+  },
+  "extensions": {}
+}

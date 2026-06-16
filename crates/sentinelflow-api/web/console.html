@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SentinelFlow Console</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    body {
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    header {
+      padding: 24px 32px;
+      background: #111827;
+      border-bottom: 1px solid #334155;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1fr;
+      gap: 24px;
+      padding: 24px 32px 48px;
+    }
+    nav, section {
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 18px;
+    }
+    nav a {
+      display: block;
+      color: #93c5fd;
+      margin: 8px 0;
+      text-decoration: none;
+    }
+    section {
+      margin-bottom: 18px;
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin: 10px 0 4px;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid #475569;
+      background: #020617;
+      color: #e2e8f0;
+      padding: 10px;
+    }
+    textarea {
+      min-height: 180px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    button {
+      cursor: pointer;
+      margin-top: 10px;
+      background: #2563eb;
+      border-color: #2563eb;
+      font-weight: 700;
+    }
+    button.secondary {
+      background: #334155;
+      border-color: #475569;
+    }
+    pre {
+      overflow: auto;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      max-height: 420px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .muted {
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SentinelFlow Console</h1>
+    <p class="muted">Team interface for tools, plugins, task planning, approvals, audit, and reports. The browser only calls the API service.</p>
+  </header>
+  <main>
+    <nav>
+      <h2>Workflow</h2>
+      <a href="#login">1. Login & Workspace</a>
+      <a href="#tools">2. Tools & Manifest</a>
+      <a href="#plugins">3. Plugin Validate / Install / Test</a>
+      <a href="#task">4. Task Spec Validate / Plan</a>
+      <a href="#run">5. Run / Logs / Steps / Cancel</a>
+      <a href="#reports">6. Findings / Evidence / Reports</a>
+      <a href="#approvals">7. Approvals</a>
+      <a href="#audit">8. Audit & Policy Explain</a>
+      <a href="#system">9. System & Protocol Center</a>
+    </nav>
+    <div>
+      <section id="login">
+        <h2>Login & Workspace</h2>
+        <div class="grid">
+          <div>
+            <label>Username</label>
+            <select id="username">
+              <option>operator</option>
+              <option>viewer</option>
+              <option>approver</option>
+              <option>admin</option>
+            </select>
+            <label>Password</label>
+            <input id="password" type="password" value="sentinelflow">
+            <button onclick="login()">Login</button>
+          </div>
+          <div>
+            <label>Bearer Token</label>
+            <input id="token" value="operator-token">
+            <button class="secondary" onclick="loadSession()">Show Session</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tools">
+        <h2>Tools & Manifest</h2>
+        <button onclick="api('GET','/api/tools')">Load Tools</button>
+        <label>Tool Name</label>
+        <input id="toolName" placeholder="example-echo">
+        <button class="secondary" onclick="api('GET','/api/tools/' + encodeURIComponent(value('toolName')))">Tool Detail</button>
+      </section>
+
+      <section id="plugins">
+        <h2>Plugin Validate / Install / Test</h2>
+        <label>Plugin Path</label>
+        <input id="pluginPath" value="plugins/examples/example-echo">
+        <button onclick="api('POST','/api/plugins/validate',{path:value('pluginPath')})">Validate Plugin</button>
+        <button onclick="api('POST','/api/plugins/install',{path:value('pluginPath')})">Install Plugin</button>
+        <button onclick="api('POST','/api/plugins/test',{path:value('pluginPath')})">Test Plugin</button>
+      </section>
+
+      <section id="task">
+        <h2>Task Spec Validate / Plan Preview</h2>
+        <textarea id="taskSpec">apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: console-example
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: hello from console
+  policy:
+    targetNames: [fixture-one]
+    targetPatterns: []
+    approveHighRisk: false
+    timeoutSeconds: 30
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+    timeWindows: []
+    outputRetention:
+      days: 7
+      retainEvidence: true
+  steps:
+    - name: echo
+      toolRef: example-echo
+      capability: echo
+      input:
+        message: hello from console
+</textarea>
+        <button onclick="api('POST','/api/tasks/validate',{content:value('taskSpec')})">Validate Task</button>
+        <button onclick="api('POST','/api/tasks/plan',{content:value('taskSpec')})">Plan Task</button>
+        <button class="secondary" onclick="api('POST','/api/policy/explain',{content:value('taskSpec')})">Policy Explain</button>
+      </section>
+
+      <section id="run">
+        <h2>Run / Logs / Steps / Cancel</h2>
+        <button onclick="api('POST','/api/tasks/run',{content:value('taskSpec')})">Run Task</button>
+        <label>Task ID</label>
+        <input id="taskId" placeholder="task-...">
+        <button class="secondary" onclick="api('GET','/api/tasks/' + encodeURIComponent(value('taskId')))">Task Status</button>
+        <button class="secondary" onclick="api('GET','/api/tasks/' + encodeURIComponent(value('taskId')) + '/logs?limit=200')">Task Logs</button>
+        <button class="secondary" onclick="connectLogs()">Stream Logs</button>
+        <button class="secondary" onclick="api('POST','/api/tasks/' + encodeURIComponent(value('taskId')) + '/cancel')">Cancel Task</button>
+      </section>
+
+      <section id="reports">
+        <h2>Finding / Evidence / Reports</h2>
+        <button onclick="api('GET','/api/findings?limit=100')">Findings</button>
+        <button class="secondary" onclick="api('GET','/api/runs?limit=100')">Runs</button>
+        <button class="secondary" onclick="api('GET','/api/reports?limit=100')">Reports</button>
+        <label>Report Task ID or Run ID</label>
+        <input id="reportId" placeholder="task-... or run-...">
+        <button onclick="api('POST','/api/reports/generate',{task:value('reportId')})">Generate Task Report</button>
+        <button class="secondary" onclick="api('GET','/api/reports/' + encodeURIComponent(value('reportId')))">Read Report</button>
+      </section>
+
+      <section id="approvals">
+        <h2>Approval Processing</h2>
+        <button onclick="api('GET','/api/approvals?limit=100')">List Approvals</button>
+        <label>Resource</label>
+        <input id="approvalResource" placeholder="task name">
+        <label>Risk</label>
+        <select id="approvalRisk">
+          <option>high</option>
+          <option>critical</option>
+          <option>medium</option>
+          <option>low</option>
+        </select>
+        <button onclick="api('POST','/api/approvals/request',{resource:value('approvalResource'),risk:value('approvalRisk')})">Request Approval</button>
+        <label>Approval ID</label>
+        <input id="approvalId" placeholder="approval-...">
+        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/approve')">Approve</button>
+        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/reject')">Reject</button>
+        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/expire')">Expire</button>
+      </section>
+
+      <section id="audit">
+        <h2>Audit & Policy Explain</h2>
+        <button onclick="api('GET','/api/audit?limit=100')">Audit Events</button>
+        <button class="secondary" onclick="api('POST','/api/policy/explain',{content:value('taskSpec')})">Explain Current Task Policy</button>
+      </section>
+
+      <section id="system">
+        <h2>System Configuration & Protocol Center</h2>
+        <button onclick="api('GET','/health')">Health</button>
+        <button class="secondary" onclick="api('GET','/openapi.json')">OpenAPI</button>
+      </section>
+
+      <section>
+        <h2>Output</h2>
+        <pre id="output">Ready.</pre>
+      </section>
+    </div>
+  </main>
+  <script>
+    let logCursor = 0;
+    function value(id) {
+      return document.getElementById(id).value;
+    }
+    function print(data) {
+      const out = document.getElementById('output');
+      if (typeof data === 'string') {
+        out.textContent = data;
+      } else {
+        out.textContent = JSON.stringify(data, null, 2);
+      }
+    }
+    async function login() {
+      const response = await fetch('/api/session/login', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({username: value('username'), password: value('password')})
+      });
+      const data = await response.json();
+      if (data.token) {
+        document.getElementById('token').value = data.token;
+      }
+      print(data);
+    }
+    async function loadSession() {
+      await api('GET', '/api/session');
+    }
+    async function api(method, path, body) {
+      const options = {
+        method,
+        headers: {
+          'authorization': 'Bearer ' + value('token'),
+          'content-type': 'application/json'
+        }
+      };
+      if (body !== undefined) {
+        options.body = JSON.stringify(body);
+      }
+      const response = await fetch(path, options);
+      const text = await response.text();
+      try {
+        print(JSON.parse(text));
+      } catch {
+        print(text);
+      }
+    }
+    function connectLogs() {
+      const taskId = encodeURIComponent(value('taskId'));
+      const token = encodeURIComponent(value('token'));
+      const url = `/api/tasks/${taskId}/logs/stream?cursor=${logCursor}&limit=200&token=${token}`;
+      const source = new EventSource(url);
+      source.addEventListener('audit', (event) => {
+        const payload = JSON.parse(event.data);
+        logCursor = payload.cursor;
+        print(payload);
+      });
+      source.onerror = () => {
+        source.close();
+        setTimeout(connectLogs, 1000);
+      };
+    }
+  </script>
+</body>
+</html>

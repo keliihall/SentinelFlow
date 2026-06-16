@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Common metadata attached to every protocol resource.",
+  "properties": {
+    "annotations": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Non-queryable annotations.",
+      "type": "object"
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Queryable labels.",
+      "type": "object"
+    },
+    "name": {
+      "description": "Resource name within its namespace.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "namespace": {
+      "description": "Optional logical namespace.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "uid": {
+      "description": "Optional stable identifier assigned by a store.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "Metadata",
+  "type": "object"
+}

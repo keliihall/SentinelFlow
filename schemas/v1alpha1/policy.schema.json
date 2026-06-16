@@ -1,0 +1,204 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "PolicyEffect": {
+      "description": "Draft policy effect.",
+      "oneOf": [
+        {
+          "description": "Deny matching requests.",
+          "enum": [
+            "deny"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Allow matching requests when every declared condition is satisfied.",
+          "enum": [
+            "allow"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "PolicyKind": {
+      "enum": [
+        "Policy"
+      ],
+      "type": "string"
+    },
+    "PolicyRule": {
+      "additionalProperties": false,
+      "description": "Draft policy rule.",
+      "properties": {
+        "authorizationScopes": {
+          "description": "Authorization scopes matched by this rule.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "capabilities": {
+          "description": "Capability names matched by this rule.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "effect": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PolicyEffect"
+            }
+          ],
+          "description": "Rule effect."
+        },
+        "name": {
+          "description": "Stable rule name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "requiresApproval": {
+          "description": "Whether explicit approval is required when this rule allows a request.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "authorizationScopes",
+        "effect",
+        "name",
+        "requiresApproval"
+      ],
+      "type": "object"
+    },
+    "PolicySpec": {
+      "additionalProperties": false,
+      "description": "Draft policy payload.",
+      "properties": {
+        "defaultEffect": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PolicyEffect"
+            }
+          ],
+          "description": "Effect used when no rule matches. It must remain deny in `v1alpha1`."
+        },
+        "rules": {
+          "description": "Ordered draft policy rules.",
+          "items": {
+            "$ref": "#/definitions/PolicyRule"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "defaultEffect"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "A draft policy resource.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PolicyKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PolicySpec"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "Policy",
+  "type": "object"
+}

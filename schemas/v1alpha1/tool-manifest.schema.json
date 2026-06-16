@@ -1,0 +1,784 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AdapterKind": {
+      "description": "Adapter selected by a tool Manifest.",
+      "oneOf": [
+        {
+          "description": "Execute a local process with a fixed argument array.",
+          "enum": [
+            "command"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Execute an OCI image through the Docker CLI.",
+          "enum": [
+            "docker"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Invoke a bounded HTTP endpoint.",
+          "enum": [
+            "http"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Import caller-supplied structured file content.",
+          "enum": [
+            "fileImport"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "CapabilitySpec": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "risk": {
+                "enum": [
+                  "high",
+                  "critical"
+                ]
+              }
+            },
+            "required": [
+              "risk"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requiresApproval": {
+                "const": true
+              }
+            },
+            "required": [
+              "requiresApproval"
+            ]
+          }
+        }
+      ],
+      "description": "A capability declaration embedded in a tool manifest or exposed as a resource.",
+      "properties": {
+        "description": {
+          "description": "Human-readable description.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "description": "Stable capability identifier.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "requiresApproval": {
+          "description": "Whether authorization must include an explicit approval.",
+          "type": "boolean"
+        },
+        "risk": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RiskLevel"
+            }
+          ],
+          "description": "Declared risk classification."
+        }
+      },
+      "required": [
+        "description",
+        "name",
+        "requiresApproval",
+        "risk"
+      ],
+      "type": "object"
+    },
+    "DockerAdapterSpec": {
+      "additionalProperties": false,
+      "description": "Docker Adapter configuration.",
+      "properties": {
+        "command": {
+          "default": [],
+          "description": "Fixed container command arguments.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cpuMillis": {
+          "description": "CPU quota in millicpus.",
+          "format": "uint32",
+          "maximum": 4000.0,
+          "minimum": 100.0,
+          "type": "integer"
+        },
+        "image": {
+          "description": "Immutable image reference, preferably pinned by digest.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "memoryMib": {
+          "description": "Memory limit in MiB.",
+          "format": "uint64",
+          "maximum": 4096.0,
+          "minimum": 16.0,
+          "type": "integer"
+        },
+        "mounts": {
+          "default": [],
+          "description": "Controlled plugin fixture mounts.",
+          "items": {
+            "$ref": "#/definitions/DockerMountSpec"
+          },
+          "type": "array"
+        },
+        "network": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DockerNetworkPolicy"
+            }
+          ],
+          "description": "Container network policy."
+        }
+      },
+      "required": [
+        "cpuMillis",
+        "image",
+        "memoryMib",
+        "network"
+      ],
+      "type": "object"
+    },
+    "DockerMountSpec": {
+      "additionalProperties": false,
+      "description": "One controlled container mount.",
+      "properties": {
+        "readOnly": {
+          "default": true,
+          "description": "Whether the mount is read-only.",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Plugin-relative source beneath `examples/`.",
+          "type": "string"
+        },
+        "target": {
+          "description": "Absolute container destination.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "DockerNetworkPolicy": {
+      "description": "Docker network policy.",
+      "oneOf": [
+        {
+          "description": "Disable container networking.",
+          "enum": [
+            "none"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Use the default bridge network when explicitly authorized.",
+          "enum": [
+            "bridge"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "FileImportAdapterSpec": {
+      "additionalProperties": false,
+      "description": "File Import Adapter configuration.",
+      "properties": {
+        "formats": {
+          "description": "Accepted formats.",
+          "items": {
+            "$ref": "#/definitions/FileImportFormat"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "maxBytes": {
+          "description": "Maximum caller-supplied content size.",
+          "format": "uint",
+          "maximum": 16777216.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "maxRecords": {
+          "description": "Maximum imported records.",
+          "format": "uint",
+          "maximum": 100000.0,
+          "minimum": 1.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "formats",
+        "maxBytes",
+        "maxRecords"
+      ],
+      "type": "object"
+    },
+    "FileImportFormat": {
+      "description": "Supported structured import formats.",
+      "oneOf": [
+        {
+          "description": "One JSON value.",
+          "enum": [
+            "json"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "One JSON value per line.",
+          "enum": [
+            "jsonl"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "CSV with a header row.",
+          "enum": [
+            "csv"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "HttpAdapterSpec": {
+      "additionalProperties": false,
+      "description": "HTTP Adapter configuration.",
+      "properties": {
+        "headers": {
+          "default": [],
+          "description": "Controlled request headers.",
+          "items": {
+            "$ref": "#/definitions/HttpHeaderSpec"
+          },
+          "type": "array"
+        },
+        "method": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/HttpMethod"
+            }
+          ],
+          "description": "Request method."
+        },
+        "pagination": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HttpPaginationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional bounded pagination."
+        },
+        "polling": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HttpPollingSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional bounded asynchronous polling."
+        },
+        "retries": {
+          "default": 0,
+          "description": "Retry count after the first attempt.",
+          "format": "uint32",
+          "maximum": 5.0,
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "url": {
+          "description": "Endpoint URL. P3 permits HTTPS and loopback HTTP fixtures.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "url"
+      ],
+      "type": "object"
+    },
+    "HttpHeaderSpec": {
+      "additionalProperties": false,
+      "description": "HTTP header value source.",
+      "properties": {
+        "name": {
+          "description": "Header name.",
+          "type": "string"
+        },
+        "secretRef": {
+          "description": "Environment-backed secret reference, without the secret value.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "description": "Non-sensitive literal value.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "HttpMethod": {
+      "description": "Supported HTTP methods.",
+      "oneOf": [
+        {
+          "description": "Read a resource.",
+          "enum": [
+            "GET"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Submit structured input.",
+          "enum": [
+            "POST"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "HttpPaginationSpec": {
+      "additionalProperties": false,
+      "description": "HTTP pagination mode.",
+      "properties": {
+        "maxPages": {
+          "description": "Maximum number of pages.",
+          "format": "uint32",
+          "maximum": 20.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "nextField": {
+          "description": "JSON response field containing the next relative URL.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "maxPages",
+        "nextField"
+      ],
+      "type": "object"
+    },
+    "HttpPollingSpec": {
+      "additionalProperties": false,
+      "description": "HTTP asynchronous polling configuration.",
+      "properties": {
+        "intervalMs": {
+          "description": "Poll interval in milliseconds.",
+          "format": "uint64",
+          "maximum": 60000.0,
+          "minimum": 10.0,
+          "type": "integer"
+        },
+        "locationField": {
+          "description": "Relative or same-origin URL field used for polling.",
+          "type": "string"
+        },
+        "maxAttempts": {
+          "description": "Maximum polling attempts.",
+          "format": "uint32",
+          "maximum": 100.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "statusField": {
+          "description": "JSON field containing the status value.",
+          "type": "string"
+        },
+        "successValue": {
+          "description": "Terminal success value.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intervalMs",
+        "locationField",
+        "maxAttempts",
+        "statusField",
+        "successValue"
+      ],
+      "type": "object"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ParserMode": {
+      "description": "Parser implementation class selected by a tool manifest.",
+      "oneOf": [
+        {
+          "description": "A parser compiled into the trusted `SentinelFlow` runtime.",
+          "enum": [
+            "builtin"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "ParserSpec": {
+      "additionalProperties": false,
+      "description": "Declarative parser selection. Parsers never execute inside the tool process.",
+      "properties": {
+        "mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserMode"
+            }
+          ],
+          "description": "Trusted parser implementation class."
+        },
+        "name": {
+          "description": "Stable parser identifier understood by the runtime.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "RiskLevel": {
+      "description": "Risk classification for a declared capability.",
+      "oneOf": [
+        {
+          "description": "Read-only or otherwise low-impact validation.",
+          "enum": [
+            "low"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Validation with bounded side effects.",
+          "enum": [
+            "medium"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Validation requiring explicit approval.",
+          "enum": [
+            "high"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Exceptional validation requiring explicit approval.",
+          "enum": [
+            "critical"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "RuntimeMode": {
+      "description": "Isolation mode declared by a tool manifest.",
+      "oneOf": [
+        {
+          "description": "Tool is isolated in a separately managed operating-system process.",
+          "enum": [
+            "process"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Tool is isolated in a container runtime introduced by a later phase.",
+          "enum": [
+            "container"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "RuntimeSpec": {
+      "additionalProperties": false,
+      "description": "Declarative runtime requirements. This type does not execute tools.",
+      "properties": {
+        "adapter": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/AdapterKind"
+            }
+          ],
+          "default": "command",
+          "description": "Adapter implementation selected for this tool."
+        },
+        "args": {
+          "description": "Fixed argument array passed directly to the executable.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "docker": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DockerAdapterSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Docker-specific configuration."
+        },
+        "entrypoint": {
+          "description": "Plugin-relative executable entry point for the Command Adapter.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "environmentAllowlist": {
+          "description": "Host environment variable names that may be inherited.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "fileImport": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FileImportAdapterSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "File Import-specific configuration."
+        },
+        "http": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HttpAdapterSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "HTTP-specific configuration."
+        },
+        "mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RuntimeMode"
+            }
+          ],
+          "description": "Required isolation mode."
+        },
+        "outputLimitBytes": {
+          "default": 1048576,
+          "description": "Combined stdout and stderr byte limit.",
+          "format": "uint",
+          "maximum": 16777216.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "timeoutSeconds": {
+          "default": 30,
+          "description": "Maximum execution time declared by the plugin.",
+          "format": "uint64",
+          "maximum": 3600.0,
+          "minimum": 1.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "type": "object"
+    },
+    "ToolManifestKind": {
+      "enum": [
+        "ToolManifest"
+      ],
+      "type": "string"
+    },
+    "ToolManifestSpec": {
+      "additionalProperties": false,
+      "description": "Tool manifest payload.",
+      "properties": {
+        "capabilities": {
+          "description": "Capabilities declared by the integration.",
+          "items": {
+            "$ref": "#/definitions/CapabilitySpec"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "displayName": {
+          "description": "Human-readable tool name.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "inputSchema": {
+          "description": "Repository-relative path to the accepted input JSON Schema.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "outputSchema": {
+          "description": "Repository-relative path to the produced output JSON Schema.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "parser": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserSpec"
+            }
+          ],
+          "description": "Parser used to convert validated runner output into protocol resources."
+        },
+        "runtime": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RuntimeSpec"
+            }
+          ],
+          "description": "Required runtime isolation declaration."
+        },
+        "version": {
+          "description": "Tool integration version.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "capabilities",
+        "displayName",
+        "inputSchema",
+        "outputSchema",
+        "parser",
+        "runtime",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "A manifest describing an external tool integration.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ToolManifestKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ToolManifestSpec"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "ToolManifest",
+  "type": "object"
+}

@@ -1,0 +1,28 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-full-cancel
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 cancel flow
+  steps:
+    - name: slow
+      toolRef: example-slow
+      capability: delay.fixture
+      failurePolicy: stop
+    - name: after
+      toolRef: example-echo
+      capability: echo
+      dependsOn: [slow]
+      failurePolicy: stop
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+    timeoutSeconds: 10
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+extensions: {}
+

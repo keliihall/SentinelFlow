@@ -1,0 +1,34 @@
+[package]
+name = "sentinelflow-api"
+description = "API delivery layer for SentinelFlow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+async-stream = "0.3.6"
+axum = { version = "0.7.9", features = ["macros"] }
+futures-core = "0.3.31"
+http = "1.1.0"
+sentinelflow-cli = { path = "../sentinelflow-cli" }
+sentinelflow-core = { path = "../sentinelflow-core" }
+sentinelflow-orchestrator = { path = "../sentinelflow-orchestrator" }
+sentinelflow-policy = { path = "../sentinelflow-policy" }
+sentinelflow-registry = { path = "../sentinelflow-registry" }
+sentinelflow-report = { path = "../sentinelflow-report" }
+sentinelflow-schema = { path = "../sentinelflow-schema" }
+sentinelflow-store = { path = "../sentinelflow-store" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde_yaml = "0.9.34"
+tokio = { version = "1.45.1", features = ["fs", "macros", "rt-multi-thread", "time"] }
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+
+[dev-dependencies]
+tempfile = "3.20.0"
+tower = { version = "0.5.2", features = ["util"] }

@@ -1,0 +1,23 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-cross-midnight-window
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 cross midnight window
+  steps:
+    - name: echo
+      toolRef: example-echo
+      capability: echo
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+    timeoutSeconds: 5
+    timeWindows:
+      - start: "23:00"
+        end: "02:00"
+extensions: {}
+

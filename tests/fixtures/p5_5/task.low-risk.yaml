@@ -1,0 +1,25 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-low-risk
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 low risk one
+    - name: fixture-two
+      input:
+        message: p55 low risk two
+  steps:
+    - name: echo
+      toolRef: example-echo
+      capability: echo
+  policy:
+    allowedTargets:
+      - fixture-one
+      - fixture-two
+    approveHighRisk: false
+    timeoutSeconds: 5
+extensions: {}
+

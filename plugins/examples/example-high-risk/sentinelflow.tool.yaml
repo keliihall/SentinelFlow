@@ -1,0 +1,31 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: example-high-risk
+  labels:
+    sentinelflow.io/example: "true"
+spec:
+  displayName: Example Approval Fixture
+  version: 0.1.0
+  capabilities:
+    - name: approval.fixture
+      description: Synthetic echo classified high solely for approval tests
+      risk: high
+      requiresApproval: true
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/echo.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 5
+    outputLimitBytes: 65536
+  parser:
+    mode: builtin
+    name: example-echo-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: synthetic-approval-only
+

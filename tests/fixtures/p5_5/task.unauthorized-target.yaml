@@ -1,0 +1,21 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-unauthorized-target
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-two
+      input:
+        message: p55 unauthorized target
+  steps:
+    - name: echo
+      toolRef: example-echo
+      capability: echo
+  policy:
+    allowedTargets:
+      - fixture-one
+    approveHighRisk: false
+    timeoutSeconds: 5
+extensions: {}
+

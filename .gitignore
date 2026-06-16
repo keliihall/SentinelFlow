@@ -1,0 +1,6 @@
+/target/
+/.sentinelflow/
+__pycache__/
+*.py[cod]
+*.pyo
+.DS_Store

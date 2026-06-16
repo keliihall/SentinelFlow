@@ -1,0 +1,1815 @@
+//! Atomic file artifacts and `SQLite` indexes for `SentinelFlow`.
+
+use std::collections::BTreeMap;
+use std::fmt;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+use rusqlite::{Connection, OptionalExtension, Row, params};
+use sentinelflow_policy::ApprovalRecord;
+use sentinelflow_runtime::{ExecutionIdentifiers, ExecutionStatus};
+use sentinelflow_schema::v1alpha1::{
+    AuditEvent, AuditEventKind, AuditEventSpec, AuditOutcome, FindingSpec, Metadata,
+    ProtocolVersion, StandardError, TaskSpec, ToolManifest, ToolOutput,
+};
+use serde::{Deserialize, Serialize};
+use tempfile::NamedTempFile;
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
+
+const ARTIFACT_DIRECTORIES: [&str; 7] = [
+    "tasks",
+    "runs",
+    "results",
+    "reports",
+    "audit",
+    "approvals",
+    "logs",
+];
+const CURRENT_SCHEMA_VERSION: i64 = 3;
+static AUDIT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+/// Terminal state of a persisted task.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TaskStatus {
+    /// Accepted but not yet planned.
+    Pending,
+    /// DAG validation and snapshot creation are in progress.
+    Planning,
+    /// Execution is blocked until an approval is granted.
+    ApprovalRequired,
+    /// The task is currently executing.
+    Running,
+    /// Execution is intentionally paused.
+    Paused,
+    /// Cancellation has been requested and is propagating.
+    Cancelling,
+    /// Every runnable node completed successfully.
+    Completed,
+    /// At least one target failed.
+    Failed,
+    /// The caller cancelled task execution.
+    Cancelled,
+}
+
+/// State of one target/step scheduler unit.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TaskStepStatus {
+    /// Waiting for dependencies.
+    Pending,
+    /// Adapter execution is active.
+    Running,
+    /// Normalized output was persisted.
+    Completed,
+    /// Execution or normalization failed.
+    Failed,
+    /// Failure propagation made the unit ineligible.
+    Skipped,
+    /// Cancellation stopped the unit.
+    Cancelled,
+}
+
+/// Persisted DAG task state and immutable configuration snapshots.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskArtifact {
+    /// Generated task identifier.
+    pub task_id: String,
+    /// Task metadata name.
+    pub name: String,
+    /// Actor that requested the task.
+    pub actor_id: String,
+    /// Tool selected by the single step.
+    pub tool_id: String,
+    /// Current task status.
+    pub status: TaskStatus,
+    /// Number of declared targets.
+    pub target_count: usize,
+    /// Run identifiers created for targets.
+    pub run_ids: Vec<String>,
+    /// Immutable Task Spec used by planning and resume.
+    pub spec_snapshot: TaskSpec,
+    /// Immutable serialized DAG plan.
+    pub plan_snapshot: serde_json::Value,
+    /// Scheduler state keyed by `target/step`.
+    pub step_states: BTreeMap<String, TaskStepStatus>,
+    /// Successful run identifier keyed by `target/step`.
+    pub outputs: BTreeMap<String, String>,
+    /// RFC 3339 start timestamp.
+    pub started_at: String,
+    /// RFC 3339 finish timestamp, once terminal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finished_at: Option<String>,
+    /// Last controlled error that explains a blocked or failed terminal state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<StandardError>,
+}
+
+/// Persisted run metadata. Raw runner output and input are deliberately excluded.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunArtifact {
+    /// Execution identifiers.
+    pub identifiers: ExecutionIdentifiers,
+    /// Actor that requested the run.
+    pub actor_id: String,
+    /// Declared authorization scope.
+    pub authorization_scope: String,
+    /// Requested capability.
+    pub capability: String,
+    /// Non-sensitive target summary.
+    pub target: String,
+    /// Terminal execution status.
+    pub status: ExecutionStatus,
+    /// RFC 3339 start timestamp.
+    pub started_at: String,
+    /// RFC 3339 finish timestamp.
+    pub finished_at: String,
+    /// Execution duration.
+    pub duration_ms: u128,
+    /// Child exit code when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+}
+
+/// Persisted normalized result for one run.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResultArtifact {
+    /// Run identifier.
+    pub run_id: String,
+    /// Normalized protocol output, when parsing succeeded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output: Option<ToolOutput>,
+    /// Standard errors generated by parsing or normalization.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub errors: Vec<StandardError>,
+}
+
+/// Complete persisted data used to render a report.
+#[derive(Clone, Debug)]
+pub struct RunBundle {
+    /// Run metadata.
+    pub run: RunArtifact,
+    /// Normalized result.
+    pub result: ResultArtifact,
+    /// Related audit events.
+    pub audit_events: Vec<AuditEvent>,
+}
+
+/// Execution fields attached to every run-related audit event.
+#[derive(Clone, Debug)]
+pub struct AuditContext<'a> {
+    /// Execution identifiers.
+    pub identifiers: &'a ExecutionIdentifiers,
+    /// Actor identifier.
+    pub actor_id: &'a str,
+}
+
+/// Store operation failure.
+#[derive(Debug)]
+pub struct StoreError {
+    message: String,
+}
+
+impl StoreError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for StoreError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for StoreError {}
+
+/// Workspace-backed store with a `SQLite` index.
+pub struct WorkspaceStore {
+    root: PathBuf,
+    connection: Connection,
+}
+
+impl WorkspaceStore {
+    /// Opens a workspace store and creates the minimal schema.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when directories or `SQLite` cannot be initialized.
+    pub fn open(root: impl Into<PathBuf>) -> Result<Self, StoreError> {
+        let root = root.into();
+        fs::create_dir_all(&root)
+            .map_err(|error| StoreError::new(format!("failed to create workspace: {error}")))?;
+        for directory in ARTIFACT_DIRECTORIES {
+            fs::create_dir_all(root.join(directory)).map_err(|error| {
+                StoreError::new(format!("failed to create {directory} directory: {error}"))
+            })?;
+        }
+        let connection = Connection::open(root.join("state.db"))
+            .map_err(|error| StoreError::new(format!("failed to open SQLite store: {error}")))?;
+        connection
+            .busy_timeout(Duration::from_secs(5))
+            .map_err(|error| StoreError::new(format!("failed to configure SQLite: {error}")))?;
+        initialize_database(&connection)?;
+        Ok(Self { root, connection })
+    }
+
+    /// Returns the workspace root used by this store.
+    #[must_use]
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Returns the applied `SQLite` schema version.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the migration metadata cannot be queried.
+    pub fn schema_version(&self) -> Result<i64, StoreError> {
+        schema_version(&self.connection)
+    }
+
+    /// Inserts or updates one registered tool index row.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when serialization or the database write fails.
+    pub fn save_tool(&self, manifest: &ToolManifest) -> Result<(), StoreError> {
+        let manifest_json = serde_json::to_string(manifest)
+            .map_err(|error| StoreError::new(format!("failed to serialize tool: {error}")))?;
+        self.connection
+            .execute(
+                "INSERT INTO tools (tool_id, version, manifest_json)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(tool_id) DO UPDATE SET
+                    version = excluded.version,
+                    manifest_json = excluded.manifest_json",
+                params![manifest.metadata.name, manifest.spec.version, manifest_json],
+            )
+            .map_err(|error| StoreError::new(format!("failed to save tool: {error}")))?;
+        Ok(())
+    }
+
+    /// Persists an approval request or decision.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the approval cannot be written atomically.
+    pub fn save_approval(&self, approval: &ApprovalRecord) -> Result<PathBuf, StoreError> {
+        let path = self
+            .root
+            .join("approvals")
+            .join(format!("{}.json", approval.approval_id));
+        atomic_json(&path, approval)?;
+        Ok(path)
+    }
+
+    /// Loads a persisted approval.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the approval does not exist or is invalid.
+    pub fn load_approval(&self, approval_id: &str) -> Result<ApprovalRecord, StoreError> {
+        read_json(
+            &self
+                .root
+                .join("approvals")
+                .join(format!("{approval_id}.json")),
+        )
+    }
+
+    /// Lists persisted approvals in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when an approval artifact cannot be read.
+    pub fn list_approvals(&self) -> Result<Vec<ApprovalRecord>, StoreError> {
+        read_json_directory(&self.root.join("approvals"))
+    }
+
+    /// Lists persisted approvals in deterministic order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when an approval artifact cannot be read.
+    pub fn list_approvals_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<ApprovalRecord>, StoreError> {
+        read_json_directory_page(&self.root.join("approvals"), limit, offset)
+    }
+
+    /// Atomically writes task state and updates its `SQLite` index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the artifact or index cannot be written.
+    pub fn save_task(&self, task: &TaskArtifact) -> Result<PathBuf, StoreError> {
+        let path = self
+            .root
+            .join("tasks")
+            .join(format!("{}.json", task.task_id));
+        let mut effective_task = task.clone();
+        if path.is_file() {
+            let previous: TaskArtifact = read_json(&path)?;
+            effective_task.status = effective_task_status(previous.status, task.status);
+            if !valid_task_transition(previous.status, effective_task.status) {
+                return Err(StoreError::new(format!(
+                    "invalid task state transition: {:?} -> {:?}",
+                    previous.status, effective_task.status
+                )));
+            }
+        }
+        atomic_json(&path, &effective_task)?;
+        self.connection
+            .execute(
+                "INSERT INTO tasks (
+                    task_id, tool_id, actor_id, name, status, target_count, artifact_path
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                 ON CONFLICT(task_id) DO UPDATE SET
+                    status = excluded.status,
+                    target_count = excluded.target_count,
+                    artifact_path = excluded.artifact_path",
+                params![
+                    effective_task.task_id,
+                    effective_task.tool_id,
+                    effective_task.actor_id,
+                    effective_task.name,
+                    task_status_name(effective_task.status),
+                    i64::try_from(effective_task.target_count).unwrap_or(i64::MAX),
+                    path.to_string_lossy()
+                ],
+            )
+            .map_err(|error| StoreError::new(format!("failed to save task: {error}")))?;
+        Ok(path)
+    }
+
+    /// Atomically writes a run artifact and updates task/run indexes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the artifact or indexes cannot be written.
+    pub fn save_run(&self, run: &RunArtifact) -> Result<PathBuf, StoreError> {
+        let path = self
+            .root
+            .join("runs")
+            .join(format!("{}.json", run.identifiers.run_id));
+        atomic_json(&path, run)?;
+        self.connection
+            .execute(
+                "INSERT INTO runs (
+                    run_id, task_id, step_id, tool_id, actor_id, correlation_id,
+                    status, started_at, finished_at, duration_ms, artifact_path
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                 ON CONFLICT(run_id) DO UPDATE SET
+                    status = excluded.status,
+                    finished_at = excluded.finished_at,
+                    duration_ms = excluded.duration_ms,
+                    artifact_path = excluded.artifact_path",
+                params![
+                    run.identifiers.run_id,
+                    run.identifiers.task_id,
+                    run.identifiers.step_id,
+                    run.identifiers.tool_id,
+                    run.actor_id,
+                    run.identifiers.correlation_id,
+                    status_name(run.status),
+                    run.started_at,
+                    run.finished_at,
+                    i64::try_from(run.duration_ms).unwrap_or(i64::MAX),
+                    path.to_string_lossy()
+                ],
+            )
+            .map_err(|error| StoreError::new(format!("failed to save run: {error}")))?;
+        Ok(path)
+    }
+
+    /// Atomically writes a normalized result and indexes its findings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the artifact or finding transaction fails.
+    pub fn save_result(&mut self, result: &ResultArtifact) -> Result<PathBuf, StoreError> {
+        let mut result = result.clone();
+        let path = self
+            .root
+            .join("results")
+            .join(format!("{}.json", result.run_id));
+        let transaction = self.connection.transaction().map_err(|error| {
+            StoreError::new(format!("failed to start result transaction: {error}"))
+        })?;
+        transaction
+            .execute("DELETE FROM findings WHERE run_id = ?1", [&result.run_id])
+            .map_err(|error| StoreError::new(format!("failed to replace findings: {error}")))?;
+        if let Some(output) = &mut result.output {
+            let tool_id = output
+                .metadata
+                .labels
+                .get("sentinelflow.io/tool-id")
+                .cloned()
+                .unwrap_or_default();
+            for (index, finding) in output.spec.findings.iter_mut().enumerate() {
+                let same_tool: Option<String> = transaction
+                    .query_row(
+                        "SELECT finding_id FROM findings
+                         WHERE tool_id = ?1 AND fingerprint = ?2 AND run_id != ?3
+                         ORDER BY finding_id LIMIT 1",
+                        params![tool_id, finding.fingerprint, result.run_id],
+                        |row| row.get(0),
+                    )
+                    .optional()
+                    .map_err(|error| {
+                        StoreError::new(format!("failed to query same-tool duplicate: {error}"))
+                    })?;
+                let cross_tool = if same_tool.is_none() {
+                    transaction
+                        .query_row(
+                            "SELECT finding_id FROM findings
+                             WHERE cross_tool_fingerprint = ?1 AND tool_id != ?2
+                             ORDER BY finding_id LIMIT 1",
+                            params![finding.cross_tool_fingerprint, tool_id],
+                            |row| row.get(0),
+                        )
+                        .optional()
+                        .map_err(|error| {
+                            StoreError::new(format!(
+                                "failed to query cross-tool duplicate: {error}"
+                            ))
+                        })?
+                } else {
+                    None
+                };
+                finding.duplicate_of = same_tool.or(cross_tool);
+                let finding_json = serde_json::to_string(finding).map_err(|error| {
+                    StoreError::new(format!("failed to serialize finding: {error}"))
+                })?;
+                transaction
+                    .execute(
+                        "INSERT INTO findings (
+                            finding_id, run_id, tool_id, severity, title,
+                            fingerprint, cross_tool_fingerprint, duplicate_of, finding_json
+                         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                        params![
+                            format!("{}-{index}", result.run_id),
+                            result.run_id,
+                            tool_id,
+                            format!("{:?}", finding.severity).to_lowercase(),
+                            finding.title,
+                            finding.fingerprint,
+                            finding.cross_tool_fingerprint,
+                            finding.duplicate_of,
+                            finding_json
+                        ],
+                    )
+                    .map_err(|error| {
+                        StoreError::new(format!("failed to index finding: {error}"))
+                    })?;
+            }
+        }
+        atomic_json(&path, &result)?;
+        transaction
+            .commit()
+            .map_err(|error| StoreError::new(format!("failed to commit result: {error}")))?;
+        Ok(path)
+    }
+
+    /// Removes a normalized result and its finding index when retention expires.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the artifact or index cannot be removed.
+    pub fn purge_result(&mut self, run_id: &str) -> Result<(), StoreError> {
+        let path = self.root.join("results").join(format!("{run_id}.json"));
+        if path.exists() {
+            fs::remove_file(&path).map_err(|error| {
+                StoreError::new(format!("failed to purge {}: {error}", path.display()))
+            })?;
+        }
+        self.connection
+            .execute("DELETE FROM findings WHERE run_id = ?1", [run_id])
+            .map_err(|error| StoreError::new(format!("failed to purge finding index: {error}")))?;
+        Ok(())
+    }
+
+    /// Creates and persists one audit event.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when timestamping, atomic file writing, or indexing fails.
+    pub fn record_audit(
+        &mut self,
+        action: &str,
+        outcome: AuditOutcome,
+        context: Option<&AuditContext<'_>>,
+        resource_ref: Option<String>,
+    ) -> Result<AuditEvent, StoreError> {
+        let timestamp = now_rfc3339()?;
+        let (task_id, run_id, step_id, tool_id, actor_id, correlation_id) =
+            context.map_or((None, None, None, None, None, None), |context| {
+                (
+                    Some(context.identifiers.task_id.clone()),
+                    Some(context.identifiers.run_id.clone()),
+                    Some(context.identifiers.step_id.clone()),
+                    Some(context.identifiers.tool_id.clone()),
+                    Some(context.actor_id.to_owned()),
+                    Some(context.identifiers.correlation_id.clone()),
+                )
+            });
+        let event = AuditEvent {
+            api_version: ProtocolVersion::V1Alpha1,
+            kind: AuditEventKind::Value,
+            metadata: Metadata {
+                name: audit_event_name(action, &timestamp),
+                namespace: None,
+                uid: None,
+                labels: BTreeMap::new(),
+                annotations: BTreeMap::new(),
+            },
+            spec: AuditEventSpec {
+                action: action.to_owned(),
+                outcome,
+                actor: actor_id.clone(),
+                timestamp,
+                resource_ref,
+                task_id,
+                run_id,
+                step_id,
+                tool_id,
+                actor_id,
+                correlation_id,
+            },
+            extensions: BTreeMap::new(),
+        };
+        self.append_audit(&event)?;
+        Ok(event)
+    }
+
+    /// Returns all audit events in append order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the log cannot be read or contains invalid events.
+    pub fn list_audit(&self) -> Result<Vec<AuditEvent>, StoreError> {
+        self.list_audit_sql(None, 0)
+    }
+
+    /// Returns audit events in append order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the audit index cannot be queried.
+    pub fn list_audit_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<AuditEvent>, StoreError> {
+        self.list_audit_sql(Some(limit), offset)
+    }
+
+    /// Loads a run artifact.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the run is missing, unreadable, or invalid.
+    pub fn load_run(&self, run_id: &str) -> Result<RunArtifact, StoreError> {
+        read_json(&self.root.join("runs").join(format!("{run_id}.json")))
+    }
+
+    /// Lists persisted runs in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a run artifact cannot be read.
+    pub fn list_runs(&self) -> Result<Vec<RunArtifact>, StoreError> {
+        read_json_directory(&self.root.join("runs"))
+    }
+
+    /// Lists persisted runs in newest-first order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a run artifact cannot be read.
+    pub fn list_runs_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<RunArtifact>, StoreError> {
+        self.query_artifact_paths("runs", "artifact_path", limit, offset)?
+            .iter()
+            .map(|path| read_json(path))
+            .collect()
+    }
+
+    /// Loads persisted task state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the task is missing, unreadable, or invalid.
+    pub fn load_task(&self, task_id: &str) -> Result<TaskArtifact, StoreError> {
+        read_json(&self.root.join("tasks").join(format!("{task_id}.json")))
+    }
+
+    /// Lists persisted tasks in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a task artifact cannot be read.
+    pub fn list_tasks(&self) -> Result<Vec<TaskArtifact>, StoreError> {
+        read_json_directory(&self.root.join("tasks"))
+    }
+
+    /// Lists persisted tasks in newest-first order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a task artifact cannot be read.
+    pub fn list_tasks_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<TaskArtifact>, StoreError> {
+        self.query_artifact_paths("tasks", "artifact_path", limit, offset)?
+            .iter()
+            .map(|path| read_json(path))
+            .collect()
+    }
+
+    /// Finds the newest active task with a matching metadata name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the task index cannot be queried or the artifact cannot be read.
+    pub fn find_active_task_by_name(&self, name: &str) -> Result<Option<TaskArtifact>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT artifact_path FROM tasks
+                 WHERE name = ?1
+                   AND status IN ('pending', 'planning', 'running', 'paused', 'cancelling')
+                 ORDER BY rowid DESC
+                 LIMIT 1",
+            )
+            .map_err(|error| StoreError::new(format!("failed to query active task: {error}")))?;
+        let path = statement
+            .query_row([name], |row| row.get::<_, String>(0))
+            .optional()
+            .map_err(|error| StoreError::new(format!("failed to query active task: {error}")))?;
+        path.map(|path| read_json(Path::new(&path))).transpose()
+    }
+
+    /// Finds the newest task with a matching metadata name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the task index cannot be queried or the artifact cannot be read.
+    pub fn latest_task_by_name(&self, name: &str) -> Result<Option<TaskArtifact>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT artifact_path FROM tasks
+                 WHERE name = ?1
+                 ORDER BY rowid DESC
+                 LIMIT 1",
+            )
+            .map_err(|error| StoreError::new(format!("failed to query latest task: {error}")))?;
+        let path = statement
+            .query_row([name], |row| row.get::<_, String>(0))
+            .optional()
+            .map_err(|error| StoreError::new(format!("failed to query latest task: {error}")))?;
+        path.map(|path| read_json(Path::new(&path))).transpose()
+    }
+
+    /// Loads all run bundles belonging to a task.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when task or run artifacts cannot be loaded.
+    pub fn load_task_bundles(&self, task_id: &str) -> Result<Vec<RunBundle>, StoreError> {
+        let task = self.load_task(task_id)?;
+        task.run_ids
+            .iter()
+            .map(|run_id| self.load_bundle(run_id))
+            .collect()
+    }
+
+    /// Returns audit events associated with a task.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the audit log cannot be loaded.
+    pub fn task_audit(&self, task_id: &str) -> Result<Vec<AuditEvent>, StoreError> {
+        self.task_audit_page(task_id, usize::MAX, 0)
+    }
+
+    /// Returns task-associated audit events with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the audit index cannot be queried.
+    pub fn task_audit_page(
+        &self,
+        task_id: &str,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<AuditEvent>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT event_id, action, outcome, run_id, task_id, resource_ref,
+                        correlation_id, actor_id, timestamp, event_json
+                 FROM audit_events
+                 WHERE task_id = ?1 OR resource_ref = ?1
+                 ORDER BY rowid
+                 LIMIT ?2 OFFSET ?3",
+            )
+            .map_err(|error| StoreError::new(format!("failed to query task audit: {error}")))?;
+        statement
+            .query_map(
+                params![task_id, bounded_i64(limit), bounded_i64(offset)],
+                audit_event_from_row,
+            )
+            .map_err(|error| StoreError::new(format!("failed to query task audit: {error}")))?
+            .map(|row| row.map_err(|error| StoreError::new(format!("invalid audit row: {error}"))))
+            .collect()
+    }
+
+    /// Loads a normalized result artifact.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the result is missing, unreadable, or invalid.
+    pub fn load_result(&self, run_id: &str) -> Result<ResultArtifact, StoreError> {
+        read_json(&self.root.join("results").join(format!("{run_id}.json")))
+    }
+
+    /// Lists persisted normalized results in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when a result artifact cannot be read.
+    pub fn list_results(&self) -> Result<Vec<ResultArtifact>, StoreError> {
+        read_json_directory(&self.root.join("results"))
+    }
+
+    /// Lists indexed findings in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the finding index cannot be queried.
+    pub fn list_findings(&self) -> Result<Vec<FindingSpec>, StoreError> {
+        self.list_findings_page(usize::MAX, 0)
+    }
+
+    /// Lists indexed findings in deterministic order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the finding index cannot be queried.
+    pub fn list_findings_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<FindingSpec>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT finding_json FROM findings ORDER BY finding_id LIMIT ?1 OFFSET ?2")
+            .map_err(|error| StoreError::new(format!("failed to query findings: {error}")))?;
+        statement
+            .query_map(params![bounded_i64(limit), bounded_i64(offset)], |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(|error| StoreError::new(format!("failed to query findings: {error}")))?
+            .map(|row| {
+                let json = row
+                    .map_err(|error| StoreError::new(format!("failed to read finding: {error}")))?;
+                serde_json::from_str(&json)
+                    .map_err(|error| StoreError::new(format!("invalid finding JSON: {error}")))
+            })
+            .collect()
+    }
+
+    /// Counts findings produced by one run.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the finding index cannot be queried.
+    pub fn count_findings_for_run(&self, run_id: &str) -> Result<usize, StoreError> {
+        self.connection
+            .query_row(
+                "SELECT COUNT(*) FROM findings WHERE run_id = ?1",
+                [run_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .map(|count| usize::try_from(count).unwrap_or(usize::MAX))
+            .map_err(|error| StoreError::new(format!("failed to count findings: {error}")))
+    }
+
+    /// Counts findings produced by every run in one task.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the finding index cannot be queried.
+    pub fn count_findings_for_task(&self, task_id: &str) -> Result<usize, StoreError> {
+        self.connection
+            .query_row(
+                "SELECT COUNT(*)
+                 FROM findings
+                 INNER JOIN runs ON findings.run_id = runs.run_id
+                 WHERE runs.task_id = ?1",
+                [task_id],
+                |row| row.get::<_, i64>(0),
+            )
+            .map(|count| usize::try_from(count).unwrap_or(usize::MAX))
+            .map_err(|error| StoreError::new(format!("failed to count task findings: {error}")))
+    }
+
+    /// Loads run, result, and related audit events.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when any required artifact cannot be loaded.
+    pub fn load_bundle(&self, run_id: &str) -> Result<RunBundle, StoreError> {
+        let audit_events = self
+            .list_audit()?
+            .into_iter()
+            .filter(|event| event.spec.run_id.as_deref() == Some(run_id))
+            .collect();
+        Ok(RunBundle {
+            run: self.load_run(run_id)?,
+            result: self.load_result(run_id)?,
+            audit_events,
+        })
+    }
+
+    /// Returns the most recently indexed run identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the database query fails.
+    pub fn latest_run_id(&self) -> Result<Option<String>, StoreError> {
+        self.connection
+            .query_row(
+                "SELECT run_id FROM runs ORDER BY rowid DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|error| StoreError::new(format!("failed to query latest run: {error}")))
+    }
+
+    /// Atomically writes a Markdown report.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the report cannot be written atomically.
+    pub fn save_report(&self, run_id: &str, markdown: &str) -> Result<PathBuf, StoreError> {
+        let path = self.root.join("reports").join(format!("{run_id}.md"));
+        atomic_write(&path, markdown.as_bytes())?;
+        Ok(path)
+    }
+
+    /// Lists report identifiers in deterministic order.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the reports directory cannot be read.
+    pub fn list_reports(&self) -> Result<Vec<String>, StoreError> {
+        self.list_reports_page(usize::MAX, 0)
+    }
+
+    /// Lists report identifiers in deterministic order with an upper bound.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the reports directory cannot be read.
+    pub fn list_reports_page(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<String>, StoreError> {
+        let mut reports = read_directory_paths(&self.root.join("reports"))?
+            .into_iter()
+            .filter(|path| path.extension().is_some_and(|extension| extension == "md"))
+            .filter_map(|path| {
+                path.file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .map(str::to_owned)
+            })
+            .collect::<Vec<_>>();
+        reports.sort();
+        Ok(reports.into_iter().skip(offset).take(limit).collect())
+    }
+
+    /// Reads a generated Markdown report.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the report cannot be read.
+    pub fn load_report(&self, report_id: &str) -> Result<String, StoreError> {
+        let path = self.root.join("reports").join(format!("{report_id}.md"));
+        fs::read_to_string(&path)
+            .map_err(|error| StoreError::new(format!("failed to read report: {error}")))
+    }
+
+    fn append_audit(&mut self, event: &AuditEvent) -> Result<(), StoreError> {
+        let path = self.root.join("audit/events.jsonl");
+        let mut line = Vec::new();
+        serde_json::to_writer(&mut line, event).map_err(|error| {
+            StoreError::new(format!("failed to serialize audit event: {error}"))
+        })?;
+        line.push(b'\n');
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|error| StoreError::new(format!("failed to open audit log: {error}")))?;
+        file.write_all(&line)
+            .and_then(|()| file.sync_all())
+            .map_err(|error| StoreError::new(format!("failed to append audit log: {error}")))?;
+        let event_json = serde_json::to_string(event)
+            .map_err(|error| StoreError::new(format!("failed to encode audit event: {error}")))?;
+        self.connection
+            .execute(
+                "INSERT INTO audit_events (
+                    event_id, action, outcome, run_id, task_id, resource_ref, correlation_id,
+                    actor_id, timestamp, event_json
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![
+                    event.metadata.name,
+                    event.spec.action,
+                    format!("{:?}", event.spec.outcome).to_lowercase(),
+                    event.spec.run_id,
+                    event.spec.task_id,
+                    event.spec.resource_ref,
+                    event.spec.correlation_id,
+                    event.spec.actor_id,
+                    event.spec.timestamp,
+                    event_json
+                ],
+            )
+            .map_err(|error| StoreError::new(format!("failed to index audit event: {error}")))?;
+        Ok(())
+    }
+
+    fn list_audit_sql(
+        &self,
+        limit: Option<usize>,
+        offset: usize,
+    ) -> Result<Vec<AuditEvent>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT event_id, action, outcome, run_id, task_id, resource_ref,
+                        correlation_id, actor_id, timestamp, event_json
+                 FROM audit_events
+                 ORDER BY rowid
+                 LIMIT ?1 OFFSET ?2",
+            )
+            .map_err(|error| StoreError::new(format!("failed to query audit events: {error}")))?;
+        let limit = limit.map_or(-1, bounded_i64);
+        statement
+            .query_map(params![limit, bounded_i64(offset)], audit_event_from_row)
+            .map_err(|error| StoreError::new(format!("failed to query audit events: {error}")))?
+            .map(|row| row.map_err(|error| StoreError::new(format!("invalid audit row: {error}"))))
+            .collect()
+    }
+
+    fn query_artifact_paths(
+        &self,
+        table: &str,
+        column: &str,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<PathBuf>, StoreError> {
+        let mut statement = self
+            .connection
+            .prepare(&format!(
+                "SELECT {column} FROM {table} ORDER BY rowid DESC LIMIT ?1 OFFSET ?2"
+            ))
+            .map_err(|error| StoreError::new(format!("failed to query {table}: {error}")))?;
+        statement
+            .query_map(params![bounded_i64(limit), bounded_i64(offset)], |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(|error| StoreError::new(format!("failed to query {table}: {error}")))?
+            .map(|row| {
+                row.map(PathBuf::from)
+                    .map_err(|error| StoreError::new(format!("failed to read {table}: {error}")))
+            })
+            .collect()
+    }
+}
+
+fn audit_event_from_row(row: &Row<'_>) -> rusqlite::Result<AuditEvent> {
+    let event_id = row.get::<_, String>(0)?;
+    let action = row.get::<_, String>(1)?;
+    let outcome = row.get::<_, String>(2)?;
+    let run_id = row.get::<_, Option<String>>(3)?;
+    let task_id = row.get::<_, Option<String>>(4)?;
+    let resource_ref = row.get::<_, Option<String>>(5)?;
+    let correlation_id = row.get::<_, Option<String>>(6)?;
+    let actor_id = row.get::<_, Option<String>>(7)?;
+    let timestamp = row.get::<_, String>(8)?;
+    let event_json = row.get::<_, String>(9)?;
+    serde_json::from_str(&event_json).or_else(|_| {
+        Ok(AuditEvent {
+            api_version: ProtocolVersion::V1Alpha1,
+            kind: AuditEventKind::Value,
+            metadata: Metadata {
+                name: event_id,
+                namespace: None,
+                uid: None,
+                labels: BTreeMap::new(),
+                annotations: BTreeMap::new(),
+            },
+            spec: AuditEventSpec {
+                action,
+                outcome: parse_audit_outcome(&outcome),
+                actor: actor_id.clone(),
+                timestamp,
+                resource_ref,
+                task_id,
+                run_id,
+                step_id: None,
+                tool_id: None,
+                actor_id,
+                correlation_id,
+            },
+            extensions: BTreeMap::new(),
+        })
+    })
+}
+
+fn parse_audit_outcome(outcome: &str) -> AuditOutcome {
+    match outcome.to_ascii_lowercase().as_str() {
+        "allowed" => AuditOutcome::Allowed,
+        "denied" => AuditOutcome::Denied,
+        "succeeded" => AuditOutcome::Succeeded,
+        _ => AuditOutcome::Failed,
+    }
+}
+
+/// Returns the current UTC time as RFC 3339.
+///
+/// # Errors
+///
+/// Returns an error when timestamp formatting fails.
+pub fn now_rfc3339() -> Result<String, StoreError> {
+    OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .map_err(|error| StoreError::new(format!("failed to format timestamp: {error}")))
+}
+
+fn audit_event_name(action: &str, timestamp: &str) -> String {
+    let sequence = AUDIT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    format!(
+        "audit-{}-{}-{}-{sequence}",
+        action.replace('.', "-"),
+        std::process::id(),
+        timestamp
+    )
+}
+
+fn initialize_database(connection: &Connection) -> Result<(), StoreError> {
+    connection
+        .execute_batch(
+            "PRAGMA foreign_keys = ON;
+             CREATE TABLE IF NOT EXISTS schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS tools (
+                tool_id TEXT PRIMARY KEY,
+                version TEXT NOT NULL,
+                manifest_json TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS tasks (
+                task_id TEXT PRIMARY KEY,
+                tool_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL,
+                name TEXT,
+                status TEXT,
+                target_count INTEGER,
+                artifact_path TEXT
+             );
+             CREATE TABLE IF NOT EXISTS runs (
+                run_id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                step_id TEXT NOT NULL,
+                tool_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL,
+                correlation_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                finished_at TEXT NOT NULL,
+                duration_ms INTEGER NOT NULL,
+                artifact_path TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS findings (
+                finding_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL,
+                tool_id TEXT NOT NULL DEFAULT '',
+                severity TEXT NOT NULL,
+                title TEXT NOT NULL,
+                fingerprint TEXT NOT NULL DEFAULT '',
+                cross_tool_fingerprint TEXT NOT NULL DEFAULT '',
+                duplicate_of TEXT,
+                finding_json TEXT NOT NULL
+             );
+             CREATE TABLE IF NOT EXISTS audit_events (
+                event_id TEXT PRIMARY KEY,
+                action TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                run_id TEXT,
+                task_id TEXT,
+                resource_ref TEXT,
+                correlation_id TEXT,
+                actor_id TEXT,
+                timestamp TEXT NOT NULL,
+                event_json TEXT NOT NULL
+             );",
+        )
+        .map_err(|error| StoreError::new(format!("failed to initialize SQLite schema: {error}")))?;
+    for (column, definition) in [
+        ("name", "TEXT"),
+        ("status", "TEXT"),
+        ("target_count", "INTEGER"),
+        ("artifact_path", "TEXT"),
+    ] {
+        ensure_column(connection, "tasks", column, definition)?;
+    }
+    for (column, definition) in [
+        ("tool_id", "TEXT NOT NULL DEFAULT ''"),
+        ("fingerprint", "TEXT NOT NULL DEFAULT ''"),
+        ("cross_tool_fingerprint", "TEXT NOT NULL DEFAULT ''"),
+        ("duplicate_of", "TEXT"),
+    ] {
+        ensure_column(connection, "findings", column, definition)?;
+    }
+    for (column, definition) in [
+        ("task_id", "TEXT"),
+        ("resource_ref", "TEXT"),
+        ("actor_id", "TEXT"),
+    ] {
+        ensure_column(connection, "audit_events", column, definition)?;
+    }
+    ensure_indexes(connection)?;
+    let version = schema_version(connection)?;
+    if version > CURRENT_SCHEMA_VERSION {
+        return Err(StoreError::new(format!(
+            "SQLite schema version {version} is newer than supported version {CURRENT_SCHEMA_VERSION}"
+        )));
+    }
+    if version < CURRENT_SCHEMA_VERSION {
+        connection
+            .execute(
+                "INSERT OR REPLACE INTO schema_migrations (version, applied_at)
+                 VALUES (?1, ?2)",
+                params![CURRENT_SCHEMA_VERSION, now_rfc3339()?],
+            )
+            .map_err(|error| StoreError::new(format!("failed to record migration: {error}")))?;
+    }
+    Ok(())
+}
+
+fn ensure_indexes(connection: &Connection) -> Result<(), StoreError> {
+    connection
+        .execute_batch(
+            "CREATE INDEX IF NOT EXISTS idx_tasks_name_status ON tasks(name, status);
+             CREATE INDEX IF NOT EXISTS idx_runs_task_id ON runs(task_id);
+             CREATE INDEX IF NOT EXISTS idx_findings_run_id ON findings(run_id);
+             CREATE INDEX IF NOT EXISTS idx_audit_task_id ON audit_events(task_id);
+             CREATE INDEX IF NOT EXISTS idx_audit_resource_ref ON audit_events(resource_ref);",
+        )
+        .map_err(|error| StoreError::new(format!("failed to create SQLite indexes: {error}")))
+}
+
+fn schema_version(connection: &Connection) -> Result<i64, StoreError> {
+    connection
+        .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
+            row.get::<_, Option<i64>>(0)
+        })
+        .map(|version| version.unwrap_or(0))
+        .map_err(|error| StoreError::new(format!("failed to query schema version: {error}")))
+}
+
+fn read_json_directory<T>(directory: &Path) -> Result<Vec<T>, StoreError>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    read_json_directory_page(directory, usize::MAX, 0)
+}
+
+fn read_json_directory_page<T>(
+    directory: &Path,
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<T>, StoreError>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    read_directory_paths(directory)?
+        .into_iter()
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "json")
+        })
+        .skip(offset)
+        .take(limit)
+        .map(|path| read_json(&path))
+        .collect()
+}
+
+fn read_directory_paths(directory: &Path) -> Result<Vec<PathBuf>, StoreError> {
+    if !directory.exists() {
+        return Ok(Vec::new());
+    }
+    let mut paths = fs::read_dir(directory)
+        .map_err(|error| {
+            StoreError::new(format!(
+                "failed to read directory {}: {error}",
+                directory.display()
+            ))
+        })?
+        .map(|entry| {
+            entry.map(|entry| entry.path()).map_err(|error| {
+                StoreError::new(format!("failed to read directory entry: {error}"))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    paths.sort();
+    Ok(paths)
+}
+
+fn ensure_column(
+    connection: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), StoreError> {
+    let mut statement = connection
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|error| StoreError::new(format!("failed to inspect {table}: {error}")))?;
+    let exists = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|error| StoreError::new(format!("failed to inspect {table}: {error}")))?
+        .filter_map(Result::ok)
+        .any(|name| name == column);
+    drop(statement);
+    if !exists {
+        connection
+            .execute(
+                &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+                [],
+            )
+            .map_err(|error| {
+                StoreError::new(format!("failed to migrate {table}.{column}: {error}"))
+            })?;
+    }
+    Ok(())
+}
+
+fn atomic_json<T: Serialize>(path: &Path, value: &T) -> Result<(), StoreError> {
+    let bytes = serde_json::to_vec_pretty(value)
+        .map_err(|error| StoreError::new(format!("failed to serialize artifact: {error}")))?;
+    atomic_write(path, &bytes)
+}
+
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| StoreError::new("artifact path has no parent"))?;
+    fs::create_dir_all(parent).map_err(|error| {
+        StoreError::new(format!("failed to create artifact directory: {error}"))
+    })?;
+    let mut temporary = NamedTempFile::new_in(parent).map_err(|error| {
+        StoreError::new(format!("failed to create temporary artifact: {error}"))
+    })?;
+    temporary
+        .write_all(bytes)
+        .and_then(|()| temporary.as_file().sync_all())
+        .map_err(|error| StoreError::new(format!("failed to write temporary artifact: {error}")))?;
+    temporary
+        .persist(path)
+        .map_err(|error| StoreError::new(format!("failed to replace artifact: {}", error.error)))?;
+    Ok(())
+}
+
+fn read_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, StoreError> {
+    let bytes = fs::read(path)
+        .map_err(|error| StoreError::new(format!("failed to read {}: {error}", path.display())))?;
+    serde_json::from_slice(&bytes)
+        .map_err(|error| StoreError::new(format!("invalid {}: {error}", path.display())))
+}
+
+fn bounded_i64(value: usize) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+const fn status_name(status: ExecutionStatus) -> &'static str {
+    match status {
+        ExecutionStatus::Succeeded => "succeeded",
+        ExecutionStatus::TimedOut => "timedOut",
+        ExecutionStatus::Cancelled => "cancelled",
+        ExecutionStatus::Failed => "failed",
+        ExecutionStatus::OutputLimitExceeded => "outputLimitExceeded",
+    }
+}
+
+const fn task_status_name(status: TaskStatus) -> &'static str {
+    match status {
+        TaskStatus::Pending => "pending",
+        TaskStatus::Planning => "planning",
+        TaskStatus::ApprovalRequired => "approval_required",
+        TaskStatus::Running => "running",
+        TaskStatus::Paused => "paused",
+        TaskStatus::Cancelling => "cancelling",
+        TaskStatus::Completed => "completed",
+        TaskStatus::Failed => "failed",
+        TaskStatus::Cancelled => "cancelled",
+    }
+}
+
+fn valid_task_transition(from: TaskStatus, to: TaskStatus) -> bool {
+    from == to
+        || matches!(
+            (from, to),
+            (
+                TaskStatus::Pending | TaskStatus::Cancelled | TaskStatus::Failed,
+                TaskStatus::Planning
+            ) | (
+                TaskStatus::Planning,
+                TaskStatus::Running
+                    | TaskStatus::ApprovalRequired
+                    | TaskStatus::Paused
+                    | TaskStatus::Cancelling
+                    | TaskStatus::Failed
+            ) | (
+                TaskStatus::ApprovalRequired,
+                TaskStatus::Planning | TaskStatus::Cancelling | TaskStatus::Failed
+            ) | (
+                TaskStatus::Running,
+                TaskStatus::Paused
+                    | TaskStatus::Cancelling
+                    | TaskStatus::Completed
+                    | TaskStatus::Failed
+            ) | (
+                TaskStatus::Paused,
+                TaskStatus::Running | TaskStatus::Cancelling | TaskStatus::Failed
+            ) | (
+                TaskStatus::Cancelling,
+                TaskStatus::Cancelled | TaskStatus::Failed
+            )
+        )
+}
+
+const fn effective_task_status(previous: TaskStatus, requested: TaskStatus) -> TaskStatus {
+    match (previous, requested) {
+        (
+            TaskStatus::Cancelling,
+            TaskStatus::Pending
+            | TaskStatus::Planning
+            | TaskStatus::ApprovalRequired
+            | TaskStatus::Running
+            | TaskStatus::Paused,
+        ) => TaskStatus::Cancelling,
+        (TaskStatus::Paused, TaskStatus::Running) => TaskStatus::Paused,
+        _ => requested,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use sentinelflow_schema::v1alpha1::{FindingSeverity, ToolOutputKind, ToolOutputSpec};
+
+    use super::*;
+    use tempfile::TempDir;
+
+    fn run_artifact() -> RunArtifact {
+        RunArtifact {
+            identifiers: ExecutionIdentifiers::generate("example-echo"),
+            actor_id: "test-actor".to_owned(),
+            authorization_scope: "local:echo".to_owned(),
+            capability: "echo".to_owned(),
+            target: "synthetic target".to_owned(),
+            status: ExecutionStatus::Succeeded,
+            started_at: "2026-01-01T00:00:00Z".to_owned(),
+            finished_at: "2026-01-01T00:00:01Z".to_owned(),
+            duration_ms: 1,
+            exit_code: Some(0),
+        }
+    }
+
+    fn task_artifact(task_id: &str, name: &str, status: TaskStatus) -> TaskArtifact {
+        TaskArtifact {
+            task_id: task_id.to_owned(),
+            name: name.to_owned(),
+            actor_id: "test-actor".to_owned(),
+            tool_id: "example-echo".to_owned(),
+            status,
+            target_count: 1,
+            run_ids: Vec::new(),
+            spec_snapshot: serde_json::from_value(serde_json::json!({
+                "apiVersion": "sentinelflow.io/v1alpha1",
+                "kind": "TaskSpec",
+                "metadata": {"name": "fixture-task"},
+                "spec": {
+                    "authorizationScope": "fixture:local-only",
+                    "targets": [{"name": "fixture-one", "input": {}}],
+                    "policy": {
+                        "allowedTargets": ["fixture-one"],
+                        "targetPatterns": [],
+                        "approveHighRisk": false,
+                        "timeoutSeconds": 30,
+                        "maxConcurrency": 1,
+                        "rateLimitPerMinute": 60,
+                        "timeWindows": [],
+                        "outputRetention": {"days": 7, "retainEvidence": true}
+                    },
+                    "steps": [{
+                        "name": "echo",
+                        "toolRef": "example-echo",
+                        "capability": "echo"
+                    }]
+                }
+            }))
+            .expect("task spec"),
+            plan_snapshot: serde_json::json!({"nodes": []}),
+            step_states: BTreeMap::new(),
+            outputs: BTreeMap::new(),
+            started_at: "2026-01-01T00:00:00Z".to_owned(),
+            finished_at: None,
+            last_error: None,
+        }
+    }
+
+    fn tool_output(run_id: &str, finding_count: usize) -> ToolOutput {
+        let findings = (0..finding_count)
+            .map(|index| FindingSpec {
+                title: format!("Synthetic finding {index}"),
+                severity: FindingSeverity::Info,
+                summary: "Fixture-only finding for store pagination tests.".to_owned(),
+                evidence: Vec::new(),
+                fingerprint: format!("{run_id}-fingerprint-{index}"),
+                cross_tool_fingerprint: format!("cross-{index}"),
+                duplicate_of: None,
+            })
+            .collect();
+        let mut labels = BTreeMap::new();
+        labels.insert(
+            "sentinelflow.io/tool-id".to_owned(),
+            "example-echo".to_owned(),
+        );
+        ToolOutput {
+            api_version: ProtocolVersion::V1Alpha1,
+            kind: ToolOutputKind::Value,
+            metadata: Metadata {
+                name: format!("output-{run_id}"),
+                namespace: None,
+                uid: None,
+                labels,
+                annotations: BTreeMap::new(),
+            },
+            spec: ToolOutputSpec {
+                schema_ref: "schemas/output.schema.json".to_owned(),
+                findings,
+                errors: Vec::new(),
+                values: serde_json::json!({}),
+            },
+            extensions: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn persists_atomic_artifacts_and_minimal_sqlite_model() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let mut store = WorkspaceStore::open(temporary.path()).expect("store");
+        assert_eq!(store.schema_version().expect("schema version"), 3);
+        let run = run_artifact();
+        store.save_run(&run).expect("run");
+        store
+            .save_result(&ResultArtifact {
+                run_id: run.identifiers.run_id.clone(),
+                output: None,
+                errors: Vec::new(),
+            })
+            .expect("result");
+        let context = AuditContext {
+            identifiers: &run.identifiers,
+            actor_id: &run.actor_id,
+        };
+        store
+            .record_audit(
+                "tool.run.finished",
+                AuditOutcome::Succeeded,
+                Some(&context),
+                None,
+            )
+            .expect("audit");
+
+        assert!(temporary.path().join("state.db").is_file());
+        assert!(
+            temporary
+                .path()
+                .join(format!("runs/{}.json", run.identifiers.run_id))
+                .is_file()
+        );
+        assert!(
+            temporary
+                .path()
+                .join(format!("results/{}.json", run.identifiers.run_id))
+                .is_file()
+        );
+        for table in [
+            "schema_migrations",
+            "tools",
+            "tasks",
+            "runs",
+            "findings",
+            "audit_events",
+        ] {
+            let exists: i64 = store
+                .connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                    [table],
+                    |row| row.get(0),
+                )
+                .expect("table query");
+            assert_eq!(exists, 1, "missing table {table}");
+        }
+    }
+
+    #[test]
+    fn migrations_are_idempotent_and_preserve_legacy_rows() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        fs::create_dir_all(&workspace).expect("workspace");
+        let connection = Connection::open(workspace.join("state.db")).expect("legacy db");
+        connection
+            .execute_batch(
+                "CREATE TABLE tools (
+                    tool_id TEXT PRIMARY KEY,
+                    version TEXT NOT NULL,
+                    manifest_json TEXT NOT NULL
+                 );
+                 CREATE TABLE tasks (
+                    task_id TEXT PRIMARY KEY,
+                    tool_id TEXT NOT NULL,
+                    actor_id TEXT NOT NULL
+                 );
+                 CREATE TABLE findings (
+                    finding_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    finding_json TEXT NOT NULL
+                 );
+                 INSERT INTO tools (tool_id, version, manifest_json)
+                 VALUES ('legacy-tool', '0.9.0', '{}');
+                 INSERT INTO tasks (task_id, tool_id, actor_id)
+                 VALUES ('legacy-task', 'legacy-tool', 'legacy-actor');",
+            )
+            .expect("legacy schema");
+        drop(connection);
+
+        let first = WorkspaceStore::open(&workspace).expect("first migration");
+        assert_eq!(first.schema_version().expect("schema version"), 3);
+        drop(first);
+        let second = WorkspaceStore::open(&workspace).expect("second migration");
+        assert_eq!(second.schema_version().expect("schema version"), 3);
+        let tool_count: i64 = second
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM tools WHERE tool_id = 'legacy-tool'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("legacy tool count");
+        let task_count: i64 = second
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM tasks WHERE task_id = 'legacy-task'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("legacy task count");
+        assert_eq!(tool_count, 1);
+        assert_eq!(task_count, 1);
+    }
+
+    #[test]
+    fn bounded_queries_page_audit_tasks_runs_and_findings() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let mut store = WorkspaceStore::open(temporary.path()).expect("store");
+        store
+            .save_task(&task_artifact(
+                "task-one",
+                "same-name",
+                TaskStatus::Completed,
+            ))
+            .expect("task one");
+        store
+            .save_task(&task_artifact("task-two", "same-name", TaskStatus::Running))
+            .expect("task two");
+        let mut run_one = run_artifact();
+        run_one.identifiers.task_id = "task-two".to_owned();
+        let mut run_two = run_artifact();
+        run_two.identifiers.task_id = "task-two".to_owned();
+        store.save_run(&run_one).expect("run one");
+        store.save_run(&run_two).expect("run two");
+        store
+            .save_result(&ResultArtifact {
+                run_id: run_one.identifiers.run_id.clone(),
+                output: Some(tool_output(&run_one.identifiers.run_id, 2)),
+                errors: Vec::new(),
+            })
+            .expect("result one");
+        store
+            .save_result(&ResultArtifact {
+                run_id: run_two.identifiers.run_id.clone(),
+                output: Some(tool_output(&run_two.identifiers.run_id, 3)),
+                errors: Vec::new(),
+            })
+            .expect("result two");
+        for _ in 0..5 {
+            let context = AuditContext {
+                identifiers: &run_one.identifiers,
+                actor_id: &run_one.actor_id,
+            };
+            store
+                .record_audit(
+                    "tool.run.finished",
+                    AuditOutcome::Succeeded,
+                    Some(&context),
+                    Some("task-two".to_owned()),
+                )
+                .expect("audit");
+        }
+        let names = store
+            .list_audit()
+            .expect("audit")
+            .into_iter()
+            .map(|event| event.metadata.name)
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(names.len(), 5);
+
+        assert_eq!(store.list_tasks_page(1, 0).expect("tasks").len(), 1);
+        assert_eq!(store.list_runs_page(1, 1).expect("runs").len(), 1);
+        assert_eq!(store.list_audit_page(2, 1).expect("audit").len(), 2);
+        assert_eq!(
+            store
+                .task_audit_page("task-two", 3, 2)
+                .expect("task audit")
+                .len(),
+            3
+        );
+        assert_eq!(store.list_findings_page(4, 1).expect("findings").len(), 4);
+        assert_eq!(
+            store
+                .count_findings_for_run(&run_two.identifiers.run_id)
+                .expect("run findings"),
+            3
+        );
+        assert_eq!(
+            store
+                .count_findings_for_task("task-two")
+                .expect("task findings"),
+            5
+        );
+        assert_eq!(
+            store
+                .find_active_task_by_name("same-name")
+                .expect("active task")
+                .expect("active")
+                .task_id,
+            "task-two"
+        );
+    }
+
+    #[test]
+    fn newer_schema_version_fails_explicitly() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        fs::create_dir_all(&workspace).expect("workspace");
+        let connection = Connection::open(workspace.join("state.db")).expect("db");
+        connection
+            .execute_batch(
+                "CREATE TABLE schema_migrations (
+                    version INTEGER PRIMARY KEY,
+                    applied_at TEXT NOT NULL
+                 );
+                 INSERT INTO schema_migrations (version, applied_at)
+                 VALUES (999, '2026-01-01T00:00:00Z');",
+            )
+            .expect("future schema");
+        drop(connection);
+
+        let error = match WorkspaceStore::open(&workspace) {
+            Ok(_) => panic!("future schema must fail"),
+            Err(error) => error,
+        };
+        assert!(
+            error.to_string().contains("newer than supported version"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn external_control_states_are_not_overwritten_by_stale_scheduler_writes() {
+        assert_eq!(
+            effective_task_status(TaskStatus::Cancelling, TaskStatus::Running),
+            TaskStatus::Cancelling
+        );
+        assert_eq!(
+            effective_task_status(TaskStatus::Cancelling, TaskStatus::Planning),
+            TaskStatus::Cancelling
+        );
+        assert_eq!(
+            effective_task_status(TaskStatus::Paused, TaskStatus::Running),
+            TaskStatus::Paused
+        );
+        assert_eq!(
+            effective_task_status(TaskStatus::Planning, TaskStatus::Running),
+            TaskStatus::Running
+        );
+    }
+
+    #[test]
+    fn database_initialization_failure_is_reported() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        fs::create_dir_all(workspace.join("state.db")).expect("state path directory");
+        let error = match WorkspaceStore::open(&workspace) {
+            Ok(_) => panic!("state.db directory must fail"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("failed to open SQLite store"));
+    }
+
+    #[test]
+    fn report_write_failure_is_reported() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        let store = WorkspaceStore::open(&workspace).expect("store");
+        fs::remove_dir_all(workspace.join("reports")).expect("remove reports directory");
+        fs::write(workspace.join("reports"), b"not a directory").expect("reports file");
+
+        let error = store
+            .save_report("run-report", "report")
+            .expect_err("report write must fail");
+        assert!(
+            error
+                .to_string()
+                .contains("failed to create temporary artifact")
+                || error
+                    .to_string()
+                    .contains("failed to create artifact directory"),
+            "unexpected error: {error}"
+        );
+    }
+
+    #[test]
+    fn audit_write_failure_is_reported() {
+        let temporary = TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        let mut store = WorkspaceStore::open(&workspace).expect("store");
+        fs::remove_dir_all(workspace.join("audit")).expect("remove audit directory");
+        fs::write(workspace.join("audit"), b"not a directory").expect("audit file");
+        let run = run_artifact();
+        let context = AuditContext {
+            identifiers: &run.identifiers,
+            actor_id: &run.actor_id,
+        };
+
+        let error = store
+            .record_audit(
+                "tool.run.finished",
+                AuditOutcome::Succeeded,
+                Some(&context),
+                None,
+            )
+            .expect_err("audit write must fail");
+        assert!(
+            error
+                .to_string()
+                .contains("failed to create temporary artifact")
+                || error.to_string().contains("failed to read audit log")
+                || error.to_string().contains("failed to open audit log")
+                || error
+                    .to_string()
+                    .contains("failed to create artifact directory"),
+            "unexpected error: {error}"
+        );
+    }
+}

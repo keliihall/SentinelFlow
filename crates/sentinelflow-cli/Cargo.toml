@@ -1,0 +1,38 @@
+[package]
+name = "sentinelflow-cli"
+description = "Command-line interface for SentinelFlow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "sentinelflow"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde_yaml = "0.9.34"
+sentinelflow-adapter-command = { path = "../sentinelflow-adapter-command" }
+sentinelflow-adapter-docker = { path = "../sentinelflow-adapter-docker" }
+sentinelflow-adapter-file-import = { path = "../sentinelflow-adapter-file-import" }
+sentinelflow-adapter-http = { path = "../sentinelflow-adapter-http" }
+sentinelflow-core = { path = "../sentinelflow-core" }
+sentinelflow-orchestrator = { path = "../sentinelflow-orchestrator" }
+sentinelflow-policy = { path = "../sentinelflow-policy" }
+sentinelflow-registry = { path = "../sentinelflow-registry" }
+sentinelflow-report = { path = "../sentinelflow-report" }
+sentinelflow-runtime = { path = "../sentinelflow-runtime" }
+sentinelflow-schema = { path = "../sentinelflow-schema" }
+sentinelflow-store = { path = "../sentinelflow-store" }
+time = { version = "=0.3.36", features = ["formatting"] }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tempfile = "3.20.0"
+
+[dev-dependencies]
+
+[lints]
+workspace = true

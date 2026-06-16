@@ -1,0 +1,409 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "FailurePolicy": {
+      "description": "How a failed step affects the remaining DAG.",
+      "oneOf": [
+        {
+          "description": "Stop scheduling new work after the first failure.",
+          "enum": [
+            "stop"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Continue scheduling nodes whose own dependencies succeeded.",
+          "enum": [
+            "continue"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Mark every transitive dependent as skipped.",
+          "enum": [
+            "skipDependents"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "OutputRetentionPolicy": {
+      "additionalProperties": false,
+      "description": "Output retention constraints.",
+      "properties": {
+        "days": {
+          "description": "Number of days normalized output may be retained.",
+          "format": "uint32",
+          "maximum": 3650.0,
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "retainEvidence": {
+          "default": true,
+          "description": "Whether normalized evidence may be retained.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "days"
+      ],
+      "type": "object"
+    },
+    "PolicyTimeWindow": {
+      "additionalProperties": false,
+      "description": "UTC wall-clock execution window.",
+      "properties": {
+        "end": {
+          "description": "Exclusive `HH:MM` end in UTC. Values earlier than start cross midnight.",
+          "type": "string"
+        },
+        "start": {
+          "description": "Inclusive `HH:MM` start in UTC.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "TaskExecutionPolicy": {
+      "additionalProperties": false,
+      "description": "Task-local execution policy.",
+      "properties": {
+        "allowedTargets": {
+          "description": "Target names explicitly authorized for this task.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "approvalRef": {
+          "description": "Persisted approval request used for high or critical risk.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "approveHighRisk": {
+          "default": false,
+          "description": "Explicit approval for high or critical risk tools.",
+          "type": "boolean"
+        },
+        "maxConcurrency": {
+          "default": 1,
+          "description": "Maximum concurrently running DAG nodes.",
+          "format": "uint",
+          "maximum": 64.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "outputRetention": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/OutputRetentionPolicy"
+            }
+          ],
+          "default": {
+            "days": 30,
+            "retainEvidence": true
+          },
+          "description": "Output retention constraints."
+        },
+        "rateLimitPerMinute": {
+          "default": 60,
+          "description": "Maximum node starts per minute.",
+          "format": "uint32",
+          "maximum": 10000.0,
+          "minimum": 1.0,
+          "type": "integer"
+        },
+        "targetPatterns": {
+          "description": "Domain, URL, IP, or CIDR patterns allowed by the task.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timeWindows": {
+          "description": "Optional UTC execution windows.",
+          "items": {
+            "$ref": "#/definitions/PolicyTimeWindow"
+          },
+          "type": "array"
+        },
+        "timeoutSeconds": {
+          "description": "Optional timeout lower than or equal to the Manifest ceiling.",
+          "format": "uint64",
+          "maximum": 3600.0,
+          "minimum": 1.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "allowedTargets"
+      ],
+      "type": "object"
+    },
+    "TaskInputMapping": {
+      "additionalProperties": false,
+      "description": "Maps a prior normalized output value into a downstream step input.",
+      "properties": {
+        "from": {
+          "description": "Dependency step name or its `outputAs` alias.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "pointer": {
+          "description": "JSON Pointer evaluated against the prior normalized `ToolOutput`.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "target": {
+          "description": "Top-level field inserted into the downstream structured input.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "pointer",
+        "target"
+      ],
+      "type": "object"
+    },
+    "TaskSpecData": {
+      "additionalProperties": false,
+      "description": "DAG task request payload.",
+      "properties": {
+        "authorizationScope": {
+          "description": "Explicit authorization boundary for this task.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "policy": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/TaskExecutionPolicy"
+            }
+          ],
+          "description": "Task-local policy constraints."
+        },
+        "steps": {
+          "description": "DAG execution steps.",
+          "items": {
+            "$ref": "#/definitions/TaskStepSpec"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "targets": {
+          "description": "One or more explicitly named targets.",
+          "items": {
+            "$ref": "#/definitions/TaskTargetSpec"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "authorizationScope",
+        "policy",
+        "steps",
+        "targets"
+      ],
+      "type": "object"
+    },
+    "TaskSpecKind": {
+      "enum": [
+        "TaskSpec"
+      ],
+      "type": "string"
+    },
+    "TaskStepSpec": {
+      "additionalProperties": false,
+      "description": "One task execution step.",
+      "properties": {
+        "capability": {
+          "description": "Capability requested from the Manifest.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "dependsOn": {
+          "description": "Step names that must complete successfully before this step is ready.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failurePolicy": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/FailurePolicy"
+            }
+          ],
+          "default": "stop",
+          "description": "Failure propagation behavior."
+        },
+        "inputFrom": {
+          "description": "Values mapped from prior normalized outputs.",
+          "items": {
+            "$ref": "#/definitions/TaskInputMapping"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Step name within the task.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "outputAs": {
+          "description": "Optional stable alias for this step's normalized output.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "toolRef": {
+          "description": "Manifest resource name selected for the step.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "capability",
+        "name",
+        "toolRef"
+      ],
+      "type": "object"
+    },
+    "TaskTargetSpec": {
+      "additionalProperties": false,
+      "description": "One explicitly authorized task target and its tool input.",
+      "properties": {
+        "input": {
+          "description": "Exact structured input supplied to the selected tool."
+        },
+        "name": {
+          "description": "Stable target name used by policy.",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "input",
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "A policy-controlled DAG task specification.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/TaskSpecKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/TaskSpecData"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "TaskSpec",
+  "type": "object"
+}

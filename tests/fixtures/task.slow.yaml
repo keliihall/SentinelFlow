@@ -1,0 +1,25 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: example-cancel-resume
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: cancellation fixture
+  steps:
+    - name: slow
+      toolRef: example-slow
+      capability: delay.fixture
+      failurePolicy: stop
+    - name: after
+      toolRef: example-echo
+      capability: echo
+      dependsOn: [slow]
+      failurePolicy: stop
+  policy:
+    allowedTargets: [fixture-one]
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+extensions: {}

@@ -1,0 +1,5 @@
+version: 1
+workspaceDir: /srv/sentinelflow/.sentinelflow
+schemaRoot: /opt/sentinelflow
+logLevel: warn
+apiEndpoint: https://sentinelflow.internal.example

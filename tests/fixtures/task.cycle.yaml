@@ -1,0 +1,22 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: cycle
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input: {message: cycle}
+  steps:
+    - name: a
+      toolRef: example-echo
+      capability: echo
+      dependsOn: [b]
+    - name: b
+      toolRef: example-echo
+      capability: echo
+      dependsOn: [a]
+  policy:
+    allowedTargets: [fixture-one]
+extensions: {}
+

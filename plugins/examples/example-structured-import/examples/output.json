@@ -1,0 +1,7 @@
+{
+  "source": "controlled-content",
+  "records": [
+    {"name": "fixture-a"},
+    {"name": "fixture-b"}
+  ]
+}

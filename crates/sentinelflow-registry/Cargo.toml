@@ -1,0 +1,23 @@
+[package]
+name = "sentinelflow-registry"
+description = "Tool registry for SentinelFlow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+jsonschema = { version = "0.18.3", default-features = false }
+semver = "1.0.26"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde_yaml = "0.9.34"
+sentinelflow-schema = { path = "../sentinelflow-schema" }
+time = "=0.3.36"
+
+[dev-dependencies]
+tempfile = "3.20.0"
+
+[lints]
+workspace = true

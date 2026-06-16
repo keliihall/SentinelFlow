@@ -1,0 +1,5 @@
+{
+  "format": "jsonl",
+  "content": "{\"name\":\"fixture-a\"}\n{\"name\":\"fixture-b\"}\n"
+}
+

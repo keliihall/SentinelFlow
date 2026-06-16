@@ -1,0 +1,20 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-parser-invalid-output
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 parser invalid output
+  steps:
+    - name: invalid-parser
+      toolRef: example-invalid-parser
+      capability: invalid.parser.fixture
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+    timeoutSeconds: 5
+extensions: {}
+

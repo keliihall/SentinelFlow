@@ -1,0 +1,14 @@
+{
+  "apiVersion": "sentinelflow.io/v1alpha1",
+  "kind": "Finding",
+  "metadata": {
+    "name": "invalid-synthetic-observation"
+  },
+  "spec": {
+    "title": "",
+    "severity": "info",
+    "summary": "This fixture is invalid because its title is empty.",
+    "evidence": []
+  },
+  "extensions": {}
+}

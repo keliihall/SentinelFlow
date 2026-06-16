@@ -1,0 +1,19 @@
+[package]
+name = "sentinelflow-report"
+description = "Report generation abstractions for SentinelFlow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json = "1.0.140"
+sentinelflow-schema = { path = "../sentinelflow-schema" }
+sentinelflow-store = { path = "../sentinelflow-store" }
+
+[dev-dependencies]
+sentinelflow-runtime = { path = "../sentinelflow-runtime" }

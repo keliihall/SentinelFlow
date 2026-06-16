@@ -1,0 +1,30 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-partial-failure
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 partial failure
+  steps:
+    - name: fails
+      toolRef: example-failure
+      capability: fail.fixture
+      failurePolicy: continue
+    - name: independent
+      toolRef: example-echo
+      capability: echo
+      failurePolicy: continue
+    - name: dependent
+      toolRef: example-echo
+      capability: echo
+      dependsOn: [fails]
+      failurePolicy: skipDependents
+  policy:
+    allowedTargets: [fixture-one]
+    maxConcurrency: 2
+    rateLimitPerMinute: 60
+extensions: {}
+

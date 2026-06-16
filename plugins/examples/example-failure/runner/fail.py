@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+import sys
+
+sys.stdin.read()
+raise SystemExit(7)
+

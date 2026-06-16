@@ -1,0 +1,32 @@
+{
+  "apiVersion": "sentinelflow.io/v1alpha1",
+  "kind": "TaskSpec",
+  "metadata": {
+    "name": "invalid-synthetic-validation-task"
+  },
+  "spec": {
+    "authorizationScope": "",
+    "targets": [
+      {
+        "name": "not-authorized",
+        "input": {
+          "message": "safe local data"
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "echo",
+        "toolRef": "example-echo",
+        "capability": "echo"
+      }
+    ],
+    "policy": {
+      "allowedTargets": [
+        "different-target"
+      ],
+      "approveHighRisk": false
+    }
+  },
+  "extensions": {}
+}

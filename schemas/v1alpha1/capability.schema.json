@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "CapabilityKind": {
+      "enum": [
+        "Capability"
+      ],
+      "type": "string"
+    },
+    "CapabilitySpec": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "risk": {
+                "enum": [
+                  "high",
+                  "critical"
+                ]
+              }
+            },
+            "required": [
+              "risk"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requiresApproval": {
+                "const": true
+              }
+            },
+            "required": [
+              "requiresApproval"
+            ]
+          }
+        }
+      ],
+      "description": "A capability declaration embedded in a tool manifest or exposed as a resource.",
+      "properties": {
+        "description": {
+          "description": "Human-readable description.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "description": "Stable capability identifier.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "requiresApproval": {
+          "description": "Whether authorization must include an explicit approval.",
+          "type": "boolean"
+        },
+        "risk": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/RiskLevel"
+            }
+          ],
+          "description": "Declared risk classification."
+        }
+      },
+      "required": [
+        "description",
+        "name",
+        "requiresApproval",
+        "risk"
+      ],
+      "type": "object"
+    },
+    "Metadata": {
+      "additionalProperties": false,
+      "description": "Common metadata attached to every protocol resource.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Non-queryable annotations.",
+          "type": "object"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Queryable labels.",
+          "type": "object"
+        },
+        "name": {
+          "description": "Resource name within its namespace.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Optional logical namespace.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uid": {
+          "description": "Optional stable identifier assigned by a store.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProtocolVersion": {
+      "description": "Supported protocol version.",
+      "oneOf": [
+        {
+          "description": "The initial alpha protocol.",
+          "enum": [
+            "sentinelflow.io/v1alpha1"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "RiskLevel": {
+      "description": "Risk classification for a declared capability.",
+      "oneOf": [
+        {
+          "description": "Read-only or otherwise low-impact validation.",
+          "enum": [
+            "low"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Validation with bounded side effects.",
+          "enum": [
+            "medium"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Validation requiring explicit approval.",
+          "enum": [
+            "high"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Exceptional validation requiring explicit approval.",
+          "enum": [
+            "critical"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "A standalone capability declaration.",
+  "properties": {
+    "apiVersion": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtocolVersion"
+        }
+      ],
+      "description": "Protocol API version."
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "description": "Forward-compatible extension values.",
+      "type": "object"
+    },
+    "kind": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/CapabilityKind"
+        }
+      ],
+      "description": "Protocol resource kind."
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        }
+      ],
+      "description": "Common resource metadata."
+    },
+    "spec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/CapabilitySpec"
+        }
+      ],
+      "description": "Resource-specific payload."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
+  "title": "Capability",
+  "type": "object"
+}

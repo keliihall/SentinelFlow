@@ -1,0 +1,19 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-high-risk-unapproved
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 high risk approval fixture
+  steps:
+    - name: approval
+      toolRef: example-high-risk
+      capability: approval.fixture
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+extensions: {}
+

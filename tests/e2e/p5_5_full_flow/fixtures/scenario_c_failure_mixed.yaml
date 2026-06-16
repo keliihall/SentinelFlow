@@ -1,0 +1,31 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: p55-full-failure-mixed
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: p55 mixed failure
+  steps:
+    - name: success
+      toolRef: example-echo
+      capability: echo
+      failurePolicy: continue
+    - name: invalid-parser
+      toolRef: example-invalid-parser
+      capability: invalid.parser.fixture
+      failurePolicy: continue
+    - name: timeout
+      toolRef: example-slow
+      capability: delay.fixture
+      failurePolicy: continue
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+    timeoutSeconds: 1
+    maxConcurrency: 3
+    rateLimitPerMinute: 60
+extensions: {}
+

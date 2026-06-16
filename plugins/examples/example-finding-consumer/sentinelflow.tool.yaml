@@ -1,0 +1,31 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: example-finding-consumer
+  labels:
+    sentinelflow.io/example: "true"
+spec:
+  displayName: Example Finding Consumer
+  version: 0.1.0
+  capabilities:
+    - name: consume
+      description: Counts normalized synthetic findings supplied by a prior step
+      risk: low
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/consume.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 5
+    outputLimitBytes: 65536
+  parser:
+    mode: builtin
+    name: example-echo-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: synthetic-finding-count-only
+

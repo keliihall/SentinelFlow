@@ -1,0 +1,33 @@
+[workspace]
+members = [
+    "crates/sentinelflow-adapter-command",
+    "crates/sentinelflow-adapter-docker",
+    "crates/sentinelflow-adapter-file-import",
+    "crates/sentinelflow-adapter-http",
+    "crates/sentinelflow-api",
+    "crates/sentinelflow-cli",
+    "crates/sentinelflow-core",
+    "crates/sentinelflow-orchestrator",
+    "crates/sentinelflow-policy",
+    "crates/sentinelflow-registry",
+    "crates/sentinelflow-report",
+    "crates/sentinelflow-runtime",
+    "crates/sentinelflow-schema",
+    "crates/sentinelflow-store",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/sentinelflow/sentinelflow"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }

@@ -1,0 +1,22 @@
+[package]
+name = "sentinelflow-adapter-docker"
+description = "Controlled Docker adapter for SentinelFlow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+async-trait = "0.1.88"
+serde_json = "1.0.140"
+sentinelflow-runtime = { path = "../sentinelflow-runtime" }
+sentinelflow-schema = { path = "../sentinelflow-schema" }
+tokio = { version = "1.45.1", features = ["io-util", "macros", "process", "rt-multi-thread", "sync", "time"] }
+tokio-util = "0.7.15"
+
+[dev-dependencies]
+tempfile = "3.20.0"
+
+[lints]
+workspace = true

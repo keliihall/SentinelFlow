@@ -1,0 +1,36 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: example-dag
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: fixture-one
+      input:
+        message: hello from DAG
+  steps:
+    - name: produce
+      toolRef: example-echo
+      capability: echo
+      outputAs: discovery
+      failurePolicy: stop
+    - name: consume
+      toolRef: example-finding-consumer
+      capability: consume
+      dependsOn: [produce]
+      inputFrom:
+        - from: discovery
+          pointer: /spec/findings
+          target: findings
+      failurePolicy: stop
+  policy:
+    allowedTargets: [fixture-one]
+    approveHighRisk: false
+    timeoutSeconds: 5
+    maxConcurrency: 2
+    rateLimitPerMinute: 60
+    outputRetention:
+      days: 30
+      retainEvidence: true
+extensions: {}
+

@@ -1,0 +1,34 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: example-http-adapter
+  labels:
+    sentinelflow.io/example: "true"
+spec:
+  displayName: Example HTTP Adapter
+  version: 0.1.0
+  capabilities:
+    - name: echo
+      description: Posts synthetic fixture data to a loopback-only test service
+      risk: low
+      requiresApproval: false
+  runtime:
+    adapter: http
+    mode: process
+    timeoutSeconds: 5
+    outputLimitBytes: 65536
+    http:
+      url: http://127.0.0.1:18080/fixture
+      method: POST
+      headers:
+        - name: Content-Type
+          value: application/json
+      retries: 1
+  parser:
+    mode: builtin
+    name: example-echo-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: loopback-fixture-only
+
