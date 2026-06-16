@@ -12,6 +12,8 @@ stealth probing, persistence, bypass, or attack-chain automation.
 
 ## Required Release Gates
 
+The default GitHub Actions CI workflow runs:
+
 ```sh
 cargo fmt --all -- --check
 cargo build --workspace
@@ -23,6 +25,11 @@ tests/e2e/p5_5_full_flow/run.sh
 tests/e2e/p5_5_security/run.sh
 tests/e2e/p5_5_reliability/run.sh
 tests/e2e/p5_5_deployment/run.sh
+```
+
+The performance baseline is a manual or scheduled release gate:
+
+```sh
 tests/performance/run.sh
 ```
 
@@ -51,6 +58,8 @@ identity provider before using real users.
 - The single-machine deployment is the only supported deployment shape.
 - v1.0-rc uses SQLite as the active store; PostgreSQL settings are reserved and
   intentionally not consumed by the runtime backend.
+- Built-in identities and tokens are development/local-pilot credentials only;
+  production-like pilots must use real authentication or a trusted reverse proxy.
 - Single-node pilots should stay within the P5.5 performance baseline:
   4 recommended concurrent task runs, 20 concurrent API/Web users, 1,000
   findings per task, 2,000 task log events, and 5,000 findings per report.
@@ -61,3 +70,16 @@ identity provider before using real users.
 - The release-candidate container favors reproducible local builds over minimal
   image size and uses the Rust Debian base image for both build and runtime
   stages.
+
+## Current Limits And Next Stage
+
+The following are P6 planning areas and are not included in this release
+candidate:
+
+- Plugin marketplace and external plugin distribution.
+- Distributed Worker execution.
+- AI-assisted finding analysis.
+- Advanced team collaboration spaces.
+
+Do not treat v1.0-rc as a public production release. It is a controlled
+single-node pilot candidate for safe local/synthetic validation workflows.

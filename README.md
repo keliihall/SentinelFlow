@@ -30,6 +30,16 @@ Implemented capabilities:
 - Single-machine Docker Compose deployment
 - P5.5 consistency, security, reliability, deployment, and performance gates
 
+Supported deployment boundary:
+
+- `v1.0-rc` supports single-node local or small-team pilots.
+- SQLite is the only active runtime store backend.
+- PostgreSQL configuration examples are reserved for future work and are not an
+  implemented backend in this release candidate.
+- Built-in development identities are for local trials only. Production-like
+  pilots must put SentinelFlow behind real authentication or a trusted reverse
+  proxy.
+
 Not included in `v1.0-rc`:
 
 - Plugin marketplace
@@ -191,6 +201,12 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 
 ## Release Gates
 
+The default GitHub Actions CI runs the required pre-release gates below except
+the performance baseline. The performance baseline runs in the separate
+`Performance Baseline` workflow by `workflow_dispatch` or the weekly schedule.
+
+Required CI gates:
+
 ```sh
 cargo fmt --all -- --check
 cargo build --workspace
@@ -202,5 +218,32 @@ tests/e2e/p5_5_full_flow/run.sh
 tests/e2e/p5_5_security/run.sh
 tests/e2e/p5_5_reliability/run.sh
 tests/e2e/p5_5_deployment/run.sh
+```
+
+Manual or scheduled release gate:
+
+```sh
 tests/performance/run.sh
 ```
+
+The deployment gate uses loopback ports and `docker compose config`; CI runners
+must provide Python 3, Docker, and Docker Compose. The E2E gates only use local
+synthetic fixtures and do not contact real targets.
+
+## Current Limits And Next Stage
+
+Known `v1.0-rc` limits:
+
+- Single-node operation only; no distributed Worker.
+- SQLite only; PostgreSQL is not active.
+- Development authentication is not production authentication.
+- Web Console is an API-backed workflow console, not a full dashboard.
+- SSE log streaming still uses the documented local-pilot token flow.
+- Example plugins are safe local fixtures, not real scanners.
+
+P6 planning areas, not implemented in this release:
+
+- Plugin ecosystem and marketplace.
+- Team collaboration and stronger identity integration.
+- Distributed Worker execution.
+- AI-assisted analysis over already-normalized safe findings.

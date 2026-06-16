@@ -124,22 +124,22 @@ The following P6 or broader-release capabilities are not counted as completed:
 
 ## Performance And Capacity Results
 
-Latest performance run: `2026-06-15T11:37:46Z`
+Latest performance run: `2026-06-16T01:26:53Z`
 
 | Metric | Observed |
 | --- | ---: |
-| API latency P50 / P95 / P99 | 39.75 ms / 311.85 ms / 611.55 ms |
-| Task plan P50 / P95 / P99 | 97.55 ms / 190.25 ms / 228.75 ms |
-| Task run scheduling P50 / P95 / P99 | 832.37 ms / 972.63 ms / 972.63 ms |
-| Bulk Finding task duration | 5690.26 ms for 128 additional targets |
-| Log push P50 / P95 / P99 | 64.57 ms / 86.96 ms / 86.96 ms |
-| Finding query latency | 15.45 ms for 136 findings |
-| Finding write throughput | 20.41 findings/s |
-| Audit write throughput | 125.92 requested audit writes/s |
-| Report generation P50 / P95 / P99 | 24.75 ms / 29.91 ms / 29.91 ms |
+| API latency P50 / P95 / P99 | 35.50 ms / 153.45 ms / 400.30 ms |
+| Task plan P50 / P95 / P99 | 55.73 ms / 165.31 ms / 219.62 ms |
+| Task run scheduling P50 / P95 / P99 | 946.72 ms / 1036.79 ms / 1036.79 ms |
+| Bulk Finding task duration | 5555.36 ms for 128 additional targets |
+| Log push P50 / P95 / P99 | 27.71 ms / 61.11 ms / 61.11 ms |
+| Finding query latency | 12.59 ms for 136 findings |
+| Finding write throughput | 20.63 findings/s |
+| Audit write throughput | 195.56 requested audit writes/s |
+| Report generation P50 / P95 / P99 | 25.25 ms / 29.26 ms / 29.26 ms |
 | API RSS growth | 7.6 MiB to 29.5 MiB |
-| Workspace growth | 73,048 bytes to 1,771,399 bytes |
-| SQLite database size | 1,044,480 bytes |
+| Workspace growth | 73,050 bytes to 1,775,503 bytes |
+| SQLite database size | 1,048,576 bytes |
 
 Capacity interpretation:
 

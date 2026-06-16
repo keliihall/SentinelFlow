@@ -3,29 +3,39 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -Dwarnings
+  SENTINELFLOW_CI_RUST: "1.85.0"
 
 jobs:
   rust:
-    name: Rust workspace
+    name: Rust workspace and release gates
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ env.SENTINELFLOW_CI_RUST }}
           components: clippy, rustfmt
 
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
+
+      - name: Show tool versions
+        run: |
+          rustc --version
+          cargo --version
+          python3 --version
+          docker --version
+          docker compose version
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -33,9 +43,26 @@ jobs:
       - name: Build workspace
         run: cargo build --workspace
 
+      - name: Lint workspace
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
       - name: Test workspace
         run: cargo test --workspace
 
-      - name: Lint workspace
-        run: cargo clippy --workspace --all-targets
+      - name: P5.5 smoke gate
+        run: tests/e2e/p5_5_smoke.sh
 
+      - name: P5.5 consistency gate
+        run: tests/e2e/p5_5_consistency.sh
+
+      - name: P5.5 full-flow gate
+        run: tests/e2e/p5_5_full_flow/run.sh
+
+      - name: P5.5 security gate
+        run: tests/e2e/p5_5_security/run.sh
+
+      - name: P5.5 reliability gate
+        run: tests/e2e/p5_5_reliability/run.sh
+
+      - name: P5.5 deployment gate
+        run: tests/e2e/p5_5_deployment/run.sh

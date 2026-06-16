@@ -29,6 +29,9 @@
 - v1.0-rc trial guide and acceptance report.
 - v1.0-rc release gate report, known issues register, and release notes for
   controlled pilot sign-off.
+- GitHub Actions release gates for fmt, build, clippy with `-D warnings`, tests,
+  and P5.5 smoke/consistency/full-flow/security/reliability/deployment E2E.
+- Manual and scheduled GitHub Actions performance baseline workflow.
 
 ### Hardened
 
@@ -64,6 +67,8 @@
   instead of leaving tasks in planning.
 - Markdown reports redact sensitive-looking target, finding, evidence, and error
   content during rendering.
+- CI now pins the Rust toolchain to the declared `1.85.0` baseline instead of
+  floating on latest stable.
 
 ### Security
 

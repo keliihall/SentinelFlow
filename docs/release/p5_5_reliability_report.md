@@ -1,9 +1,9 @@
 # SentinelFlow P5.5 Reliability Report
 
-Generated: 2026-06-15T11:37:29Z
+Generated: 2026-06-16T01:26:28Z
 
 Command: `tests/e2e/p5_5_reliability/run.sh`
-Workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-reliability.2y2hs4ds/.sentinelflow`
+Workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-reliability.gqxfxlcs/.sentinelflow`
 
 ## Scope
 
@@ -15,7 +15,7 @@ All checks use local safe fixtures only. No real targets, credentials, scanners,
 
 | Category | Expected Reliability Behavior | Result | Evidence |
 | --- | --- | --- | --- |
-| completed 状态审计 | 成功任务进入 completed 且有 task.state.completed | pass | status=200 task=task-78508732-232b-46e0-9dce-dfa1867fc183 |
+| completed 状态审计 | 成功任务进入 completed 且有 task.state.completed | pass | status=200 task=task-94ef2c14-7099-4f91-8a63-8c45a46e9edd |
 | 日志断线重连 | 重连后 cursor 单调递增且不重复 | pass | first=[1, 2] second=[3, 4] |
 | API 服务重启 | 重启后可查询已有任务和日志 | pass | task=200 logs=200:12 |
 | approval_required 状态 | 未审批高风险任务不 stuck，落到 approvalRequired 并保留错误码 | pass | status=403 taskStatus=approvalRequired code=AuthorizationDenied |

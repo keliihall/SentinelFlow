@@ -1,9 +1,9 @@
 # SentinelFlow P5.5 Security Hardening Report
 
-Generated: 2026-06-15T11:37:20Z
+Generated: 2026-06-16T01:26:20Z
 
 Command: `tests/e2e/p5_5_security/run.sh`
-Workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-security.i3nkfi7r/.sentinelflow`
+Workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-security.j6vwd19f/.sentinelflow`
 
 ## Scope
 

@@ -1,6 +1,7 @@
 # SentinelFlow v1.0-rc Release Gate
 
 Generated: 2026-06-15T05:13:31Z
+Updated: 2026-06-16T01:26:53Z
 
 ## Conclusion
 
@@ -87,7 +88,10 @@ target/debug/sentinelflow task validate tests/fixtures/v1alpha1/valid-task-spec.
 target/debug/sentinelflow plugin validate plugins/examples/example-echo
 ```
 
-All commands above passed in the current workspace.
+The default GitHub Actions CI runs the fmt/build/clippy/test and P5.5 E2E
+commands. The performance baseline is intentionally run by the separate manual
+or scheduled `Performance Baseline` workflow so ordinary PR CI does not become
+capacity-test bound.
 
 ## Minimum Standard Review
 
@@ -109,17 +113,17 @@ Latest raw metrics: `docs/release/p5_5_performance_baseline_metrics.json`
 
 | Metric | Observed |
 | --- | ---: |
-| API latency P50 / P95 / P99 | 27.68 ms / 166.10 ms / 294.79 ms |
-| Task plan P50 / P95 / P99 | 60.62 ms / 128.65 ms / 142.23 ms |
-| Task run scheduling P50 / P95 / P99 | 904.66 ms / 1016.54 ms / 1016.54 ms |
-| Bulk Finding task duration | 5741.06 ms for 128 additional targets |
-| Log push P50 / P95 / P99 | 41.77 ms / 63.16 ms / 63.16 ms |
-| Finding query latency | 11.72 ms for 136 findings |
-| Finding write throughput | 20.12 findings/s |
-| Audit write throughput | 302.36 requested audit writes/s |
-| Report generation P50 / P95 / P99 | 22.47 ms / 24.25 ms / 24.25 ms |
-| API RSS growth | 7.7 MiB to 29.9 MiB |
-| Workspace growth | 73,050 bytes to 1,775,544 bytes |
+| API latency P50 / P95 / P99 | 35.50 ms / 153.45 ms / 400.30 ms |
+| Task plan P50 / P95 / P99 | 55.73 ms / 165.31 ms / 219.62 ms |
+| Task run scheduling P50 / P95 / P99 | 946.72 ms / 1036.79 ms / 1036.79 ms |
+| Bulk Finding task duration | 5555.36 ms for 128 additional targets |
+| Log push P50 / P95 / P99 | 27.71 ms / 61.11 ms / 61.11 ms |
+| Finding query latency | 12.59 ms for 136 findings |
+| Finding write throughput | 20.63 findings/s |
+| Audit write throughput | 195.56 requested audit writes/s |
+| Report generation P50 / P95 / P99 | 25.25 ms / 29.26 ms / 29.26 ms |
+| API RSS growth | 7.6 MiB to 29.5 MiB |
+| Workspace growth | 73,050 bytes to 1,775,503 bytes |
 | SQLite database size | 1,048,576 bytes |
 
 ## Issue Classification Summary

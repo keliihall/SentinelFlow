@@ -409,7 +409,7 @@ Compose 会使用 `sentinelflow-workspace`、`sentinelflow-plugins`、
 
 ## 测试与发布门禁
 
-推荐发布前执行：
+默认 GitHub Actions CI 会执行：
 
 ```sh
 cargo fmt --all -- --check
@@ -422,6 +422,11 @@ tests/e2e/p5_5_full_flow/run.sh
 tests/e2e/p5_5_security/run.sh
 tests/e2e/p5_5_reliability/run.sh
 tests/e2e/p5_5_deployment/run.sh
+```
+
+性能基线是手动或定时发布门禁，不进入普通 PR CI：
+
+```sh
 tests/performance/run.sh
 ```
 
@@ -431,6 +436,8 @@ tests/performance/run.sh
 - 在受限沙箱中，这类测试可能需要允许本地 socket bind。
 - 所有 E2E 使用临时工作区，可重复运行。
 - 不使用公网目标、真实凭据或真实攻击 payload。
+- `v1.0-rc` 当前只支持 SQLite 后端；PostgreSQL 仅保留未来配置，不是已启用后端。
+- 内置身份认证只适合开发/受控试点；生产化环境必须接入真实认证或可信反向代理。
 
 E2E 报告：
 

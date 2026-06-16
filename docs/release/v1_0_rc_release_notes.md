@@ -1,6 +1,7 @@
 # SentinelFlow v1.0-rc Release Notes
 
 Generated: 2026-06-15T05:13:31Z
+Updated: 2026-06-16T01:26:53Z
 
 ## Release Summary
 
@@ -14,19 +15,21 @@ authentication bypass, persistence, or attack-chain automation capabilities.
 
 ## Pilot Readiness
 
-The v1.0-rc release gate passed for controlled single-node pilots:
+The v1.0-rc release gate is split between default GitHub Actions CI and a
+manual/scheduled performance workflow:
 
-- Build, format, Clippy, and full workspace tests passed.
-- CLI/API/Web consistency passed across shared Task Spec fixtures.
-- Full Web/API loop passed from login through plugin validation, installation,
+- Default CI runs build, format, Clippy, full workspace tests, CLI/API/Web
+  consistency, full Web/API flow, security, reliability, and deployment E2E.
+- The `Performance Baseline` workflow runs manually or on the weekly schedule.
+- Full Web/API loop covers login through plugin validation, installation,
   task plan, Policy Explain, approval, run, logs, findings, report, and audit.
-- Security E2E passed for unauthorized targets, high-risk tasks without
+- Security E2E covers unauthorized targets, high-risk tasks without
   approval, time-window mismatch, plugin exceptions, parser invalid output,
   cancellation, report redaction, and API/Web bypass attempts.
-- Deployment and migration E2E passed, including clean startup, Docker Compose
+- Deployment and migration E2E includes clean startup, Docker Compose
   config, SQLite schema version `3`, idempotent migration, previous-version
   fixture upgrade, and backup/restore documentation.
-- Documentation usability passed for README, quickstart, Web usage, protocol,
+- Documentation usability covers README, quickstart, Web usage, protocol,
   plugin development, troubleshooting, and examples.
 
 ## Versions
@@ -82,8 +85,12 @@ tests/e2e/p5_5_full_flow/run.sh
 tests/e2e/p5_5_security/run.sh
 tests/e2e/p5_5_reliability/run.sh
 tests/e2e/p5_5_deployment/run.sh
+```
+
+Manual or scheduled release gate:
+
+```sh
 tests/performance/run.sh
-docker compose config
 ```
 
 ## Deployment

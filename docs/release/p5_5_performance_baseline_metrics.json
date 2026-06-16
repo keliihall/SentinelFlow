@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-06-15T11:37:46Z",
-  "workspace": "/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-perf-r70gdloj/.sentinelflow",
+  "generatedAt": "2026-06-16T01:26:53Z",
+  "workspace": "/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-perf-s4vg1jfa/.sentinelflow",
   "scenarios": {
     "concurrentApiUsers": 12,
     "concurrentTaskPlans": 24,
@@ -14,54 +14,54 @@
   "metrics": {
     "apiLatency": {
       "count": 168,
-      "p50Ms": 39.75,
-      "p95Ms": 311.85,
-      "p99Ms": 611.55,
-      "maxMs": 886.64
+      "p50Ms": 35.5,
+      "p95Ms": 153.45,
+      "p99Ms": 400.3,
+      "maxMs": 599.31
     },
     "taskPlanLatency": {
       "count": 24,
-      "p50Ms": 97.55,
-      "p95Ms": 190.25,
-      "p99Ms": 228.75,
-      "maxMs": 228.75
+      "p50Ms": 55.73,
+      "p95Ms": 165.31,
+      "p99Ms": 219.62,
+      "maxMs": 219.62
     },
     "taskRunSchedulingLatency": {
       "count": 8,
-      "p50Ms": 832.37,
-      "p95Ms": 972.63,
-      "p99Ms": 972.63,
-      "maxMs": 972.63
+      "p50Ms": 946.72,
+      "p95Ms": 1036.79,
+      "p99Ms": 1036.79,
+      "maxMs": 1036.79
     },
-    "taskRunBatchMs": 973.57,
-    "bulkFindingTaskMs": 5690.26,
+    "taskRunBatchMs": 1037.93,
+    "bulkFindingTaskMs": 5555.36,
     "logPushLatency": {
       "count": 8,
-      "p50Ms": 64.57,
-      "p95Ms": 86.96,
-      "p99Ms": 86.96,
-      "maxMs": 86.96
+      "p50Ms": 27.71,
+      "p95Ms": 61.11,
+      "p99Ms": 61.11,
+      "maxMs": 61.11
     },
-    "findingQueryLatencyMs": 15.45,
-    "findingWriteThroughputPerSecond": 20.41,
-    "auditWriteThroughputPerSecond": 125.92,
+    "findingQueryLatencyMs": 12.59,
+    "findingWriteThroughputPerSecond": 20.63,
+    "auditWriteThroughputPerSecond": 195.56,
     "reportGenerationLatency": {
       "count": 8,
-      "p50Ms": 24.75,
-      "p95Ms": 29.91,
-      "p99Ms": 29.91,
-      "maxMs": 29.91
+      "p50Ms": 25.25,
+      "p95Ms": 29.26,
+      "p99Ms": 29.26,
+      "maxMs": 29.26
     },
-    "reportBatchMs": 198.67,
+    "reportBatchMs": 197.26,
     "apiProcessRssKiB": {
-      "start": 7792,
-      "end": 30176
+      "start": 7808,
+      "end": 30224
     },
     "workspaceBytes": {
-      "start": 73048,
-      "end": 1771399
+      "start": 73050,
+      "end": 1775503
     },
-    "sqliteBytes": 1044480,
+    "sqliteBytes": 1048576,
     "postgresqlWriteBottleneck": "not-active-in-v1.0-rc",
     "auditRows": 723
   },
