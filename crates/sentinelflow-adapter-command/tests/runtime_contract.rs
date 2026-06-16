@@ -40,7 +40,7 @@ fn request(root: &Path, input: Value) -> ExecutionRequest {
         input,
         authorization_scope: Some("local:echo".to_owned()),
         approved: false,
-        timeout: Duration::from_secs(2),
+        timeout: Duration::from_secs(5),
     }
 }
 

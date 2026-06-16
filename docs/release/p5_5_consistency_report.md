@@ -1,6 +1,6 @@
 # SentinelFlow P5.5 Consistency Report
 
-Generated: 2026-06-16T04:18:26Z
+Generated: 2026-06-16T04:26:22Z
 
 Command: `tests/e2e/p5_5_consistency.sh`
 
