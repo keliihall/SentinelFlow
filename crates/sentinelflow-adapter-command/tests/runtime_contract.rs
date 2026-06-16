@@ -136,7 +136,7 @@ async fn invalid_input_missing_runner_and_path_traversal_are_rejected() {
 }
 
 #[tokio::test]
-async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
+async fn timeout_is_enforced() {
     let temporary = copy_example();
     let adapter = adapter();
 
@@ -155,6 +155,12 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
         .await
         .expect_err("timeout must terminate");
     assert_eq!(error.kind, RuntimeErrorKind::Timeout);
+}
+
+#[tokio::test]
+async fn abnormal_exit_is_reported() {
+    let temporary = copy_example();
+    let adapter = adapter();
 
     write_runner(
         temporary.path(),
@@ -163,6 +169,7 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
     );
     let mut failed = request(temporary.path(), json!({"message": "hello"}));
     failed.manifest.spec.runtime.entrypoint = Some("runner/exit.py".to_owned());
+    failed.timeout = Duration::from_secs(5);
     let prepared = adapter.prepare(failed).await.expect("prepare failure");
     let running = adapter.execute(prepared).await.expect("execute failure");
     let error = adapter
@@ -171,6 +178,12 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
         .expect_err("abnormal exit must fail");
     assert_eq!(error.kind, RuntimeErrorKind::ExitFailure);
     assert!(!error.message.contains("stderr"));
+}
+
+#[tokio::test]
+async fn output_limit_is_enforced() {
+    let temporary = copy_example();
+    let adapter = adapter();
 
     write_runner(
         temporary.path(),
@@ -180,6 +193,7 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
     let mut large = request(temporary.path(), json!({"message": "hello"}));
     large.manifest.spec.runtime.entrypoint = Some("runner/large.py".to_owned());
     large.manifest.spec.runtime.output_limit_bytes = 128;
+    large.timeout = Duration::from_secs(5);
     let prepared = adapter.prepare(large).await.expect("prepare large output");
     let running = adapter
         .execute(prepared)
@@ -190,6 +204,12 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
         .await
         .expect_err("large output must fail");
     assert_eq!(error.kind, RuntimeErrorKind::OutputLimit);
+}
+
+#[tokio::test]
+async fn invalid_output_schema_is_rejected() {
+    let temporary = copy_example();
+    let adapter = adapter();
 
     write_runner(
         temporary.path(),
@@ -198,6 +218,7 @@ async fn timeout_abnormal_exit_and_output_limit_are_enforced() {
     );
     let mut invalid_output = request(temporary.path(), json!({"message": "hello"}));
     invalid_output.manifest.spec.runtime.entrypoint = Some("runner/invalid-output.py".to_owned());
+    invalid_output.timeout = Duration::from_secs(5);
     let prepared = adapter
         .prepare(invalid_output)
         .await

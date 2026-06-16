@@ -30,6 +30,12 @@ jobs:
       - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: CI marker
+        run: |
+          echo "SentinelFlow CI workflow: ${GITHUB_WORKFLOW}"
+          echo "SentinelFlow CI commit: ${GITHUB_SHA}"
+          echo "SentinelFlow CI ref: ${GITHUB_REF}"
+
       - name: Show tool versions
         run: |
           rustc --version
