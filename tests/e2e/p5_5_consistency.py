@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -398,6 +399,16 @@ def api_fixture(base: str, workspace: pathlib.Path, fixture: dict[str, Any]) -> 
 def web_entry(base: str) -> dict[str, Any]:
     status, html = http_request(base, "GET", "/console", raw=True)
     html = html if isinstance(html, str) else ""
+    served_assets = [html]
+    asset_statuses = {}
+    for path in re.findall(r'<script[^>]+src="([^"]+)"', html):
+        if not path.startswith("/console/"):
+            continue
+        asset_status, asset = http_request(base, "GET", path, raw=True)
+        asset_statuses[path] = asset_status
+        if asset_status == 200 and isinstance(asset, str):
+            served_assets.append(asset)
+    web_source = "\n".join(served_assets)
     required_endpoints = [
         "/api/tasks/validate",
         "/api/tasks/plan",
@@ -415,10 +426,12 @@ def web_entry(base: str) -> dict[str, Any]:
         "policy.allowedTargets",
     ]
     return {
-        "status": status,
-        "apiOnlyStatement": "browser only calls the API service" in html,
-        "requiredEndpointsPresent": all(endpoint in html for endpoint in required_endpoints),
-        "noDirectExecutionFragments": not any(fragment in html for fragment in forbidden_fragments),
+        "status": status if all(value == 200 for value in asset_statuses.values()) else 502,
+        "apiOnlyStatement": "browser only calls the API service" in web_source,
+        "requiredEndpointsPresent": all(endpoint in web_source for endpoint in required_endpoints),
+        "noDirectExecutionFragments": not any(
+            fragment in web_source for fragment in forbidden_fragments
+        ),
     }
 
 

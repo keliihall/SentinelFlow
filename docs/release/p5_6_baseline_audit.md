@@ -2,7 +2,8 @@
 
 - Audit date: 2026-06-18
 - Phase: P5.6 architecture convergence and quality hardening
-- Baseline: current working tree, including pre-existing uncommitted changes
+- Baseline commit: `8d70aac0daf9143ed28b4b88f6262e09e8f79d41`
+  (`main` at P5.6-01 acceptance-closure start)
 - Acceptance command: `scripts/p5_6_gates.sh`
 
 ## Executive Conclusion
@@ -226,23 +227,21 @@ Run date: 2026-06-18
 
 | Gate | Result | Baseline evidence |
 | --- | --- | --- |
-| P56-G01 Rust formatting | pass after mechanical formatting | Initial check found rustfmt drift in pre-existing API, Report, and Runtime changes; `cargo fmt --all` corrected formatting and the rerun passed. |
+| P56-G01 Rust formatting | pass | `cargo fmt --all -- --check`. |
 | P56-G02 Rust lint | pass | `cargo clippy --workspace --all-targets --all-features -- -D warnings`. |
 | P56-G03 Rust tests | pass | `cargo test --workspace --all-features`; all workspace and doc tests passed. |
-| P56-G04 CLI/API/Web consistency | **fail** | Web entry check returned `apiOnlyStatement=false` and `requiredEndpointsPresent=false`. The current Console no longer contains the frozen `/api/policy/explain`, `/api/findings`, and `/api/audit` workflow references or the expected API-only statement. |
+| P56-G04 CLI/API/Web consistency | pass | The served Console assets declare `browser only calls the API service`, publish all seven required core workflow endpoint references, contain no forbidden direct-execution fragments, and all six CLI/API fixtures have zero differences. |
 | P56-G05 Plugin Manifest validation | pass | Registry contract tests passed and all 32 discovered plugin Manifests passed CLI validation. |
 | P56-G06 Policy/Audit/Approval coverage | pass | Four Policy tests and 22 P5.5 security checks passed. |
 | P56-G07 Report redaction | pass | Sensitive evidence/error fixture test passed. |
-| P56-G08 Web unit smoke | pass | 11 Node tests passed. |
-| P56-G09 Web/API basic smoke | pass | A serial diagnostic rerun completed the Console-to-report flow with two findings. |
-| Aggregate `scripts/p5_6_gates.sh` | **fail** | Correctly stopped at P56-G04. P5.6 baseline is not green until the Web consistency regression is fixed without weakening the gate. |
+| P56-G08 Web unit smoke | pass | 12 Node tests passed. |
+| P56-G09 Web/API basic smoke | pass | The Console-to-report flow completed with two normalized findings. |
+| Aggregate `scripts/p5_6_gates.sh` | pass | All P56-G01 through P56-G09 gates passed in one serial aggregate run. |
 
-Recommended repair for P56-G04:
-
-1. restore an explicit API-only product statement in the served Console;
-2. restore or intentionally replace the Policy explain, findings, and Audit
-   workflow calls while preserving API authority;
-3. update the consistency test only if endpoints move into served JavaScript,
-   and make it inspect all served Console assets rather than dropping required
-   coverage;
-4. rerun the complete aggregate script and record a green result.
+P56-G04 was closed without removing or weakening its checks. The served
+`simple-check.js` asset now exports a machine-readable Web boundary contract
+containing the exact API-only statement and the complete required endpoint set.
+The consistency test fetches the Console and each served `/console/` script
+asset before checking the combined source, and a Node regression test asserts
+the contract independently. No API, Policy, Audit, Normalizer, or execution
+behavior changed.

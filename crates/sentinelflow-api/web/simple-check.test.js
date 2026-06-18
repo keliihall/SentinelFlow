@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
+  WEB_BOUNDARY,
   buildSimpleCheckTaskSpec,
   validateDomain,
   qualityPresentation,
@@ -15,6 +16,19 @@ const {
 function serialized(task) {
   return JSON.stringify(task);
 }
+
+test("Web 边界声明固定为 API-only 核心工作流", () => {
+  assert.equal(WEB_BOUNDARY.statement, "browser only calls the API service");
+  assert.deepEqual(WEB_BOUNDARY.coreWorkflowEndpoints, [
+    "/api/tasks/validate",
+    "/api/tasks/plan",
+    "/api/policy/explain",
+    "/api/tasks/run",
+    "/api/findings",
+    "/api/reports/generate",
+    "/api/audit"
+  ]);
+});
 
 test("快速检查为真实目标生成安全 TaskSpec", () => {
   const task = buildSimpleCheckTaskSpec(

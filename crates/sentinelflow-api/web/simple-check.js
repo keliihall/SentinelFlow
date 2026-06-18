@@ -7,6 +7,19 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  const WEB_BOUNDARY = Object.freeze({
+    statement: "browser only calls the API service",
+    coreWorkflowEndpoints: Object.freeze([
+      "/api/tasks/validate",
+      "/api/tasks/plan",
+      "/api/policy/explain",
+      "/api/tasks/run",
+      "/api/findings",
+      "/api/reports/generate",
+      "/api/audit"
+    ])
+  });
+
   const FIXTURE_MARKERS = [
     "fixture:local-only",
     "fixture.passive.example.com.json",
@@ -461,6 +474,7 @@
   }
 
   return {
+    WEB_BOUNDARY,
     FIXTURE_MARKERS,
     normalizeDomain,
     validateDomain,
