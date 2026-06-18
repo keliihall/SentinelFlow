@@ -126,7 +126,8 @@ HTTP, verifies SSE reconnect behavior, generates a report, and checks audit.
 
 ## Safety Notes
 
-- Use only synthetic fixtures under `plugins/examples/` and `tests/fixtures/`.
+- Use only synthetic fixtures under `plugins/examples/`, official `example.com`
+  fixtures under `plugins/official/`, and fixtures under `tests/fixtures/`.
 - Do not enter real credentials, production targets, or operational payloads.
 - High or critical risk tasks require approval records before execution.
 - Web Console requests go through the API service; it must not execute tools

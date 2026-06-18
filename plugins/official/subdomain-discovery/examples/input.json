@@ -1,0 +1,8 @@
+{
+  "spec": {
+    "root_domain": "example.com",
+    "providers": ["crtsh", "hackertarget", "buffer_over"],
+    "timeout": 30
+  }
+}
+

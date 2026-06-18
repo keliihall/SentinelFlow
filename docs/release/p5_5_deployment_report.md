@@ -1,10 +1,10 @@
 # SentinelFlow P5.5 Deployment Report
 
-Generated: 2026-06-16T04:26:39Z
+Generated: 2026-06-17T01:47:37Z
 
 Command: `tests/e2e/p5_5_deployment/run.sh`
-Clean workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-deployment.fknpnhr0/clean/.sentinelflow`
-Upgrade fixture workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-deployment.fknpnhr0/upgrade/.sentinelflow`
+Clean workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-deployment.6gq872yw/clean/.sentinelflow`
+Upgrade fixture workspace: `/var/folders/46/j153v48s4dqg3wg85sg3g4mw0000gn/T/sentinelflow-p55-deployment.6gq872yw/upgrade/.sentinelflow`
 
 ## Scope
 
@@ -18,7 +18,7 @@ No real targets, credentials, scanner behavior, exploitation, brute force, steal
 | --- | --- | --- | --- |
 | Compose 配置 | Docker Compose 配置可解析 | pass | docker compose config passed |
 | 干净环境启动 | API Service 和 Web Console 可访问 | pass | console=200 |
-| example-echo 闭环 | 部署后可安装 example-echo、执行任务并生成报告 | pass | run=200 report=200 task=task-603bc509-833d-46f7-81e4-c7b646de05a9 |
+| example-echo 闭环 | 部署后可安装 example-echo、执行任务并生成报告 | pass | run=200 report=200 task=task-4c52ffa3-c533-4549-93d5-6e364f939a4b |
 | 安全默认配置 | 高风险执行默认仍需审批 | pass | fixtures default to low risk; policy gate tested in release suites |
 | SQLite 初始化迁移 | 干净 workspace 初始化 schema_migrations | pass | version=3 |
 | 挂载目录 | plugins/reports/logs 目录存在 | pass | plugins/reports/logs present |

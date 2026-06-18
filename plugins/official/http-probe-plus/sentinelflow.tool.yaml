@@ -1,0 +1,61 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: http-probe-plus
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/asset-category: http
+spec:
+  displayName: HTTP Probe Plus
+  version: 0.1.0
+  capabilities:
+    - name: asset.http.probe.passive
+      description: Imports HTTP endpoint observations from fixtures or local cache without contacting targets
+      risk: low
+      requiresApproval: false
+    - name: asset.http.probe.active_safe
+      description: Performs bounded HTTP HEAD/GET probing for authorized endpoints when policy.allow_active_verify is true
+      risk: medium
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/runner.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 300
+    outputLimitBytes: 4194304
+  parser:
+    mode: builtin
+    name: http-probe-plus-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/category: asset.http
+  sentinelflow.io/riskLevel: low
+  sentinelflow.io/safetyProfile: passive-first-bounded-http-probe
+  sentinelflow.io/networkBoundary: fixture-cache-default-active-http-policy-gated
+  sentinelflow.io/capabilities:
+    - name: passive_intel
+      riskLevel: low
+      impact: read_only
+      requiresApproval: false
+    - name: active_safe
+      riskLevel: medium
+      impact: low_impact
+      requiresApproval: policy_dependent
+      requiresPolicyFlag: allow_active_verify
+  sentinelflow.io/controls:
+    requiresAuthorization: true
+    requiresApproval: false
+    supportsRateLimit: true
+    supportsConcurrencyLimit: true
+    secretTransport: none
+    maxConcurrency: 10
+    defaultMode: passive_intel
+  sentinelflow.io/audit:
+    recordInput: true
+    recordOutputSummary: true
+    recordRawOutput: false
+    evidenceRequired: true

@@ -1,0 +1,44 @@
+{
+  "context": {
+    "task_id": "task_example_passive",
+    "run_id": "run_example_passive",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "domain",
+    "value": "example.com",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "passive",
+    "passive": {
+      "enabled": true,
+      "sources": ["fixture"],
+      "fixture_file": "examples/fixture.passive.example.com.json",
+      "crtsh_enabled": false,
+      "crtsh_timeout_seconds": 10
+    },
+    "active": {
+      "enabled": false,
+      "dry_run": false,
+      "wordlist_file": "examples/wordlist.small.txt",
+      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "record_types": ["A", "AAAA"],
+      "timeout_seconds": 3,
+      "concurrency": 5,
+      "rate_limit_per_second": 5,
+      "max_candidates": 100,
+      "detect_wildcard": true
+    },
+    "output": {
+      "include_unresolved": false,
+      "include_sources": true
+    }
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

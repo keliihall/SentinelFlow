@@ -1,0 +1,23 @@
+{
+  "context": {
+    "task_id": "task-zap-fixture",
+    "run_id": "run-zap-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "url", "value": "https://www.example.com", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "import": {"format": "zap_json", "file": "examples/fixture.json", "max_records": 100},
+    "filters": {"minimum_risk": "info", "minimum_confidence": "low", "include_false_positives": false},
+    "output": {"include_attack": false, "include_evidence": true, "include_source_details": true, "deduplicate": true},
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_scan": false,
+    "allow_ajax_spider": false,
+    "allow_authentication": false,
+    "allow_attack_mode": false
+  }
+}

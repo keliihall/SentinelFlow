@@ -1,0 +1,288 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: authorized-weikan-full-asset-discovery
+  labels:
+    target: weikan.net.cn
+    authorizationScope: real:weikan-net-cn
+    purpose: authorized-asset-discovery
+spec:
+  authorizationScope: real:weikan-net-cn
+  targets:
+    - name: weikan.net.cn
+      input:
+        context:
+          task_id: authorized-weikan-full-asset-discovery
+          run_id: run_weikan_full_asset_discovery
+          operator: admin
+          workspace: default
+          authorization_scope: real:weikan-net-cn
+        target:
+          type: domain
+          value: weikan.net.cn
+          metadata:
+            authorization: user-confirmed
+        options:
+          mode: dry_run
+          passive:
+            enabled: true
+            sources: [crtsh, local_cache, passive_dns_cache]
+            crtsh_enabled: true
+            crtsh_timeout_seconds: 10
+          active:
+            enabled: true
+            dry_run: true
+            wordlist_file: examples/wordlist.small.txt
+            resolvers: [1.1.1.1, 8.8.8.8]
+            record_types: [A, AAAA]
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_candidates: 500
+            detect_wildcard: true
+          output:
+            include_unresolved: true
+            include_sources: true
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+  steps:
+    - name: discover-subdomains
+      toolRef: subdomain-discovery-plus
+      capability: asset.subdomain.discovery
+      outputAs: subdomains
+      failurePolicy: continue
+      input:
+        context:
+          task_id: authorized-weikan-full-asset-discovery
+          run_id: run_weikan_subdomains
+          operator: admin
+          workspace: default
+          authorization_scope: real:weikan-net-cn
+        target:
+          type: domain
+          value: weikan.net.cn
+          metadata:
+            authorization: user-confirmed
+        options:
+          mode: hybrid
+          passive:
+            enabled: true
+            sources: [crtsh, local_cache, passive_dns_cache]
+            crtsh_enabled: true
+            crtsh_timeout_seconds: 10
+          active:
+            enabled: true
+            dry_run: false
+            wordlist_file: examples/wordlist.small.txt
+            resolvers: [1.1.1.1, 8.8.8.8]
+            record_types: [A, AAAA]
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_candidates: 500
+            detect_wildcard: true
+          output:
+            include_unresolved: true
+            include_sources: true
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+    - name: resolve-dns
+      toolRef: dns-resolve-plus
+      capability: asset.dns.resolve.active_public_resolver
+      dependsOn: [discover-subdomains]
+      outputAs: dns_records
+      failurePolicy: continue
+      input:
+        context:
+          task_id: authorized-weikan-full-asset-discovery
+          run_id: run_weikan_dns
+          operator: admin
+          workspace: default
+          authorization_scope: real:weikan-net-cn
+        target:
+          type: domain
+          value: weikan.net.cn
+          metadata:
+            authorization: user-confirmed
+        inputs:
+          domains: []
+          findings: []
+        options:
+          mode: hybrid
+          record_types: [A, AAAA, CNAME, MX, NS, TXT]
+          passive_intel:
+            enabled: true
+            sources: [local_cache, passive_dns_cache]
+            api_timeout_seconds: 10
+            api_rate_limit_per_second: 1
+            max_queries: 100
+            allow_missing_secrets: true
+            local_cache_file: examples/cache.empty.json
+            passive_dns_cache_file: examples/cache.empty.json
+          active:
+            enabled: true
+            resolver_mode: public_resolver
+            resolvers: [1.1.1.1, 8.8.8.8]
+            authoritative_trace: false
+            timeout_seconds: 3
+            concurrency: 10
+            rate_limit_per_second: 10
+            max_domains: 1000
+            max_queries: 5000
+          merge:
+            deduplicate: true
+            conflict_policy: preserve_all_sources
+            mark_source_disagreement: true
+            confidence_strategy: weighted_sources
+            stale_after_days: 30
+          output:
+            include_unresolved: true
+            include_source_details: true
+            include_conflicts: true
+          risk_acknowledged: false
+          execution_profile: authorized_assessment
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+      inputFrom:
+        - from: subdomains
+          pointer: /spec/findings
+          target: /inputs/findings
+    - name: probe-ports
+      toolRef: port-probe-plus
+      capability: asset.port.probe.hybrid
+      dependsOn: [resolve-dns]
+      outputAs: open_ports
+      failurePolicy: continue
+      input:
+        context:
+          task_id: authorized-weikan-full-asset-discovery
+          run_id: run_weikan_ports
+          operator: admin
+          workspace: default
+          authorization_scope: real:weikan-net-cn
+        target:
+          type: domain
+          value: weikan.net.cn
+          metadata:
+            authorization: user-confirmed
+        inputs:
+          addresses: []
+          findings: []
+        options:
+          mode: hybrid
+          passive_intel:
+            enabled: true
+            sources: [fofa, shodan, local_cache]
+            allow_missing_secrets: true
+            api_timeout_seconds: 10
+            api_rate_limit_per_second: 1
+            max_queries: 100
+            local_cache_file: examples/cache.empty.json
+          active:
+            enabled: true
+            probe_engine: tcp_connect
+            port_profile: custom
+            ports: [80, 443, 8080, 8443, 8000, 8888, 3000, 5000, 9000]
+            timeout_seconds: 2
+            concurrency: 10
+            rate_limit_per_second: 10
+            max_targets: 100
+            max_ports: 20
+          merge:
+            deduplicate: true
+            conflict_policy: preserve_all_sources
+            mark_source_disagreement: true
+            confidence_strategy: weighted_sources
+            stale_after_days: 30
+          output:
+            include_closed: false
+            include_filtered: false
+            include_source_details: true
+            include_conflicts: true
+          execution_profile: authorized_assessment
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+      inputFrom:
+        - from: dns_records
+          pointer: /spec/findings
+          target: /inputs/findings
+    - name: detect-services
+      toolRef: service-detect-plus
+      capability: asset.service.detect.safe
+      dependsOn: [probe-ports]
+      outputAs: services
+      failurePolicy: continue
+      input:
+        context:
+          task_id: authorized-weikan-full-asset-discovery
+          run_id: run_weikan_services
+          operator: admin
+          workspace: default
+          authorization_scope: real:weikan-net-cn
+        target:
+          type: service
+          value: weikan.net.cn:443
+          metadata:
+            authorization: user-confirmed
+        inputs:
+          services: []
+          findings: []
+        options:
+          mode: hybrid
+          detection_depth: safe
+          passive_intel:
+            enabled: true
+            sources: [upstream_port_result, upstream_dns_result, local_cache, fofa_enrichment, shodan_enrichment]
+            prefer_sources: [upstream_port_result, local_cache, fofa_enrichment, shodan_enrichment]
+            api_timeout_seconds: 10
+            api_rate_limit_per_second: 1
+            max_queries: 100
+            allow_missing_secrets: true
+            local_cache_file: examples/cache.empty.json
+          active:
+            enabled: true
+            probe_profiles: [tcp_banner, tls_hello, http_head, http_get_root]
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_services: 100
+            max_probes_per_service: 4
+            max_response_bytes: 4096
+          merge:
+            deduplicate: true
+            conflict_policy: preserve_all_sources
+            mark_source_disagreement: true
+            confidence_strategy: weighted_sources
+            stale_after_days: 30
+          output:
+            include_unknown: false
+            include_source_details: true
+            include_conflicts: true
+            mask_sensitive_headers: true
+            truncate_banner_bytes: 512
+          risk_acknowledged: false
+          execution_profile: authorized_assessment
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+      inputFrom:
+        - from: open_ports
+          pointer: /spec/findings
+          target: /inputs/findings
+  policy:
+    allowedTargets: [weikan.net.cn]
+    targetPatterns:
+      - domain:weikan.net.cn
+      - domain:*.weikan.net.cn
+    approveHighRisk: false
+    timeoutSeconds: 300
+    maxConcurrency: 3
+    rateLimitPerMinute: 300
+    outputRetention:
+      days: 30
+      retainEvidence: true
+extensions: {}

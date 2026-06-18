@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Subdomain Discovery Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "domain",
+    "mode",
+    "findings",
+    "summary",
+    "errors",
+    "safety"
+  ],
+  "properties": {
+    "source": {"const": "subdomain-discovery-plus"},
+    "domain": {"type": "string", "minLength": 3, "maxLength": 253},
+    "mode": {
+      "type": "string",
+      "enum": ["fixture", "dry_run", "passive_intel", "active_dictionary", "hybrid"]
+    },
+    "run_context": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["mode", "input_target", "authorization_scope", "synthetic_fixture", "real_scan", "planned_sources"],
+      "properties": {
+        "mode": {"type": "string"},
+        "input_target": {"type": "string"},
+        "authorization_scope": {"type": "string"},
+        "synthetic_fixture": {"type": "boolean"},
+        "real_scan": {"type": "boolean"},
+        "planned_sources": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "domain",
+          "subdomain",
+          "source",
+          "sources",
+          "resolved",
+          "confirmed",
+          "status",
+          "record_type",
+          "addresses",
+          "records",
+          "confidence",
+          "evidence",
+          "raw"
+        ],
+        "properties": {
+          "type": {"enum": ["subdomain_finding", "subdomain_candidate"]},
+          "domain": {"type": "string", "minLength": 3, "maxLength": 253},
+          "subdomain": {"type": "string", "minLength": 3, "maxLength": 253},
+          "source": {
+            "type": "string",
+            "enum": [
+              "passive_fixture",
+              "passive_crtsh",
+              "passive_local_cache",
+              "passive_dns_cache",
+              "passive_fofa",
+              "passive_shodan",
+              "active_dictionary",
+              "merged"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "passive_fixture",
+                "passive_crtsh",
+                "passive_local_cache",
+                "passive_dns_cache",
+                "passive_fofa",
+                "passive_shodan",
+                "active_dictionary"
+              ]
+            }
+          },
+          "resolved": {"type": "boolean"},
+          "confirmed": {"type": "boolean"},
+          "status": {"type": "string", "enum": ["confirmed", "candidate", "invalid_special_address"]},
+          "record_type": {"type": "string", "enum": ["A", "AAAA", "unknown"]},
+          "addresses": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1, "maxLength": 64}
+          },
+          "records": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["record_type", "value"],
+              "properties": {
+                "record_type": {"type": "string", "enum": ["A", "AAAA"]},
+                "value": {"type": "string", "minLength": 1, "maxLength": 64}
+              }
+            }
+          },
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["summary", "items"],
+            "properties": {
+              "summary": {"type": "string", "minLength": 1, "maxLength": 512},
+              "items": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {"type": "object", "additionalProperties": true}
+              }
+            }
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source_details": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "synthetic_fixture": {"type": "boolean"},
+          "real_scan": {"type": "boolean"}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "mode",
+        "candidate_count",
+        "finding_count",
+        "active_queries",
+        "wildcard_detected",
+        "errors"
+      ],
+      "properties": {
+        "domain": {"type": "string", "minLength": 3, "maxLength": 253},
+        "mode": {
+          "type": "string",
+          "enum": ["fixture", "dry_run", "passive_intel", "active_dictionary", "hybrid"]
+        },
+        "target": {"type": "string", "minLength": 3, "maxLength": 253},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256},
+        "synthetic_fixture": {"type": "boolean"},
+        "real_scan": {"type": "boolean"},
+        "planned_sources": {"type": "array", "items": {"type": "string"}},
+        "confirmed_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "candidate_observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "invalid_observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "finding_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "active_queries": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "wildcard_detected": {"type": "boolean"},
+        "errors": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {"type": "string", "minLength": 1, "maxLength": 512}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message", "details"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1, "maxLength": 128},
+          "message": {"type": "string", "minLength": 1, "maxLength": 512},
+          "field": {"type": "string", "minLength": 1, "maxLength": 256},
+          "details": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_type_domain_only",
+        "authorization_scope_required",
+        "active_policy_allowed",
+        "active_dns_queries",
+        "dictionary_candidates",
+        "brute_force_attempts",
+        "port_scan_attempts",
+        "exploit_attempts"
+      ],
+      "properties": {
+        "target_type_domain_only": {"const": true},
+        "authorization_scope_required": {"const": true},
+        "active_policy_allowed": {"type": "boolean"},
+        "active_dns_queries": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "dictionary_candidates": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "brute_force_attempts": {"const": 0},
+        "port_scan_attempts": {"const": 0},
+        "exploit_attempts": {"const": 0}
+      }
+    }
+  }
+}

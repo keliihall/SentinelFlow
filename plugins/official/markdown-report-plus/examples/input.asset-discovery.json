@@ -1,0 +1,81 @@
+{
+  "context": {
+    "task_id": "task-asset-report",
+    "run_id": "run-markdown-report",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "report",
+    "value": "asset-discovery-fixture"
+  },
+  "options": {
+    "mode": "asset_discovery",
+    "title": "Asset Discovery Delivery Report",
+    "include": {
+      "summary": true,
+      "findings": true,
+      "evidence": true,
+      "errors": true,
+      "audit": true
+    },
+    "limits": {
+      "max_findings": 20,
+      "max_evidence_per_finding": 3,
+      "max_audit_events": 10,
+      "max_markdown_bytes": 65536
+    }
+  },
+  "data": {
+    "task": {
+      "task_id": "task-asset-report",
+      "name": "Example asset discovery"
+    },
+    "runs": [
+      {"run_id": "run-dns", "tool_id": "dns-resolve-plus", "status": "succeeded"},
+      {"run_id": "run-http", "tool_id": "http-probe-plus", "status": "succeeded"}
+    ],
+    "findings": [
+      {
+        "title": "DNS record observed",
+        "severity": "info",
+        "summary": "A record for www.example.com resolved to 93.184.216.34.",
+        "evidence": [
+          {
+            "evidenceType": "dns-resolution",
+            "description": "Fixture DNS answer.",
+            "data": {
+              "findingType": "asset.dns_resolve",
+              "target": {"type": "domain", "value": "www.example.com"},
+              "confidence": 0.86,
+              "x-sentinelflow-dns.value": "93.184.216.34"
+            }
+          }
+        ]
+      },
+      {
+        "title": "HTTP endpoint observed",
+        "severity": "info",
+        "summary": "HTTPS endpoint returned 200 with an Example title.",
+        "evidence": [
+          {
+            "evidenceType": "http-probe",
+            "description": "Fixture HTTP response.",
+            "data": {
+              "findingType": "asset.http_probe",
+              "target": {"type": "url", "value": "https://www.example.com/"},
+              "confidence": 0.82,
+              "authorization": "Bearer example-secret-token"
+            }
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "audit_events": [
+      {"action": "tool.run", "outcome": "succeeded", "timestamp": "2026-06-01T00:00:00Z"}
+    ],
+    "source_status": [
+      {"source": "fixture", "status": "ok", "message": "fixture loaded"}
+    ]
+  }
+}

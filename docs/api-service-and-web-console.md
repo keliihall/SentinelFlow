@@ -66,6 +66,7 @@ Mutating endpoints require authentication, authorization, and audit events.
 The service exposes:
 
 - Tools: `GET /api/tools`, `GET /api/tools/{name}`
+- System: `GET /api/system/status`
 - Plugins: `GET /api/plugins`, `POST /api/plugins/validate`,
   `POST /api/plugins/install`, `POST /api/plugins/test`
 - Tasks: `GET /api/tasks`, `POST /api/tasks/validate`,
@@ -108,69 +109,97 @@ also available at `GET /api/tasks/{taskId}/logs`.
 The optional `limit` query parameter bounds emitted events. Omitting it defaults
 to 200 events; the API caps one stream response at 1,000 events.
 
-## Web Console Pages
+## Web Console Product Experience
 
-The Console is intentionally workflow-first, not a display dashboard. Use the
-sections in this order for a complete safe trial:
+The Console is positioned as **SentinelFlow 安全验证工作台**. The default
+experience is designed for managers, project managers, delivery and presales
+staff, junior security engineers, and non-specialist users.
 
-1. Login and workspace.
-   - Select `operator`, keep password `sentinelflow`, and click Login.
-   - The token field should become `operator-token`.
-   - Click Show Session to verify the authenticated role.
-2. Plugin management.
-   - Set Plugin Path to `plugins/examples/example-echo`.
-   - Click Validate Plugin.
-   - Click Install Plugin.
-   - Click Test Plugin when you want the plugin fixture tested through the normal
-     temporary workspace path.
-3. Tool management.
-   - Click Load Tools.
-   - Confirm `example-echo` appears.
-   - Enter `example-echo` in Tool Name and click Tool Detail to inspect the
-     Manifest, runtime adapter, parser, Schema paths, and capabilities.
-4. Task Spec editing.
-   - Use the default low-risk Task Spec or paste a safe fixture from
-     `tests/fixtures/task.single-step.yaml`.
-   - Do not enter real targets or credentials.
-5. Task plan.
-   - Click Validate Task.
-   - Click Plan Task.
-   - Review the DAG order and step names.
-6. Policy Explain and approval.
-   - Click Policy Explain before running.
-   - Low-risk `example-echo` decisions should be allowed.
-   - For a high-risk approval trial, install
-     `plugins/examples/example-restricted-high-risk`, submit
-     `tests/e2e/p5_5_full_flow/fixtures/scenario_b_restricted_high_risk.yaml`,
-     request approval as `operator`, then login as `approver` or use
-     `approver-token` to approve. Add the returned approval ID as
-     `spec.policy.approvalRef` before rerunning.
-7. Task execution.
-   - Click Run Task.
-   - Copy the returned `taskId` into the Task ID field.
-   - Click Task Status to verify `completed`, `approvalRequired`, `failed`, or
-     another controlled state.
-8. Logs.
-   - Click Task Logs for bounded JSON log history.
-   - Click Stream Logs to open the SSE stream. Reconnect resumes from the last
-     cursor.
-9. Finding and Evidence.
-   - Click Findings.
-   - Findings include stable `fingerprint`, `crossToolFingerprint`, severity,
-     summary, and structured Evidence.
-10. Reports.
-    - Paste the `taskId` into Report Task ID or Run ID.
-    - Click Generate Task Report.
-    - Click Read Report to view Markdown.
-11. Audit.
-    - Click Audit Events.
-    - Confirm plugin validation/install, task run, normalization, report, and
-      policy or approval decisions appear as Audit Events.
-12. System and protocol center.
-    - Click Health and OpenAPI to verify service status and route metadata.
+Normal navigation contains only:
 
-All buttons call `/api/...` routes. Browser code never invokes adapters or
-duplicates Policy checks.
+1. 首页
+2. 开始检查
+3. 检查记录
+4. 报告中心
+5. 帮助
+
+Administrators additionally receive an 高级功能 entry for plugin management,
+raw task configuration, audit logs, and system settings. Plugin names,
+`TaskSpec`, Policy internals, raw findings, evidence, and audit JSON are hidden
+from the default workflow.
+
+### Three-step authorized check
+
+An operator starts a check in three visible steps:
+
+1. Enter a real authorized domain and a plain-language authorization note.
+2. Choose 快速检查 or 标准检查. 深度检查 remains in the administrator path.
+3. Review the safety summary and confirm authorization.
+
+The browser then automatically calls the existing API chain:
+
+```text
+validate task
+→ plan task
+→ policy explain
+→ run task
+→ fetch task result
+→ generate asset-discovery report
+→ fetch report and audit-backed status
+```
+
+The browser remains an API client. It does not start adapters, execute plugins,
+normalize output, evaluate Policy independently, or bypass Core.
+
+### Safe task generation
+
+`web/simple-check.js` provides `buildSimpleCheckTaskSpec()` for the normal-user
+workflow.
+
+- Authorization scope is generated as `real:<domain-slug>`.
+- Allowed targets and domain patterns are generated from the entered domain.
+- 快速检查 uses passive-intelligence modes and keeps active and high-risk
+  capabilities disabled.
+- 标准检查 enables only bounded low-impact DNS, TCP connect, and safe service
+  identification. SYN probing, deep fingerprinting, exploitation, password
+  attempts, directory brute force, and high-risk capabilities remain disabled.
+- 深度检查 is rejected by the simple builder and must enter the advanced,
+  approval-aware path.
+
+Neither the form nor the task builder has an `example.com` or
+`fixture:local-only` default.
+
+### Real-target fixture protection
+
+Fixture misuse is blocked twice:
+
+- Frontend task generation rejects `example.com`, fixture authorization scopes,
+  fixture sources, fixture files, passive fixture markers, and mock/fixture DNS
+  resolvers for real targets.
+- `parse_task_request()` applies the same real-target boundary to API
+  submissions after protocol validation. Direct API callers therefore cannot
+  bypass the browser check.
+
+The user-facing error is:
+
+```text
+当前目标是真实域名，不能使用本地示例数据。请切换为快速检查或标准检查。
+```
+
+### Result and report semantics
+
+Task execution state and report quality are displayed separately. A completed
+task can still produce an unconfirmed or invalid report.
+
+- `valid` + passed quality gate → 可信
+- `valid_with_warnings` → 有警告
+- `unconfirmed` → 未确认
+- failed quality gate or invalid status → 不可信
+
+Candidate assets are never mixed into confirmed assets. A skipped port stage is
+shown as “端口检查已跳过：没有可检查的公网 IP”, and a skipped service stage is
+shown as “服务识别已跳过：没有确认开放的端口”. Neither state is presented as a
+negative finding.
 
 ## Verification
 
@@ -185,6 +214,7 @@ P5 adds API contract tests that verify:
 Run:
 
 ```sh
+node --test crates/sentinelflow-api/web/simple-check.test.js
 cargo test -p sentinelflow-api
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

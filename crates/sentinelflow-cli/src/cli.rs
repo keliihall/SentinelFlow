@@ -326,6 +326,9 @@ pub struct ReportGenerateArguments {
         required_unless_present = "run"
     )]
     pub task: Option<String>,
+    /// Report template.
+    #[arg(long, value_name = "TEMPLATE", default_value = "default")]
+    pub template: String,
 }
 
 /// Arguments for a single-step task execution.

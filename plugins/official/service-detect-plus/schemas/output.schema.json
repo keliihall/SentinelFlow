@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service Detect Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "detection_depth", "observations", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "service-detect-plus"},
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {"type": {"const": "service"}, "value": {"type": "string", "minLength": 3, "maxLength": 512}}
+    },
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active", "hybrid"]},
+    "detection_depth": {"type": "string", "enum": ["fixture", "passive", "safe", "standard", "deep", "external_fingerprint"]},
+    "observations": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/definitions/Observation"}},
+    "results": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/definitions/Result"}},
+    "source_status": {"type": "array", "maxItems": 50, "items": {"$ref": "#/definitions/SourceStatus"}},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service_count", "observation_count", "result_count", "passive_sources", "active_enabled", "detection_depth", "estimated_api_queries", "estimated_service_probes", "requires_active_verify", "requires_high_risk", "requires_approval", "source_status_count", "error_count"],
+      "properties": {
+        "service_count": {"type": "integer", "minimum": 0, "maximum": 500},
+        "observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "result_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "passive_sources": {"type": "array", "maxItems": 8, "items": {"type": "string"}},
+        "active_enabled": {"type": "boolean"},
+        "detection_depth": {"type": "string"},
+        "estimated_api_queries": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "estimated_service_probes": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "requires_active_verify": {"type": "boolean"},
+        "requires_high_risk": {"type": "boolean"},
+        "requires_approval": {"type": "boolean"},
+        "source_status_count": {"type": "integer", "minimum": 0, "maximum": 50},
+        "error_count": {"type": "integer", "minimum": 0, "maximum": 50},
+        "status": {"type": "string", "enum": ["completed", "skipped"]},
+        "reason": {"type": ["string", "null"], "maxLength": 128}
+      }
+    },
+    "errors": {"type": "array", "maxItems": 50, "items": {"$ref": "#/definitions/Error"}},
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_type_service_only", "authorization_scope_required", "active_policy_allowed", "high_risk_policy_allowed", "active_service_probes", "external_api_queries", "shell_commands", "exploit_attempts", "bruteforce_attempts", "dos_attempts"],
+      "properties": {
+        "target_type_service_only": {"const": true},
+        "authorization_scope_required": {"const": true},
+        "active_policy_allowed": {"type": "boolean"},
+        "high_risk_policy_allowed": {"type": "boolean"},
+        "active_service_probes": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "external_api_queries": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "shell_commands": {"const": 0},
+        "exploit_attempts": {"const": 0},
+        "bruteforce_attempts": {"const": 0},
+        "dos_attempts": {"const": 0}
+      }
+    }
+  },
+  "definitions": {
+    "Observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "port", "protocol", "service", "transport", "product", "version", "hostnames", "banner_summary", "http", "tls", "source", "source_type", "detection_depth", "observed_at", "source_updated_at", "confidence", "evidence", "source_details"],
+      "properties": {
+        "address": {"type": "string", "minLength": 1, "maxLength": 253},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "protocol": {"type": "string", "enum": ["tcp", "udp"]},
+        "service": {"type": "string", "minLength": 1, "maxLength": 64},
+        "transport": {"type": ["string", "null"], "maxLength": 32},
+        "product": {"type": ["string", "null"], "maxLength": 128},
+        "version": {"type": ["string", "null"], "maxLength": 64},
+        "hostnames": {"type": "array", "maxItems": 16, "items": {"type": "string", "maxLength": 253}},
+        "banner_summary": {"type": ["string", "null"], "maxLength": 4096},
+        "http": {"type": "object", "additionalProperties": true},
+        "tls": {"type": "object", "additionalProperties": true},
+        "source": {"type": "string"},
+        "source_type": {"type": "string", "enum": ["fixture", "passive_intel", "active"]},
+        "detection_depth": {"type": "string", "enum": ["fixture", "passive", "safe", "standard", "deep", "external_fingerprint"]},
+        "observed_at": {"type": "string", "minLength": 1, "maxLength": 64},
+        "source_updated_at": {"type": ["string", "null"], "maxLength": 64},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "evidence": {"$ref": "#/definitions/Evidence"},
+        "source_details": {"type": "array", "maxItems": 32, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "Result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "address", "port", "protocol", "service", "transport", "product", "version", "hostnames", "banner_summary", "http", "tls", "sources", "source_details", "source_count", "source_agreement", "conflict", "conflict_reason", "detection_depth", "risk_level", "observed_at", "stale", "confidence", "confidence_strategy", "evidence"],
+      "properties": {
+        "type": {"const": "service_result"},
+        "address": {"type": "string", "minLength": 1, "maxLength": 253},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "protocol": {"type": "string", "enum": ["tcp", "udp"]},
+        "service": {"type": "string", "minLength": 1, "maxLength": 64},
+        "transport": {"type": ["string", "null"], "maxLength": 32},
+        "product": {"type": ["string", "null"], "maxLength": 128},
+        "version": {"type": ["string", "null"], "maxLength": 64},
+        "hostnames": {"type": "array", "maxItems": 16, "items": {"type": "string", "maxLength": 253}},
+        "banner_summary": {"type": ["string", "null"], "maxLength": 4096},
+        "http": {"type": "object", "additionalProperties": true},
+        "tls": {"type": "object", "additionalProperties": true},
+        "sources": {"type": "array", "maxItems": 16, "items": {"type": "string"}},
+        "source_details": {"type": "array", "maxItems": 32, "items": {"$ref": "#/definitions/SourceDetail"}},
+        "source_count": {"type": "integer", "minimum": 0, "maximum": 16},
+        "source_agreement": {"type": "string", "enum": ["consistent", "passive_only", "active_only", "conflict", "stale_passive", "unknown"]},
+        "conflict": {"type": "boolean"},
+        "conflict_reason": {"type": ["string", "null"], "maxLength": 128},
+        "detection_depth": {"type": "string", "enum": ["fixture", "passive", "safe", "standard", "deep", "external_fingerprint"]},
+        "risk_level": {"type": "string", "enum": ["low", "medium", "high"]},
+        "observed_at": {"type": ["string", "null"], "maxLength": 64},
+        "stale": {"type": "boolean"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "confidence_strategy": {"type": "string", "enum": ["weighted_sources"]},
+        "evidence": {"$ref": "#/definitions/Evidence"}
+      }
+    },
+    "SourceDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "source_type", "detection_depth", "observed_at", "source_updated_at", "confidence", "stale", "evidence"],
+      "properties": {
+        "source": {"type": "string"},
+        "source_type": {"type": "string"},
+        "detection_depth": {"type": "string"},
+        "observed_at": {"type": "string"},
+        "source_updated_at": {"type": ["string", "null"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "stale": {"type": "boolean"},
+        "evidence": {"$ref": "#/definitions/Evidence"}
+      }
+    },
+    "SourceStatus": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source", "status", "message", "query_count", "probe_count"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1, "maxLength": 128},
+        "status": {"type": "string", "enum": ["ok", "error", "skipped", "skipped_missing_secret", "skipped_not_implemented", "skipped_policy_denied"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 512},
+        "query_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "probe_count": {"type": "integer", "minimum": 0, "maximum": 100000}
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "items"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 512},
+        "items": {"type": "array", "maxItems": 32, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "details"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 128},
+        "message": {"type": "string", "minLength": 1, "maxLength": 512},
+        "field": {"type": "string", "minLength": 1, "maxLength": 256},
+        "details": {"type": "object", "additionalProperties": true}
+      }
+    }
+  }
+}

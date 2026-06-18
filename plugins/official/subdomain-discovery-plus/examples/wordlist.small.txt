@@ -1,0 +1,13 @@
+# Small documentation-only wordlist for example.com fixtures.
+www
+api
+docs
+mail
+dev
+stage
+test
+portal
+status
+cdn
+assets
+admin

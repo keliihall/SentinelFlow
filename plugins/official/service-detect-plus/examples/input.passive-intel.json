@@ -1,0 +1,86 @@
+{
+  "context": {
+    "task_id": "task_service_detect_passive",
+    "run_id": "run_service_detect_passive",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "service", "value": "93.184.216.34:443", "metadata": {}},
+  "inputs": {
+    "services": [
+      {"address": "93.184.216.34", "port": 443, "protocol": "tcp", "hostnames": ["www.example.com"]}
+    ],
+    "findings": [
+      {
+        "title": "Port observed",
+        "severity": "info",
+        "summary": "Synthetic upstream port intelligence.",
+        "evidence": [
+          {
+            "evidenceType": "port-probe",
+            "description": "Synthetic upstream port result.",
+            "data": {
+              "findingType": "asset.port_probe",
+              "confidence": 0.8,
+              "x-sentinelflow-port.address": "93.184.216.34",
+              "x-sentinelflow-port.port": 443,
+              "x-sentinelflow-port.protocol": "tcp",
+              "x-sentinelflow-port.service": "https",
+              "x-sentinelflow-port.product": "example-http-service",
+              "x-sentinelflow-port.version": null,
+              "x-sentinelflow-port.hostnames": ["www.example.com"],
+              "x-sentinelflow-port.banner_summary": "HTTP service metadata from upstream port intelligence.",
+              "x-sentinelflow-port.source_details": [
+                {"source": "fofa_enrichment", "observed_at": "2026-06-01T00:00:00Z"},
+                {"source": "shodan_enrichment", "observed_at": "2026-06-01T00:00:00Z"}
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "options": {
+    "mode": "passive_intel",
+    "detection_depth": "passive",
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["upstream_port_result", "local_cache", "passive_service_cache", "external_fingerprint_intel"],
+      "prefer_sources": ["upstream_port_result", "passive_service_cache", "local_cache", "fixture"],
+      "api_timeout_seconds": 10,
+      "api_rate_limit_per_second": 1,
+      "max_queries": 50,
+      "allow_missing_secrets": true,
+      "local_cache_file": "examples/fixture.services.example.com.json",
+      "passive_service_cache_file": "examples/fixture.services.example.com.json"
+    },
+    "active": {
+      "enabled": false,
+      "probe_profiles": ["tcp_banner", "tls_hello", "http_head"],
+      "timeout_seconds": 3,
+      "concurrency": 5,
+      "rate_limit_per_second": 5,
+      "max_services": 50,
+      "max_probes_per_service": 3,
+      "max_response_bytes": 4096
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources",
+      "stale_after_days": 30
+    },
+    "output": {
+      "include_unknown": false,
+      "include_source_details": true,
+      "include_conflicts": true,
+      "mask_sensitive_headers": true,
+      "truncate_banner_bytes": 512
+    },
+    "risk_acknowledged": false,
+    "execution_profile": "passive_intel"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

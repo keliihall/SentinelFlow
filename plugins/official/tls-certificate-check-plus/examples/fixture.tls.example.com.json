@@ -1,0 +1,35 @@
+{
+  "certificates": [
+    {
+      "host": "www.example.com",
+      "port": 443,
+      "subject": "CN=www.example.com",
+      "issuer": "CN=Example Intermediate CA,O=Example Trust",
+      "san": ["www.example.com", "example.com"],
+      "not_before": "2026-01-01T00:00:00Z",
+      "not_after": "2026-12-31T23:59:59Z",
+      "signature_algorithm": "sha256WithRSAEncryption",
+      "tls_version": "TLSv1.3",
+      "chain": [
+        {"subject": "CN=www.example.com", "issuer": "CN=Example Intermediate CA,O=Example Trust"},
+        {"subject": "CN=Example Intermediate CA,O=Example Trust", "issuer": "CN=Example Root CA,O=Example Trust"}
+      ],
+      "confidence": 0.72,
+      "observed_at": "2026-06-01T00:00:00Z"
+    },
+    {
+      "host": "soon-expire.example.com",
+      "port": 443,
+      "subject": "CN=soon-expire.example.com",
+      "issuer": "CN=Example Intermediate CA,O=Example Trust",
+      "san": ["soon-expire.example.com"],
+      "not_before": "2026-05-01T00:00:00Z",
+      "not_after": "2026-06-25T00:00:00Z",
+      "signature_algorithm": "ecdsa-with-SHA256",
+      "tls_version": "TLSv1.2",
+      "chain": [],
+      "confidence": 0.72,
+      "observed_at": "2026-06-01T00:00:00Z"
+    }
+  ]
+}

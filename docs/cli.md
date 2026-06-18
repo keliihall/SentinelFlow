@@ -61,8 +61,9 @@ Adapter. `--approve-high-risk` is required for high or critical risk capabilitie
 requests cancellation and process-group termination.
 
 For the allowlisted low-risk repository examples, `tool run` defaults
-`authorizationScope` to `fixture:local-only`; callers may still provide an explicit
-scope. Task Specs must always declare their scope.
+`authorizationScope` to `fixture:local-only`; callers may still provide an
+explicit scope. Official plugins should use an explicit scope such as
+`public:passive-discovery`. Task Specs must always declare their scope.
 
 `task run` accepts YAML or JSON, validates the Task Spec, checks every target against
 `policy.allowedTargets`, queries the Tool Registry, and executes the single step once

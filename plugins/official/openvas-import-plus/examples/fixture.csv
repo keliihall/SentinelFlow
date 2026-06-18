@@ -1,0 +1,2 @@
+host,port,protocol,nvt_oid,plugin_name,family,threat,severity,qod,cve,cvss_base_score,description,solution,solution_type,evidence
+csv.example.com,443,tcp,1.3.6.1.4.1.25623.1.0.200001,Example OpenVAS CSV Finding,General,Medium,6.2,80,CVE-2026-2001,6.2,Synthetic CSV OpenVAS finding.,Patch CSV fixture.,VendorFix,CSV proof text.

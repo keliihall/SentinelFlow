@@ -1,0 +1,8 @@
+{
+  "ResourceRecordSets": [{
+    "Name": "app.example.com.",
+    "Type": "A",
+    "TTL": 300,
+    "ResourceRecords": [{"Value": "198.51.100.15"}]
+  }]
+}

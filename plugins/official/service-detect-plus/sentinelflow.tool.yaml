@@ -1,0 +1,87 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: service-detect-plus
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/asset-category: service
+spec:
+  displayName: Service Detect Plus
+  version: 0.1.0
+  capabilities:
+    - name: asset.service.detect.passive
+      description: Identifies services from upstream findings, local cache, fixtures, and passive service intelligence without connecting to targets
+      risk: low
+      requiresApproval: false
+    - name: asset.service.detect.safe
+      description: Performs bounded low-impact service checks such as banner read, TLS hello, and HTTP HEAD when policy.allow_active_verify is true
+      risk: medium
+      requiresApproval: false
+    - name: asset.service.detect.standard
+      description: Performs bounded non-exploit protocol handshakes for service identification when active verification is authorized
+      risk: medium
+      requiresApproval: false
+    - name: asset.service.detect.deep
+      description: High-risk deep fingerprinting framework for authorized assessment or lab use only
+      risk: high
+      requiresApproval: true
+    - name: asset.service.detect.external_fingerprint
+      description: High-risk external fingerprint tool adapter framework with allowlisted arguments only
+      risk: high
+      requiresApproval: true
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/runner.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 300
+    outputLimitBytes: 4194304
+  parser:
+    mode: builtin
+    name: service-detect-plus-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/category: asset.service
+  sentinelflow.io/riskLevel: low
+  sentinelflow.io/safetyProfile: passive-intel-first-policy-gated-service-identification
+  sentinelflow.io/networkBoundary: fixture-cache-upstream-default-active-service-probes-policy-gated
+  sentinelflow.io/capabilities:
+    - name: passive_intel
+      riskLevel: low
+      impact: read_only
+      requiresApproval: false
+    - name: safe
+      riskLevel: medium
+      impact: low_impact
+      requiresApproval: policy_dependent
+      requiresPolicyFlag: allow_active_verify
+    - name: standard
+      riskLevel: medium
+      impact: active_verify
+      requiresApproval: policy_dependent
+      requiresPolicyFlag: allow_active_verify
+    - name: deep
+      riskLevel: high
+      impact: lab_only
+      requiresApproval: true
+      requiresPolicyFlag: allow_high_risk
+    - name: external_fingerprint
+      riskLevel: high
+      impact: lab_only
+      requiresApproval: true
+      requiresPolicyFlag: allow_high_risk
+  sentinelflow.io/controls:
+    requiresAuthorization: true
+    supportsRateLimit: true
+    supportsConcurrencyLimit: true
+    defaultMode: passive_intel
+    maxConcurrency: 10
+    secretTransport: pending-sentinelflow-secret-config
+  sentinelflow.io/audit:
+    recordInput: true
+    recordOutputSummary: true
+    recordRawOutput: false
+    evidenceRequired: true

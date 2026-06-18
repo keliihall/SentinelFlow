@@ -1,0 +1,20 @@
+{
+  "domain": "example.com",
+  "subdomains": [
+    {
+      "name": "www.example.com",
+      "source": "fixture",
+      "confidence": 0.8
+    },
+    {
+      "name": "api.example.com",
+      "source": "fixture",
+      "confidence": 0.75
+    },
+    {
+      "name": "docs.example.com",
+      "source": "fixture",
+      "confidence": 0.7
+    }
+  ]
+}

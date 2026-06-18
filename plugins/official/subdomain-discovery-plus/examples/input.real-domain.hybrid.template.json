@@ -1,0 +1,44 @@
+{
+  "context": {
+    "task_id": "task_real_domain_hybrid",
+    "run_id": "run_real_domain_hybrid",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "YOUR_AUTHORIZATION_SCOPE"
+  },
+  "target": {
+    "type": "domain",
+    "value": "YOUR_AUTHORIZED_DOMAIN.example",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "hybrid",
+    "passive": {
+      "enabled": true,
+      "sources": ["crtsh", "local_cache", "passive_dns_cache"],
+      "fixture_file": "examples/fixture.passive.example.com.json",
+      "crtsh_enabled": true,
+      "crtsh_timeout_seconds": 10
+    },
+    "active": {
+      "enabled": true,
+      "dry_run": false,
+      "wordlist_file": "examples/wordlist.small.txt",
+      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "record_types": ["A", "AAAA"],
+      "timeout_seconds": 3,
+      "concurrency": 5,
+      "rate_limit_per_second": 5,
+      "max_candidates": 500,
+      "detect_wildcard": true
+    },
+    "output": {
+      "include_unresolved": true,
+      "include_sources": true
+    }
+  },
+  "policy": {
+    "allow_active_verify": true,
+    "allow_high_risk": false
+  }
+}

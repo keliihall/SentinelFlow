@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "host": "www.example.com",
+      "ip": "93.184.216.34",
+      "port": 443,
+      "protocol": "https",
+      "service": "https",
+      "title": "Example Domain",
+      "banner": "HTTP/1.1 200 OK\\nServer: example-edge",
+      "certificate": {"subject": "CN=www.example.com", "issuer": "CN=Example CA", "fingerprint": "sha256:example-www", "san": ["www.example.com", "example.com"]},
+      "first_seen": "2026-05-01T00:00:00Z",
+      "last_seen": "2026-06-01T00:00:00Z",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.82
+    },
+    {
+      "host": "api.example.com",
+      "ip": "93.184.216.35",
+      "port": 8443,
+      "protocol": "https",
+      "service": "api-gateway",
+      "title": "Example API",
+      "banner": "HTTP/1.1 200 OK\\nServer: nginx",
+      "certificate": {"subject": "CN=api.example.com", "issuer": "CN=Example CA", "fingerprint": "sha256:example-api", "san": ["api.example.com"]},
+      "first_seen": "2026-05-15T00:00:00Z",
+      "last_seen": "2026-06-01T00:00:00Z",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.80
+    }
+  ]
+}

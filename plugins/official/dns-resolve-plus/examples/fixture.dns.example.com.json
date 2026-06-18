@@ -1,0 +1,41 @@
+{
+  "domain": "example.com",
+  "records": [
+    {
+      "domain": "www.example.com",
+      "record_type": "A",
+      "value": "93.184.216.34",
+      "ttl": 300,
+      "source": "fixture",
+      "source_type": "fixture",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "source_updated_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.7,
+      "evidence": {"summary": "A record for www.example.com from local fixture.", "items": []}
+    },
+    {
+      "domain": "api.example.com",
+      "record_type": "A",
+      "value": "192.0.2.25",
+      "ttl": 300,
+      "source": "passive_dns_cache",
+      "source_type": "passive_intel",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "source_updated_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.75,
+      "evidence": {"summary": "A record for api.example.com from passive DNS cache.", "items": []}
+    },
+    {
+      "domain": "api.example.com",
+      "record_type": "CNAME",
+      "value": "edge.example.net",
+      "ttl": null,
+      "source": "local_cache",
+      "source_type": "passive_intel",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "source_updated_at": null,
+      "confidence": 0.7,
+      "evidence": {"summary": "CNAME for api.example.com from local cache.", "items": []}
+    }
+  ]
+}

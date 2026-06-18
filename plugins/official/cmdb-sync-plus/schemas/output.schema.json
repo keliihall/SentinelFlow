@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CMDB Sync Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "results", "operations", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "cmdb-sync-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "import", "reconcile", "writeback_plan"]},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "external_id", "asset_type", "name", "addresses", "criticality", "status", "sources", "confidence", "evidence"],
+        "properties": {
+          "type": {"const": "cmdb_asset_result"},
+          "external_id": {"type": "string"},
+          "asset_type": {"type": "string"},
+          "name": {"type": "string"},
+          "addresses": {"type": "array", "items": {"type": "string"}},
+          "department": {"type": ["string", "null"]},
+          "business_system": {"type": ["string", "null"]},
+          "owner": {"type": ["string", "null"]},
+          "criticality": {"type": "string", "enum": ["unknown", "low", "medium", "high", "critical"]},
+          "status": {"type": "string"},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["operation_id", "action", "match", "changes", "preconditions", "requires_gateway_write", "reason"],
+        "properties": {
+          "operation_id": {"type": "string"},
+          "action": {"type": "string", "enum": ["create", "update", "noop", "manual_review", "skip"]},
+          "match": {"type": "object", "additionalProperties": true},
+          "changes": {"type": "object", "additionalProperties": true},
+          "preconditions": {"type": "object", "additionalProperties": true},
+          "requires_gateway_write": {"type": "boolean"},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "context": {
+    "task_id": "task_real_domain_active",
+    "run_id": "run_real_domain_active",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "YOUR_AUTHORIZATION_SCOPE"
+  },
+  "target": {
+    "type": "domain",
+    "value": "YOUR_AUTHORIZED_DOMAIN.example",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "active_dictionary",
+    "passive": {
+      "enabled": false,
+      "sources": ["crtsh"],
+      "fixture_file": "examples/fixture.passive.example.com.json",
+      "crtsh_enabled": false,
+      "crtsh_timeout_seconds": 10
+    },
+    "active": {
+      "enabled": true,
+      "dry_run": false,
+      "wordlist_file": "examples/wordlist.small.txt",
+      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "record_types": ["A", "AAAA"],
+      "timeout_seconds": 3,
+      "concurrency": 5,
+      "rate_limit_per_second": 5,
+      "max_candidates": 100,
+      "detect_wildcard": true
+    },
+    "output": {
+      "include_unresolved": false,
+      "include_sources": true
+    }
+  },
+  "policy": {
+    "allow_active_verify": true,
+    "allow_high_risk": false
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "context": {
+    "task_id": "task-ip-private",
+    "run_id": "run-ip-private",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "ip",
+    "value": "10.0.0.1",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "dry_run",
+    "lookup": {
+      "max_results": 100,
+      "include_geo": true,
+      "include_cloud": true,
+      "include_cdn_waf": true
+    },
+    "local_cache": {
+      "enabled": false,
+      "cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.ip.example.json"
+    },
+    "provider": {
+      "enabled": false,
+      "allow_missing_secret": true,
+      "timeout_seconds": 10,
+      "rate_limit_per_second": 1,
+      "sources": []
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_geo": true,
+      "include_cloud": true,
+      "include_cdn_waf": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

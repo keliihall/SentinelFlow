@@ -1,0 +1,13 @@
+{
+  "value": [{
+    "id": "/subscriptions/sub-001/resourceGroups/rg-web/providers/Microsoft.Network/publicIPAddresses/web-ip",
+    "name": "web-ip",
+    "location": "eastus",
+    "properties": {
+      "provisioningState": "Succeeded",
+      "ipAddress": "192.0.2.44",
+      "dnsSettings": {"fqdn": "web-ip.eastus.cloudapp.azure.com"}
+    },
+    "tags": {"service": "frontend"}
+  }]
+}

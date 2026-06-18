@@ -1,0 +1,52 @@
+{
+  "results": [
+    {
+      "host": "www.example.com",
+      "ip": "93.184.216.34",
+      "port": 443,
+      "protocol": "https",
+      "service": "HTTPS",
+      "names": ["www.example.com", "example.com"],
+      "certificate": {
+        "subject": "CN=www.example.com",
+        "issuer": "CN=Example CA",
+        "fingerprint_sha256": "sha256:example-www",
+        "names": ["www.example.com", "example.com"],
+        "not_before": "2026-01-01T00:00:00Z",
+        "not_after": "2026-12-31T23:59:59Z"
+      },
+      "service_fingerprint": {
+        "jarm": "29d29d00029d29d00042d43d000000example",
+        "software": [{"name": "example-edge", "version": "1.0"}]
+      },
+      "first_observed_at": "2026-05-01T00:00:00Z",
+      "last_observed_at": "2026-06-01T00:00:00Z",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.84
+    },
+    {
+      "host": "api.example.com",
+      "ip": "93.184.216.35",
+      "port": 8443,
+      "protocol": "https",
+      "service": "API Gateway",
+      "names": ["api.example.com"],
+      "certificate": {
+        "subject": "CN=api.example.com",
+        "issuer": "CN=Example CA",
+        "fingerprint_sha256": "sha256:example-api",
+        "names": ["api.example.com"],
+        "not_before": "2026-01-01T00:00:00Z",
+        "not_after": "2026-12-31T23:59:59Z"
+      },
+      "service_fingerprint": {
+        "jarm": "07d14d16d21d21d07c42d43d000000example",
+        "software": [{"name": "example-gateway", "version": "2.1"}]
+      },
+      "first_observed_at": "2026-05-15T00:00:00Z",
+      "last_observed_at": "2026-06-01T00:00:00Z",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.82
+    }
+  ]
+}

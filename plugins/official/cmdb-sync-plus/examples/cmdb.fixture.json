@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "ci_id": "ci-web-001",
+      "ci_type": "server",
+      "display_name": "web-prod-1",
+      "ip_addresses": "198.51.100.15,10.0.1.15",
+      "department_name": "Digital Commerce",
+      "business_service": "Storefront",
+      "responsible_owner": "alice@example.com",
+      "importance": "high",
+      "lifecycle_status": "active",
+      "modified_at": "2026-06-17T08:00:00Z"
+    },
+    {
+      "ci_id": "ci-api-001",
+      "ci_type": "service",
+      "display_name": "api.example.com",
+      "ip_addresses": "203.0.113.55",
+      "department_name": "Platform",
+      "business_service": "Public API",
+      "responsible_owner": "bob@example.com token=fixture-secret",
+      "importance": "critical",
+      "lifecycle_status": "active",
+      "modified_at": "2026-06-17T08:30:00Z"
+    }
+  ]
+}

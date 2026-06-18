@@ -250,6 +250,7 @@ sentinelflow approval approve <APPROVAL_ID>
 ## 插件与示例
 
 示例插件位于 [plugins/examples](plugins/examples)。
+官方插件位于 [plugins/official](plugins/official)。
 
 当前安全示例包括：
 
@@ -268,6 +269,12 @@ sentinelflow approval approve <APPROVAL_ID>
 | `example-structured-import` | 结构化导入示例 |
 
 所有示例都必须保持安全 mock 或 fixture 属性。
+
+当前官方插件：
+
+| 插件 | 用途 |
+| --- | --- |
+| `subdomain-discovery` | 被动式子域名发现，只查询公开数据源；示例输入使用 `example.com` 和内置 fixture |
 
 ## Task Spec、Policy 与审批
 
@@ -474,6 +481,7 @@ crates/
   sentinelflow-api/
 schemas/v1alpha1/
 plugins/examples/
+plugins/official/
 sdk/python/
 docs/
 tests/fixtures/

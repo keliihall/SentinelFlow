@@ -1,0 +1,28 @@
+{
+  "context": {
+    "task_id": "task-openvas-csv",
+    "run_id": "run-openvas-csv",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "report", "value": "openvas-csv-fixture", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "import": {
+      "format": "csv",
+      "file": "examples/fixture.csv",
+      "max_records": 100,
+      "include_log": true,
+      "minimum_severity": "info"
+    },
+    "output": {
+      "include_description": true,
+      "include_solution": true,
+      "include_evidence": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

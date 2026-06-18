@@ -1,0 +1,17 @@
+{
+  "Reservations": [{
+    "Instances": [{
+      "InstanceId": "i-0123456789abcdef0",
+      "InstanceType": "t3.small",
+      "State": {"Name": "running"},
+      "Placement": {"AvailabilityZone": "us-east-1a"},
+      "PrivateIpAddress": "10.0.1.15",
+      "PublicIpAddress": "198.51.100.15",
+      "PublicDnsName": "ec2-198-51-100-15.compute-1.amazonaws.com",
+      "Tags": [
+        {"Key": "Name", "Value": "web-prod-1"},
+        {"Key": "api_token", "Value": "fixture-secret"}
+      ]
+    }]
+  }]
+}

@@ -1,0 +1,12 @@
+{
+  "value": [{
+    "id": "/subscriptions/sub-001/resourceGroups/rg-edge/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/edge-waf",
+    "name": "edge-waf",
+    "location": "eastus",
+    "properties": {
+      "provisioningState": "Succeeded",
+      "policySettings": {"state": "Enabled", "mode": "Prevention"},
+      "endpoint": "waf.example.com"
+    }
+  }]
+}

@@ -142,6 +142,92 @@ fn python_sdk_scaffold_runs_through_the_plugin_lifecycle() {
     );
 }
 
+#[test]
+fn official_subdomain_discovery_runs_passive_fixture_flow() {
+    let root = workspace_root();
+    let plugin = root.join("plugins/official/subdomain-discovery");
+    let temporary = TempDir::new().expect("temporary directory must be created");
+    let workspace = temporary.path().join(".sentinelflow");
+    let workspace_arg = workspace.to_string_lossy();
+    let plugin_arg = plugin.to_string_lossy();
+
+    let validate = run(&["plugin", "validate", &plugin_arg], &root);
+    assert_eq!(
+        validate.status.code(),
+        Some(0),
+        "{}",
+        text(&validate.stderr)
+    );
+
+    let plugin_test = run(&["plugin", "test", &plugin_arg], &root);
+    assert_eq!(
+        plugin_test.status.code(),
+        Some(0),
+        "{}",
+        text(&plugin_test.stderr)
+    );
+    assert!(text(&plugin_test.stdout).contains("plugin test passed"));
+
+    let install = run(
+        &[
+            "--workspace",
+            &workspace_arg,
+            "plugin",
+            "install",
+            &plugin_arg,
+        ],
+        &root,
+    );
+    assert_eq!(install.status.code(), Some(0), "{}", text(&install.stderr));
+
+    let input = plugin.join("examples/input.json");
+    let output = run(
+        &[
+            "--workspace",
+            &workspace_arg,
+            "tool",
+            "run",
+            "subdomain-discovery",
+            "--input",
+            &input.to_string_lossy(),
+            "--authorization-scope",
+            "public:passive-discovery",
+            "--target",
+            "example.com",
+        ],
+        &root,
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let receipt: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("execution receipt must be JSON");
+    assert_eq!(receipt["status"], "succeeded");
+    assert_eq!(
+        receipt["output"]["spec"]["values"]["root_domain"],
+        "example.com"
+    );
+    assert_eq!(
+        receipt["output"]["spec"]["values"]["summary"]["total_subdomains"],
+        4
+    );
+    assert_eq!(
+        receipt["output"]["spec"]["values"]["safety"]["active_dns_queries"],
+        0
+    );
+    assert_eq!(
+        receipt["output"]["spec"]["values"]["records"][0]["name"],
+        "api.example.com"
+    );
+    assert_eq!(
+        receipt["output"]["spec"]["findings"][0]["title"],
+        "Structured records imported"
+    );
+
+    let audit_log =
+        fs::read_to_string(workspace.join("audit/events.jsonl")).expect("audit log must exist");
+    assert!(audit_log.contains("\"action\":\"tool.run.started\""));
+    assert!(audit_log.contains("\"action\":\"result.normalized\""));
+}
+
 fn install_example(workspace: &Path, plugin: &Path, current_dir: &Path) {
     let output = run(
         &[

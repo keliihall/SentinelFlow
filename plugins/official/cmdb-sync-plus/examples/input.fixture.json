@@ -1,0 +1,42 @@
+{
+  "context": {
+    "task_id": "task-cmdb-fixture",
+    "run_id": "run-cmdb-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "cmdb", "value": "enterprise-cmdb-fixture", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "cmdb": {"format": "json", "file": "examples/cmdb.fixture.json"},
+    "sentinelflow": {"format": "normalized_json", "file": "examples/sentinelflow.assets.json"},
+    "mapping": {
+      "external_id": "ci_id",
+      "asset_type": "ci_type",
+      "name": "display_name",
+      "addresses": "ip_addresses",
+      "department": "department_name",
+      "business_system": "business_service",
+      "owner": "responsible_owner",
+      "criticality": "importance",
+      "status": "lifecycle_status",
+      "updated_at": "modified_at"
+    },
+    "writeback": {
+      "match_fields": ["external_id", "address"],
+      "allowed_fields": ["asset_type", "name", "addresses", "department", "business_system", "owner", "criticality", "status", "source_refs", "last_seen_at"],
+      "conflict_policy": "sentinelflow_wins",
+      "create_missing": true,
+      "update_existing": true
+    },
+    "output": {"max_records": 100, "include_source_details": true, "include_noop_operations": true},
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_network": false,
+    "allow_credentials": false,
+    "allow_direct_writeback": false,
+    "allow_delete": false
+  }
+}

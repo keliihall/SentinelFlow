@@ -1,0 +1,219 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DNS Resolve Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "inputs", "options", "policy"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "options": {
+            "properties": {
+              "active": {
+                "properties": {"enabled": {"const": true}},
+                "required": ["enabled"]
+              }
+            },
+            "required": ["active"]
+          }
+        },
+        "required": ["options"]
+      },
+      "then": {
+        "properties": {
+          "policy": {
+            "properties": {"allow_active_verify": {"const": true}},
+            "required": ["allow_active_verify"]
+          }
+        },
+        "required": ["policy"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "options": {
+            "properties": {
+              "active": {
+                "properties": {"authoritative_trace": {"const": true}},
+                "required": ["authoritative_trace"]
+              }
+            },
+            "required": ["active"]
+          }
+        },
+        "required": ["options"]
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "properties": {"risk_acknowledged": {"const": true}},
+            "required": ["risk_acknowledged"]
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.:-]+$"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "domain"},
+        "value": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 253,
+          "pattern": "^(?=.{3,253}$)(?!.*[/:@\\\\*\\s;&|`$<>])(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$"
+        },
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domains", "findings"],
+      "properties": {
+        "domains": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 253,
+            "pattern": "^(?=.{3,253}$)(?!.*[/:@\\\\*\\s;&|`$<>])(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$"
+          }
+        },
+        "findings": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "record_types", "passive_intel", "active", "merge", "output", "risk_acknowledged", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active", "hybrid"]},
+        "record_types": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"type": "string", "enum": ["A", "AAAA", "CNAME", "MX", "NS", "TXT"]}
+        },
+        "passive_intel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "sources", "api_timeout_seconds", "api_rate_limit_per_second", "max_queries", "allow_missing_secrets", "local_cache_file"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["fixture", "local_cache", "passive_dns_cache", "external_dns_intel"]}
+            },
+            "api_timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "api_rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 10},
+            "max_queries": {"type": "integer", "minimum": 0, "maximum": 1000},
+            "allow_missing_secrets": {"type": "boolean"},
+            "local_cache_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "fixture_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "passive_dns_cache_file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "resolver_mode", "resolvers", "authoritative_trace", "timeout_seconds", "concurrency", "rate_limit_per_second", "max_domains", "max_queries"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "resolver_mode": {"type": "string", "enum": ["system_resolver", "public_resolver"]},
+            "resolvers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 5,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "anyOf": [
+                  {"pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"},
+                  {"pattern": "^[0-9A-Fa-f:]{2,45}$"},
+                  {"const": "system"}
+                ]
+              }
+            },
+            "authoritative_trace": {"type": "boolean"},
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "concurrency": {"type": "integer", "minimum": 1, "maximum": 20},
+            "rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 20},
+            "max_domains": {"type": "integer", "minimum": 1, "maximum": 1000},
+            "max_queries": {"type": "integer", "minimum": 1, "maximum": 5000}
+          }
+        },
+        "merge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deduplicate", "conflict_policy", "mark_source_disagreement", "confidence_strategy", "stale_after_days"],
+          "properties": {
+            "deduplicate": {"type": "boolean"},
+            "conflict_policy": {"type": "string", "enum": ["preserve_all_sources"]},
+            "mark_source_disagreement": {"type": "boolean"},
+            "confidence_strategy": {"type": "string", "enum": ["weighted_sources"]},
+            "stale_after_days": {"type": "integer", "minimum": 1, "maximum": 3650}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_unresolved", "include_source_details", "include_conflicts"],
+          "properties": {
+            "include_unresolved": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"},
+            "include_conflicts": {"type": "boolean"}
+          }
+        },
+        "risk_acknowledged": {"type": "boolean"},
+        "execution_profile": {"type": "string", "enum": ["fixture", "passive_intel", "active_safe", "authorized_assessment", "lab"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"type": "boolean"},
+        "allow_high_risk": {"type": "boolean"}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+    }
+  }
+}

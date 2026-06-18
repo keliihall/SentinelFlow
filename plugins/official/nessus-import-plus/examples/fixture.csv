@@ -1,0 +1,2 @@
+host,port,protocol,service,plugin_id,plugin_name,plugin_family,severity,cve,cvss_base_score,synopsis,description,solution,evidence
+csv.example.com,443,tcp,https,300001,Example CSV Vulnerability,General,medium,CVE-2026-0200,6.4,CSV import finding.,Synthetic CSV import vulnerability.,Patch CSV fixture.,CSV proof text.

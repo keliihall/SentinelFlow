@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "crt.sh Subdomain Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "domain"},
+        "value": {"type": "string", "minLength": 3, "maxLength": 253},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "lookup", "local_cache", "provider", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_cache", "api_lookup", "hybrid"]},
+        "lookup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_results", "include_expired", "include_wildcard", "include_certificate_assets"],
+          "properties": {
+            "max_results": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "include_expired": {"type": "boolean"},
+            "include_wildcard": {"type": "boolean"},
+            "include_certificate_assets": {"type": "boolean"}
+          }
+        },
+        "local_cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "cache_file", "fixture_file"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "cache_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "fixture_file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "allow_unavailable", "timeout_seconds", "rate_limit_per_second"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "allow_unavailable": {"type": "boolean"},
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 5}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_certificate_assets", "include_source_details"],
+          "properties": {
+            "include_certificate_assets": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "passive_intel"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"const": false},
+        "allow_high_risk": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "context": {
+    "task_id": "task-audit-report",
+    "run_id": "run-markdown-audit",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "report",
+    "value": "audit-fixture"
+  },
+  "options": {
+    "mode": "audit",
+    "title": "Audit Report",
+    "include": {
+      "summary": true,
+      "findings": false,
+      "evidence": false,
+      "errors": true,
+      "audit": true
+    },
+    "limits": {
+      "max_findings": 5,
+      "max_evidence_per_finding": 1,
+      "max_audit_events": 5,
+      "max_markdown_bytes": 32768
+    }
+  },
+  "data": {
+    "task": {"task_id": "task-audit-report", "name": "Audit fixture"},
+    "runs": [{"run_id": "run-one", "tool_id": "example-echo", "status": "failed"}],
+    "findings": [],
+    "errors": [{"code": "ExampleFailure", "message": "controlled failure"}],
+    "audit_events": [
+      {"action": "tool.run", "outcome": "failed", "timestamp": "2026-06-01T00:00:00Z"}
+    ],
+    "source_status": []
+  }
+}

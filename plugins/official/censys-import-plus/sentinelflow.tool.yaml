@@ -1,0 +1,58 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: censys-import-plus
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/asset-category: exposure-intel
+spec:
+  displayName: Censys Import Plus
+  version: 0.1.0
+  capabilities:
+    - name: data.import.censys.passive
+      description: Imports Censys-style host, service, and certificate intelligence from fixtures, local cache, or a configured provider without accepting arbitrary user queries
+      risk: low
+      requiresApproval: false
+    - name: asset.exposure_intel.censys
+      description: Normalizes Censys exposure intelligence including services, TLS certificate metadata, observed names, JARM, and observation windows
+      risk: low
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/runner.py
+    args: []
+    environmentAllowlist:
+      - PATH
+      - CENSYS_API_ID
+      - CENSYS_API_SECRET
+    timeoutSeconds: 300
+    outputLimitBytes: 4194304
+  parser:
+    mode: builtin
+    name: censys-import-plus-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/category: data.import
+  sentinelflow.io/riskLevel: low
+  sentinelflow.io/safetyProfile: controlled-target-derived-censys-intelligence-import
+  sentinelflow.io/networkBoundary: fixture-cache-default-provider-query-secret-gated
+  sentinelflow.io/capabilities:
+    - name: passive_intel
+      riskLevel: low
+      impact: passive_intel
+      requiresApproval: false
+  sentinelflow.io/controls:
+    requiresAuthorization: true
+    requiresApproval: false
+    supportsRateLimit: true
+    supportsConcurrencyLimit: false
+    secretTransport: environment_or_future_secret_config
+    maxConcurrency: 1
+    defaultMode: passive_intel
+  sentinelflow.io/audit:
+    recordInput: true
+    recordOutputSummary: true
+    recordRawOutput: false
+    evidenceRequired: true

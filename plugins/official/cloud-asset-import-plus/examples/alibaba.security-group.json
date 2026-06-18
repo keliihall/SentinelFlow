@@ -1,0 +1,20 @@
+{
+  "SecurityGroups": {
+    "SecurityGroup": [{
+      "SecurityGroupId": "sg-ali-001",
+      "SecurityGroupName": "public-web",
+      "RegionId": "cn-hangzhou",
+      "SecurityGroupPolicySet": {
+        "Ingress": [{
+          "Direction": "ingress",
+          "IpProtocol": "TCP",
+          "PortStart": 22,
+          "PortEnd": 22,
+          "SourceCidrIp": "0.0.0.0/0",
+          "Action": "Accept"
+        }]
+      },
+      "Tags": {"environment": "production"}
+    }]
+  }
+}

@@ -540,7 +540,15 @@ impl Validate for TaskSpec {
                         "must be an absolute JSON Pointer",
                     ));
                 }
-                if mapping.target.contains('.') || mapping.target.contains('/') {
+                if mapping.target.starts_with('/') {
+                    if mapping.target == "/" || mapping.target.split('/').skip(1).any(str::is_empty)
+                    {
+                        errors.push(ValidationError::new(
+                            format!("$.spec.steps[{index}].inputFrom[{mapping_index}].target"),
+                            "must be a non-empty absolute JSON Pointer",
+                        ));
+                    }
+                } else if mapping.target.contains('.') || mapping.target.contains('/') {
                     errors.push(ValidationError::new(
                         format!("$.spec.steps[{index}].inputFrom[{mapping_index}].target"),
                         "must be a top-level input field name",

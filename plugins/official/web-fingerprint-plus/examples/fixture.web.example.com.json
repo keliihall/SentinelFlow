@@ -1,0 +1,38 @@
+{
+  "observations": [
+    {
+      "url": "https://www.example.com/",
+      "title": "Example WordPress Site",
+      "server": "nginx",
+      "content_type": "text/html; charset=utf-8",
+      "headers": {
+        "x-powered-by": "PHP/8.2",
+        "x-generator": "WordPress 6.4",
+        "cf-cache-status": "DYNAMIC"
+      },
+      "body_signals": [
+        "/wp-content/themes/example/style.css",
+        "window.React = window.React || {}"
+      ],
+      "favicon_hash": "wordpress-demo-hash",
+      "confidence": 0.72,
+      "observed_at": "2026-06-01T00:00:00Z"
+    },
+    {
+      "url": "https://admin.example.com/",
+      "title": "Grafana",
+      "server": "nginx",
+      "content_type": "text/html",
+      "headers": {
+        "x-frame-options": "deny"
+      },
+      "body_signals": [
+        "public/build/grafana.dark.css",
+        "window.grafanaBootData"
+      ],
+      "favicon_hash": "grafana-demo-hash",
+      "confidence": 0.78,
+      "observed_at": "2026-06-01T00:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "context": {
+    "task_id": "task-tls-active",
+    "run_id": "run-tls-active",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-lab"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "endpoints": [{"host": "127.0.0.1", "port": 8443, "server_name": "localhost"}],
+    "findings": []
+  },
+  "options": {
+    "mode": "active_tls",
+    "passive_intel": {
+      "enabled": false,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json"
+    },
+    "active": {
+      "enabled": true,
+      "timeout_seconds": 2,
+      "concurrency": 2,
+      "rate_limit_per_second": 5,
+      "max_endpoints": 10
+    },
+    "checks": {
+      "expiry_warning_days": 30,
+      "include_san_assets": true,
+      "include_chain_summary": true
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_source_details": true
+    },
+    "execution_profile": "lab"
+  },
+  "policy": {"allow_active_verify": true, "allow_high_risk": false}
+}

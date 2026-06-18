@@ -1,0 +1,35 @@
+{
+  "context": {
+    "task_id": "task-nessus-json",
+    "run_id": "run-nessus-json",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "report",
+    "value": "nessus-json-fixture",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "fixture",
+    "import": {
+      "format": "json",
+      "file": "examples/fixture.json",
+      "max_records": 100,
+      "include_info": true,
+      "minimum_severity": "info"
+    },
+    "output": {
+      "include_description": true,
+      "include_solution": true,
+      "include_evidence": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

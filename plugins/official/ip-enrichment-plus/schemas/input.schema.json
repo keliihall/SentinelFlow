@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IP Enrichment Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "ip"},
+        "value": {"type": "string", "minLength": 2, "maxLength": 64},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "lookup", "local_cache", "provider", "merge", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_cache", "provider_lookup", "hybrid"]},
+        "lookup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_results", "include_geo", "include_cloud", "include_cdn_waf"],
+          "properties": {
+            "max_results": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "include_geo": {"type": "boolean"},
+            "include_cloud": {"type": "boolean"},
+            "include_cdn_waf": {"type": "boolean"}
+          }
+        },
+        "local_cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "cache_file", "fixture_file"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "cache_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "fixture_file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "allow_missing_secret", "timeout_seconds", "rate_limit_per_second", "sources"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "allow_missing_secret": {"type": "boolean"},
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 10},
+            "sources": {
+              "type": "array",
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["ipinfo", "maxmind", "cloud_ranges"]}
+            }
+          }
+        },
+        "merge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deduplicate", "confidence_strategy"],
+          "properties": {
+            "deduplicate": {"type": "boolean"},
+            "confidence_strategy": {"type": "string", "enum": ["weighted_sources"]}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_geo", "include_cloud", "include_cdn_waf", "include_source_details"],
+          "properties": {
+            "include_geo": {"type": "boolean"},
+            "include_cloud": {"type": "boolean"},
+            "include_cdn_waf": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "passive_intel"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"const": false},
+        "allow_high_risk": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

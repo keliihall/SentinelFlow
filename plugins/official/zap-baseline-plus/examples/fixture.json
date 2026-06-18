@@ -1,0 +1,61 @@
+{
+  "@version": "2.15.0",
+  "@generated": "Thu, 18 Jun 2026 09:00:00",
+  "site": [{
+    "@name": "https://www.example.com",
+    "@host": "www.example.com",
+    "@port": "443",
+    "@ssl": "true",
+    "alerts": [{
+      "pluginid": "10020",
+      "alertRef": "10020",
+      "alert": "X-Frame-Options Header Not Set",
+      "riskcode": "1",
+      "confidence": "2",
+      "riskdesc": "Low (Medium)",
+      "desc": "<p>Anti-clickjacking header missing. token=fixture-secret</p>",
+      "instances": [{
+        "uri": "https://www.example.com/",
+        "method": "GET",
+        "param": "",
+        "attack": "",
+        "evidence": "HTTP/1.1 200 OK",
+        "otherinfo": ""
+      }, {
+        "uri": "https://www.example.com/",
+        "method": "GET",
+        "param": "",
+        "attack": "",
+        "evidence": "duplicate",
+        "otherinfo": ""
+      }],
+      "count": "2",
+      "solution": "<p>Set X-Frame-Options or CSP frame-ancestors.</p>",
+      "reference": "https://developer.mozilla.org/docs/Web/HTTP/Headers/X-Frame-Options",
+      "cweid": "1021",
+      "wascid": "15",
+      "sourceid": "3"
+    }, {
+      "pluginid": "40012",
+      "alertRef": "40012",
+      "alert": "Cross Site Scripting (Reflected)",
+      "riskcode": "3",
+      "confidence": "0",
+      "riskdesc": "High (False Positive)",
+      "desc": "Fixture false positive.",
+      "instances": [{
+        "uri": "https://www.example.com/search?q=test",
+        "method": "GET",
+        "param": "q",
+        "attack": "<script>alert(1)</script>",
+        "evidence": "test",
+        "otherinfo": ""
+      }],
+      "solution": "Validate output.",
+      "reference": "",
+      "cweid": "79",
+      "wascid": "8",
+      "sourceid": "3"
+    }]
+  }]
+}

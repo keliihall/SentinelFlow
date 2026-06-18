@@ -1,0 +1,38 @@
+{
+  "context": {
+    "task_id": "task-cloud-fixture",
+    "run_id": "run-cloud-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "cloud_inventory", "value": "multicloud-fixture", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "sources": [
+      {"provider": "aws", "resource_type": "compute", "file": "examples/aws.compute.json", "scope_id": "aws-account-001", "region": "us-east-1"},
+      {"provider": "aws", "resource_type": "dns", "file": "examples/aws.dns.json", "scope_id": "aws-account-001", "region": "global"},
+      {"provider": "alibaba", "resource_type": "security_group", "file": "examples/alibaba.security-group.json", "scope_id": "ali-account-001", "region": "cn-hangzhou"},
+      {"provider": "tencent", "resource_type": "load_balancer", "file": "examples/tencent.load-balancer.json", "scope_id": "tencent-account-001", "region": "ap-guangzhou"},
+      {"provider": "huawei", "resource_type": "object_storage", "file": "examples/huawei.object-storage.json", "scope_id": "huawei-project-001", "region": "cn-north-4"},
+      {"provider": "azure", "resource_type": "public_ip", "file": "examples/azure.public-ip.json", "scope_id": "sub-001", "region": "eastus"},
+      {"provider": "azure", "resource_type": "waf", "file": "examples/azure.waf.json", "scope_id": "sub-001", "region": "eastus"},
+      {"provider": "alibaba", "resource_type": "cdn", "file": "examples/alibaba.cdn.json", "scope_id": "ali-account-001", "region": "global"}
+    ],
+    "filters": {"providers": [], "resource_types": [], "internet_exposed_only": false},
+    "output": {
+      "max_records": 100,
+      "include_tags": true,
+      "include_security_rules": true,
+      "include_source_details": true,
+      "deduplicate": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_cloud_api": false,
+    "allow_credential_use": false,
+    "allow_asset_connections": false,
+    "allow_mutation": false
+  }
+}

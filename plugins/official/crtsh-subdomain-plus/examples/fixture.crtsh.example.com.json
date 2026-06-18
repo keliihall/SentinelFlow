@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "entry_id": "111111",
+      "issuer_name": "CN=Example CA",
+      "common_name": "*.example.com",
+      "name_value": "*.example.com\nwww.example.com\napi.example.com",
+      "not_before": "2026-01-01T00:00:00Z",
+      "not_after": "2026-12-31T23:59:59Z",
+      "logged_at": "2026-01-02T00:00:00Z"
+    },
+    {
+      "entry_id": "222222",
+      "issuer_name": "CN=Example CA",
+      "common_name": "login.example.com",
+      "name_value": "login.example.com\noutside.example.net",
+      "not_before": "2026-02-01T00:00:00Z",
+      "not_after": "2026-11-30T23:59:59Z",
+      "logged_at": "2026-02-02T00:00:00Z"
+    },
+    {
+      "entry_id": "333333",
+      "issuer_name": "CN=Old Example CA",
+      "common_name": "old.example.com",
+      "name_value": "old.example.com",
+      "not_before": "2024-01-01T00:00:00Z",
+      "not_after": "2024-12-31T23:59:59Z",
+      "logged_at": "2024-01-02T00:00:00Z"
+    }
+  ]
+}

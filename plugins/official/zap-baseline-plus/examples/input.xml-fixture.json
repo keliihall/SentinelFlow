@@ -1,0 +1,23 @@
+{
+  "context": {
+    "task_id": "task-zap-xml-fixture",
+    "run_id": "run-zap-xml-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "url", "value": "https://api.example.com", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "import": {"format": "zap_xml", "file": "examples/fixture.xml", "max_records": 100},
+    "filters": {"minimum_risk": "info", "minimum_confidence": "low", "include_false_positives": false},
+    "output": {"include_attack": false, "include_evidence": true, "include_source_details": true, "deduplicate": true},
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_scan": false,
+    "allow_ajax_spider": false,
+    "allow_authentication": false,
+    "allow_attack_mode": false
+  }
+}

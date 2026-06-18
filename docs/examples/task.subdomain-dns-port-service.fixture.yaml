@@ -1,0 +1,87 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: subdomain-dns-port-service-fixture
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: example.com
+      input:
+        context:
+          task_id: task_asset_discovery_fixture
+          run_id: run_asset_discovery_fixture
+          operator: operator
+          workspace: default
+          authorization_scope: fixture:local-only
+        target:
+          type: domain
+          value: example.com
+          metadata: {}
+        options:
+          mode: passive
+          passive:
+            enabled: true
+            sources: [fixture]
+            fixture_file: examples/fixture.passive.example.com.json
+            crtsh_enabled: false
+            crtsh_timeout_seconds: 10
+          active:
+            enabled: false
+            dry_run: false
+            wordlist_file: examples/wordlist.small.txt
+            resolvers: [1.1.1.1, 8.8.8.8]
+            record_types: [A, AAAA]
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_candidates: 100
+            detect_wildcard: true
+          output:
+            include_unresolved: false
+            include_sources: true
+        policy:
+          allow_active_verify: false
+          allow_high_risk: false
+  steps:
+    - name: discover-subdomains
+      toolRef: subdomain-discovery-plus
+      capability: asset.subdomain.discovery
+      outputAs: subdomains
+    - name: resolve-dns
+      toolRef: dns-resolve-plus
+      capability: asset.dns.resolve.passive
+      dependsOn: [discover-subdomains]
+      outputAs: dns
+      inputFrom:
+        - from: subdomains
+          pointer: /spec/findings
+          target: findings
+    - name: probe-ports
+      toolRef: port-probe-plus
+      capability: asset.port.probe.fixture
+      dependsOn: [resolve-dns]
+      outputAs: ports
+      inputFrom:
+        - from: dns
+          pointer: /spec/findings
+          target: findings
+    - name: detect-services
+      toolRef: service-detect-plus
+      capability: asset.service.detect.passive
+      dependsOn: [probe-ports]
+      outputAs: services
+      inputFrom:
+        - from: ports
+          pointer: /spec/findings
+          target: findings
+  policy:
+    allowedTargets: [example.com]
+    targetPatterns:
+      - domain:example.com
+      - domain:*.example.com
+      - ip:93.184.216.34
+    approveHighRisk: false
+    timeoutSeconds: 300
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+extensions: {}

@@ -1,0 +1,43 @@
+{
+  "context": {
+    "task_id": "task-crtsh-fixture",
+    "run_id": "run-crtsh-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "domain",
+    "value": "example.com",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "fixture",
+    "lookup": {
+      "max_results": 100,
+      "include_expired": false,
+      "include_wildcard": true,
+      "include_certificate_assets": true
+    },
+    "local_cache": {
+      "enabled": false,
+      "cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.crtsh.example.com.json"
+    },
+    "provider": {
+      "enabled": false,
+      "allow_unavailable": true,
+      "timeout_seconds": 10,
+      "rate_limit_per_second": 1
+    },
+    "output": {
+      "include_certificate_assets": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

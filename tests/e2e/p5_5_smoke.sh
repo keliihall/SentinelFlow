@@ -62,6 +62,14 @@ for _ in range(100):
 else:
     raise SystemExit("API service did not become healthy")
 
+status, console = request("GET", "/console", raw=True)
+assert status == 200 and "SentinelFlow 安全验证工作台" in console, console[:500]
+assert "任务状态与报告可信度分别展示" in console, "missing product result semantics"
+
+status, simple_check = request("GET", "/console/simple-check.js", raw=True)
+assert status == 200 and "buildSimpleCheckTaskSpec" in simple_check, simple_check[:500]
+assert "fixture:local-only" in simple_check and "不能使用本地示例数据" in simple_check
+
 status, session = request(
     "POST",
     "/api/session/login",

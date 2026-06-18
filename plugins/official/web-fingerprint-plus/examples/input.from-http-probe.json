@@ -1,0 +1,48 @@
+{
+  "context": {
+    "task_id": "task-web-fingerprint-http",
+    "run_id": "run-web-fingerprint-http",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "observations": [
+      {
+        "url": "https://www.example.com/",
+        "title": "Example WordPress Site",
+        "server": "nginx",
+        "content_type": "text/html",
+        "headers": {"x-generator": "WordPress"},
+        "body_signals": ["/wp-content/plugins/example/plugin.js"]
+      }
+    ],
+    "findings": []
+  },
+  "options": {
+    "mode": "from_http_probe",
+    "passive_intel": {
+      "enabled": false,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json"
+    },
+    "fingerprint": {
+      "use_headers": true,
+      "use_title": true,
+      "use_body_signals": true,
+      "use_favicon_hash": true,
+      "max_body_signal_bytes": 65536
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_signals"
+    },
+    "output": {
+      "include_source_details": true,
+      "include_signal_details": true
+    },
+    "execution_profile": "passive_intel"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

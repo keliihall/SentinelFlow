@@ -1,0 +1,50 @@
+{
+  "context": {
+    "task_id": "task-censys-fixture",
+    "run_id": "run-censys-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "ip",
+    "value": "93.184.216.34",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "fixture",
+    "lookup": {
+      "scope": "ip",
+      "max_results": 100,
+      "include_certificate": true,
+      "include_names": true,
+      "include_service_fingerprint": true
+    },
+    "local_cache": {
+      "enabled": false,
+      "cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.censys.example.com.json"
+    },
+    "provider": {
+      "enabled": false,
+      "allow_missing_secret": true,
+      "timeout_seconds": 10,
+      "rate_limit_per_second": 1
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_certificate": true,
+      "include_names": true,
+      "include_service_fingerprint": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

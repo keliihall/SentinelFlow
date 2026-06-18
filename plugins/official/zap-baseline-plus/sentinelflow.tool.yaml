@@ -1,0 +1,56 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: zap-baseline-plus
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/asset-category: web-scan
+spec:
+  displayName: ZAP Baseline Plus
+  version: 0.1.0
+  capabilities:
+    - name: risk.web_scan.zap_baseline.import
+      description: Imports bounded OWASP ZAP JSON or XML baseline reports without invoking a scanner
+      risk: low
+      requiresApproval: false
+    - name: risk.web_scan.zap_baseline.normalize
+      description: Normalizes passive ZAP alerts and per-URL instances into structured SentinelFlow findings
+      risk: low
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/runner.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 300
+    outputLimitBytes: 4194304
+  parser:
+    mode: builtin
+    name: zap-baseline-plus-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/category: risk.web_scan
+  sentinelflow.io/riskLevel: low
+  sentinelflow.io/safetyProfile: bounded-offline-zap-baseline-import
+  sentinelflow.io/networkBoundary: no-network-file-under-plugin-root-only
+  sentinelflow.io/capabilities:
+    - name: zap_baseline_report_import
+      riskLevel: low
+      impact: read_only
+      requiresApproval: false
+  sentinelflow.io/controls:
+    requiresAuthorization: true
+    requiresApproval: false
+    supportsRateLimit: false
+    supportsConcurrencyLimit: false
+    defaultMode: fixture
+    maxConcurrency: 1
+    secretTransport: none
+  sentinelflow.io/audit:
+    recordInput: true
+    recordOutputSummary: true
+    recordRawOutput: false
+    evidenceRequired: true

@@ -1,0 +1,10 @@
+{
+  "buckets": [{
+    "id": "obs-public-assets",
+    "name": "public-assets",
+    "location": "cn-north-4",
+    "endpoint": "public-assets.obs.cn-north-4.myhuaweicloud.com",
+    "acl": "public-read",
+    "tags": {"owner": "web-team"}
+  }]
+}

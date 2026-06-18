@@ -1,0 +1,28 @@
+{
+  "endpoints": [
+    {
+      "url": "https://www.example.com/",
+      "status_code": 200,
+      "title": "Example Domain",
+      "server": "example-http",
+      "content_type": "text/html",
+      "content_length": 1256,
+      "redirect_chain": [],
+      "tls_enabled": true,
+      "confidence": 0.7,
+      "observed_at": "2026-06-01T00:00:00Z"
+    },
+    {
+      "url": "http://api.example.com/",
+      "status_code": 301,
+      "title": null,
+      "server": "example-edge",
+      "content_type": "text/html",
+      "content_length": 178,
+      "redirect_chain": ["https://api.example.com/"],
+      "tls_enabled": false,
+      "confidence": 0.7,
+      "observed_at": "2026-06-01T00:00:00Z"
+    }
+  ]
+}

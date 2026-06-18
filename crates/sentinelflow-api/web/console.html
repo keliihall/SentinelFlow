@@ -1,313 +1,772 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SentinelFlow Console</title>
+  <title>SentinelFlow Console - SentinelFlow 安全验证工作台</title>
   <style>
     :root {
-      color-scheme: light dark;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.45;
+      color-scheme: light;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      --bg: #f5f7fb; --surface: #fff; --soft: #f8fafc; --line: #e2e8f0;
+      --text: #172033; --muted: #64748b; --primary: #155eef; --primary-soft: #edf4ff;
+      --green: #16803c; --green-soft: #eaf8ef; --amber: #a15c06; --amber-soft: #fff6df;
+      --red: #b42318; --red-soft: #fff0ee; --blue-soft: #eaf2ff;
+      --shadow: 0 12px 34px rgba(15, 23, 42, .07);
     }
-    body {
-      margin: 0;
-      background: #0f172a;
-      color: #e2e8f0;
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: var(--bg); line-height: 1.55; overflow-x: hidden; }
+    button, input, textarea, select { font: inherit; }
+    button { min-height: 40px; padding: 9px 15px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--text); font-weight: 700; cursor: pointer; }
+    button:hover { background: #f8fafc; }
+    button.primary { color: #fff; background: var(--primary); border-color: var(--primary); }
+    button.primary:hover { background: #124fd0; }
+    button.ghost { border-color: transparent; background: transparent; }
+    button.danger { color: var(--red); background: var(--red-soft); border-color: #fecaca; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    input, textarea, select { width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--text); }
+    textarea { min-height: 100px; resize: vertical; }
+    label { display: block; margin-bottom: 6px; font-size: .9rem; font-weight: 750; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { padding: 11px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #475569; background: var(--soft); font-size: .8rem; }
+    pre { max-height: 520px; overflow: auto; padding: 14px; border-radius: 10px; background: #101828; color: #e2e8f0; white-space: pre-wrap; font-size: .82rem; }
+    details summary { cursor: pointer; color: #334155; font-weight: 750; }
+    .layout { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
+    .sidebar { position: sticky; top: 0; height: 100vh; padding: 22px 14px; border-right: 1px solid var(--line); background: #fff; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 24px; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; color: #fff; background: linear-gradient(135deg, #155eef, #0f766e); font-weight: 850; }
+    .brand strong { display: block; }
+    .brand small { display: block; color: var(--muted); }
+    .nav { display: grid; gap: 5px; }
+    .nav button { width: 100%; display: flex; justify-content: space-between; border-color: transparent; background: transparent; text-align: left; color: #475569; }
+    .nav button.active { color: var(--primary); background: var(--primary-soft); border-color: #cfe0ff; }
+    .advanced-nav { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .main { min-width: 0; }
+    .topbar { height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 28px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.94); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); }
+    .topbar-title { font-weight: 800; }
+    .session { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .9rem; }
+    .content { max-width: 1280px; margin: 0 auto; padding: 30px; }
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    .page-head h1 { margin: 0; font-size: 1.55rem; }
+    .page-head p { margin: 6px 0 0; color: var(--muted); }
+    .stack { min-width: 0; display: grid; gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
+    .panel, .hero, .card { border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: var(--shadow); }
+    .panel { min-width: 0; padding: 20px; }
+    .panel h2, .panel h3 { margin: 0 0 12px; }
+    .hero { padding: 34px; background: linear-gradient(120deg, #f8fbff 0%, #eefbf7 100%); }
+    .hero h1 { max-width: 760px; margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.25; }
+    .hero p { max-width: 760px; margin: 12px 0 22px; color: #475569; font-size: 1.05rem; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .action-card { padding: 22px; min-height: 160px; display: grid; align-content: space-between; }
+    .action-card .icon { font-size: 1.55rem; }
+    .action-card h3 { margin: 8px 0 4px; }
+    .muted { color: var(--muted); }
+    .small { font-size: .86rem; }
+    .notice { padding: 13px 15px; border: 1px solid #cbd5e1; border-radius: 12px; background: var(--soft); }
+    .notice.success { color: var(--green); border-color: #bbf7d0; background: var(--green-soft); }
+    .notice.warning { color: #7c3f00; border-color: #fcd34d; background: var(--amber-soft); }
+    .notice.danger { color: var(--red); border-color: #fecaca; background: var(--red-soft); }
+    .badge { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px; font-size: .78rem; font-weight: 800; white-space: nowrap; }
+    .badge.success { color: var(--green); background: var(--green-soft); }
+    .badge.warning { color: var(--amber); background: var(--amber-soft); }
+    .badge.danger { color: var(--red); background: var(--red-soft); }
+    .badge.info { color: #175cd3; background: var(--blue-soft); }
+    .badge.neutral { color: #475569; background: #eef2f6; }
+    .summary-card { padding: 18px; min-height: 110px; }
+    .summary-card .value { display: block; margin-top: 6px; font-size: 1.8rem; font-weight: 850; }
+    .wizard { display: flex; align-items: center; margin-bottom: 18px; }
+    .wizard-step { flex: 1; position: relative; color: var(--muted); font-size: .86rem; font-weight: 750; }
+    .wizard-step::after { content: ""; position: absolute; top: 15px; left: 34px; right: 8px; height: 2px; background: #dbe3ef; }
+    .wizard-step:last-child::after { display: none; }
+    .wizard-step span { position: relative; z-index: 1; width: 31px; height: 31px; display: grid; place-items: center; margin-bottom: 6px; border-radius: 50%; border: 2px solid #cbd5e1; background: #fff; }
+    .wizard-step.active, .wizard-step.done { color: var(--primary); }
+    .wizard-step.active span, .wizard-step.done span { color: #fff; border-color: var(--primary); background: var(--primary); }
+    .mode-card { min-height: 230px; padding: 20px; border: 2px solid var(--line); border-radius: 16px; background: #fff; cursor: pointer; }
+    .mode-card.selected { border-color: var(--primary); background: #f7faff; }
+    .mode-card.recommended::before { content: "推荐"; display: inline-block; margin-bottom: 10px; padding: 3px 8px; border-radius: 999px; color: #fff; background: var(--primary); font-size: .75rem; font-weight: 800; }
+    .mode-card h3 { margin: 0 0 8px; }
+    .confirm-list { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .confirm-row { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+    .confirm-row:last-child { border-bottom: 0; }
+    .confirm-row span:first-child { color: var(--muted); }
+    .checkline { display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid #93c5fd; border-radius: 12px; background: var(--primary-soft); }
+    .checkline input { width: auto; margin-top: 5px; }
+    .progress-list { display: grid; gap: 10px; }
+    .progress-item { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+    .progress-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #eef2f6; }
+    .progress-item.running .progress-icon { color: var(--primary); background: var(--primary-soft); animation: pulse 1.4s infinite; }
+    .progress-item.done .progress-icon { color: var(--green); background: var(--green-soft); }
+    .progress-item.warning .progress-icon { color: var(--amber); background: var(--amber-soft); }
+    @keyframes pulse { 50% { transform: scale(1.08); } }
+    .login { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 20% 20%, #dbeafe, transparent 35%), radial-gradient(circle at 80% 75%, #d1fae5, transparent 32%), #f8fafc; }
+    .login-card { width: min(470px, 100%); padding: 30px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.96); box-shadow: var(--shadow); }
+    .login-card h1 { margin: 16px 0 6px; }
+    .form-group { margin-bottom: 15px; }
+    .empty { padding: 32px; border: 1px dashed #b8c4d6; border-radius: 14px; color: var(--muted); text-align: center; background: var(--soft); }
+    .technical { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .report-content h2 { margin-top: 24px; }
+    .faq { border-bottom: 1px solid var(--line); padding: 14px 0; }
+    .faq summary { font-size: 1rem; }
+    .toast { position: fixed; right: 22px; top: 82px; z-index: 30; max-width: 420px; padding: 12px 15px; border-radius: 12px; color: #fff; background: #172033; box-shadow: var(--shadow); }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .advanced-nav { display: none; }
+      .grid-3, .grid-5 { grid-template-columns: repeat(2, minmax(0,1fr)); }
     }
-    header {
-      padding: 24px 32px;
-      background: #111827;
-      border-bottom: 1px solid #334155;
-    }
-    main {
-      display: grid;
-      grid-template-columns: minmax(260px, 320px) 1fr;
-      gap: 24px;
-      padding: 24px 32px 48px;
-    }
-    nav, section {
-      background: #111827;
-      border: 1px solid #334155;
-      border-radius: 14px;
-      padding: 18px;
-    }
-    nav a {
-      display: block;
-      color: #93c5fd;
-      margin: 8px 0;
-      text-decoration: none;
-    }
-    section {
-      margin-bottom: 18px;
-    }
-    h1, h2, h3 {
-      margin-top: 0;
-    }
-    label {
-      display: block;
-      margin: 10px 0 4px;
-      color: #cbd5e1;
-      font-size: 0.9rem;
-    }
-    input, textarea, select, button {
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 10px;
-      border: 1px solid #475569;
-      background: #020617;
-      color: #e2e8f0;
-      padding: 10px;
-    }
-    textarea {
-      min-height: 180px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    }
-    button {
-      cursor: pointer;
-      margin-top: 10px;
-      background: #2563eb;
-      border-color: #2563eb;
-      font-weight: 700;
-    }
-    button.secondary {
-      background: #334155;
-      border-color: #475569;
-    }
-    pre {
-      overflow: auto;
-      background: #020617;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 12px;
-      max-height: 420px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 14px;
-    }
-    .muted {
-      color: #94a3b8;
+    @media (max-width: 640px) {
+      .content { padding: 18px; }
+      .topbar { height: auto; min-height: 68px; padding: 11px 18px; flex-wrap: wrap; }
+      .topbar-title { max-width: 48%; line-height: 1.35; }
+      .session { margin-left: auto; gap: 7px; }
+      .hero { min-width: 0; padding: 24px; overflow: hidden; }
+      .hero h1 { font-size: 1.75rem; overflow-wrap: anywhere; }
+      .hero .actions button { flex: 1 1 150px; min-width: 0; }
+      .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; }
+      .nav { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .page-head { display: block; }
+      .page-head .actions { margin-top: 12px; }
+      .confirm-row { grid-template-columns: 1fr; gap: 2px; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>SentinelFlow Console</h1>
-    <p class="muted">Team interface for tools, plugins, task planning, approvals, audit, and reports. The browser only calls the API service.</p>
-  </header>
-  <main>
-    <nav>
-      <h2>Workflow</h2>
-      <a href="#login">1. Login & Workspace</a>
-      <a href="#tools">2. Tools & Manifest</a>
-      <a href="#plugins">3. Plugin Validate / Install / Test</a>
-      <a href="#task">4. Task Spec Validate / Plan</a>
-      <a href="#run">5. Run / Logs / Steps / Cancel</a>
-      <a href="#reports">6. Findings / Evidence / Reports</a>
-      <a href="#approvals">7. Approvals</a>
-      <a href="#audit">8. Audit & Policy Explain</a>
-      <a href="#system">9. System & Protocol Center</a>
-    </nav>
-    <div>
-      <section id="login">
-        <h2>Login & Workspace</h2>
-        <div class="grid">
-          <div>
-            <label>Username</label>
-            <select id="username">
-              <option>operator</option>
-              <option>viewer</option>
-              <option>approver</option>
-              <option>admin</option>
-            </select>
-            <label>Password</label>
-            <input id="password" type="password" value="sentinelflow">
-            <button onclick="login()">Login</button>
-          </div>
-          <div>
-            <label>Bearer Token</label>
-            <input id="token" value="operator-token">
-            <button class="secondary" onclick="loadSession()">Show Session</button>
-          </div>
-        </div>
-      </section>
-
-      <section id="tools">
-        <h2>Tools & Manifest</h2>
-        <button onclick="api('GET','/api/tools')">Load Tools</button>
-        <label>Tool Name</label>
-        <input id="toolName" placeholder="example-echo">
-        <button class="secondary" onclick="api('GET','/api/tools/' + encodeURIComponent(value('toolName')))">Tool Detail</button>
-      </section>
-
-      <section id="plugins">
-        <h2>Plugin Validate / Install / Test</h2>
-        <label>Plugin Path</label>
-        <input id="pluginPath" value="plugins/examples/example-echo">
-        <button onclick="api('POST','/api/plugins/validate',{path:value('pluginPath')})">Validate Plugin</button>
-        <button onclick="api('POST','/api/plugins/install',{path:value('pluginPath')})">Install Plugin</button>
-        <button onclick="api('POST','/api/plugins/test',{path:value('pluginPath')})">Test Plugin</button>
-      </section>
-
-      <section id="task">
-        <h2>Task Spec Validate / Plan Preview</h2>
-        <textarea id="taskSpec">apiVersion: sentinelflow.io/v1alpha1
-kind: TaskSpec
-metadata:
-  name: console-example
-spec:
-  authorizationScope: fixture:local-only
-  targets:
-    - name: fixture-one
-      input:
-        message: hello from console
-  policy:
-    targetNames: [fixture-one]
-    targetPatterns: []
-    approveHighRisk: false
-    timeoutSeconds: 30
-    maxConcurrency: 1
-    rateLimitPerMinute: 60
-    timeWindows: []
-    outputRetention:
-      days: 7
-      retainEvidence: true
-  steps:
-    - name: echo
-      toolRef: example-echo
-      capability: echo
-      input:
-        message: hello from console
-</textarea>
-        <button onclick="api('POST','/api/tasks/validate',{content:value('taskSpec')})">Validate Task</button>
-        <button onclick="api('POST','/api/tasks/plan',{content:value('taskSpec')})">Plan Task</button>
-        <button class="secondary" onclick="api('POST','/api/policy/explain',{content:value('taskSpec')})">Policy Explain</button>
-      </section>
-
-      <section id="run">
-        <h2>Run / Logs / Steps / Cancel</h2>
-        <button onclick="api('POST','/api/tasks/run',{content:value('taskSpec')})">Run Task</button>
-        <label>Task ID</label>
-        <input id="taskId" placeholder="task-...">
-        <button class="secondary" onclick="api('GET','/api/tasks/' + encodeURIComponent(value('taskId')))">Task Status</button>
-        <button class="secondary" onclick="api('GET','/api/tasks/' + encodeURIComponent(value('taskId')) + '/logs?limit=200')">Task Logs</button>
-        <button class="secondary" onclick="connectLogs()">Stream Logs</button>
-        <button class="secondary" onclick="api('POST','/api/tasks/' + encodeURIComponent(value('taskId')) + '/cancel')">Cancel Task</button>
-      </section>
-
-      <section id="reports">
-        <h2>Finding / Evidence / Reports</h2>
-        <button onclick="api('GET','/api/findings?limit=100')">Findings</button>
-        <button class="secondary" onclick="api('GET','/api/runs?limit=100')">Runs</button>
-        <button class="secondary" onclick="api('GET','/api/reports?limit=100')">Reports</button>
-        <label>Report Task ID or Run ID</label>
-        <input id="reportId" placeholder="task-... or run-...">
-        <button onclick="api('POST','/api/reports/generate',{task:value('reportId')})">Generate Task Report</button>
-        <button class="secondary" onclick="api('GET','/api/reports/' + encodeURIComponent(value('reportId')))">Read Report</button>
-      </section>
-
-      <section id="approvals">
-        <h2>Approval Processing</h2>
-        <button onclick="api('GET','/api/approvals?limit=100')">List Approvals</button>
-        <label>Resource</label>
-        <input id="approvalResource" placeholder="task name">
-        <label>Risk</label>
-        <select id="approvalRisk">
-          <option>high</option>
-          <option>critical</option>
-          <option>medium</option>
-          <option>low</option>
-        </select>
-        <button onclick="api('POST','/api/approvals/request',{resource:value('approvalResource'),risk:value('approvalRisk')})">Request Approval</button>
-        <label>Approval ID</label>
-        <input id="approvalId" placeholder="approval-...">
-        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/approve')">Approve</button>
-        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/reject')">Reject</button>
-        <button class="secondary" onclick="api('POST','/api/approvals/' + encodeURIComponent(value('approvalId')) + '/expire')">Expire</button>
-      </section>
-
-      <section id="audit">
-        <h2>Audit & Policy Explain</h2>
-        <button onclick="api('GET','/api/audit?limit=100')">Audit Events</button>
-        <button class="secondary" onclick="api('POST','/api/policy/explain',{content:value('taskSpec')})">Explain Current Task Policy</button>
-      </section>
-
-      <section id="system">
-        <h2>System Configuration & Protocol Center</h2>
-        <button onclick="api('GET','/health')">Health</button>
-        <button class="secondary" onclick="api('GET','/openapi.json')">OpenAPI</button>
-      </section>
-
-      <section>
-        <h2>Output</h2>
-        <pre id="output">Ready.</pre>
-      </section>
-    </div>
-  </main>
+  <div id="app"></div>
+  <script src="/console/simple-check.js"></script>
   <script>
-    let logCursor = 0;
-    function value(id) {
-      return document.getElementById(id).value;
-    }
-    function print(data) {
-      const out = document.getElementById('output');
-      if (typeof data === 'string') {
-        out.textContent = data;
-      } else {
-        out.textContent = JSON.stringify(data, null, 2);
-      }
-    }
-    async function login() {
-      const response = await fetch('/api/session/login', {
-        method: 'POST',
-        headers: {'content-type': 'application/json'},
-        body: JSON.stringify({username: value('username'), password: value('password')})
-      });
-      const data = await response.json();
-      if (data.token) {
-        document.getElementById('token').value = data.token;
-      }
-      print(data);
-    }
-    async function loadSession() {
-      await api('GET', '/api/session');
-    }
-    async function api(method, path, body) {
-      const options = {
-        method,
-        headers: {
-          'authorization': 'Bearer ' + value('token'),
-          'content-type': 'application/json'
+    const Simple = window.SentinelFlowSimpleCheck;
+    const state = {
+      route: "home", apiBase: localStorage.getItem("sentinelflow.apiBase") || window.location.origin,
+      token: localStorage.getItem("sentinelflow.token") || "", identity: null, health: null, system: null,
+      tasks: [], reports: [], tools: [], audit: [], approvals: [], selectedTask: null, reportId: "",
+      reportMarkdown: "", reportCache: {}, technicalOpen: false, technicalLogs: [], advancedTab: "plugins", busy: false,
+      advancedTaskText: "", advancedOutput: null,
+      logCursor: 0, logSource: null,
+      progressStage: "", progressError: "", toast: "",
+      form: {domain: "", authorizationNote: "", mode: "standard", authorizationConfirmed: false, step: 1, error: ""}
+    };
+
+    class ApiClient {
+      url(path) { return `${state.apiBase.replace(/\/$/, "")}${path}`; }
+      async request(method, path, body, raw) {
+        const headers = {accept: raw ? "text/plain" : "application/json"};
+        if (body !== undefined) headers["content-type"] = "application/json";
+        if (state.token) headers.authorization = `Bearer ${state.token}`;
+        const response = await fetch(this.url(path), {method, headers, body: body === undefined ? undefined : JSON.stringify(body)});
+        const text = await response.text();
+        let data = text;
+        if (!raw && text && (response.headers.get("content-type") || "").includes("application/json")) data = JSON.parse(text);
+        if (!response.ok) {
+          const original = data && data.error ? data.error : text || response.statusText;
+          const error = new Error(humanError(original));
+          error.original = original; error.status = response.status; throw error;
         }
-      };
-      if (body !== undefined) {
-        options.body = JSON.stringify(body);
+        return data;
       }
-      const response = await fetch(path, options);
-      const text = await response.text();
-      try {
-        print(JSON.parse(text));
-      } catch {
-        print(text);
+      get(path, raw) { return this.request("GET", path, undefined, raw); }
+      post(path, body) { return this.request("POST", path, body, false); }
+      streamUrl(taskId, logCursor) {
+        return `${this.url(`/api/tasks/${encodeURIComponent(taskId)}/logs/stream`)}?cursor=${logCursor}&limit=200&token=${encodeURIComponent(state.token)}`;
       }
     }
-    function connectLogs() {
-      const taskId = encodeURIComponent(value('taskId'));
-      const token = encodeURIComponent(value('token'));
-      const url = `/api/tasks/${taskId}/logs/stream?cursor=${logCursor}&limit=200&token=${token}`;
-      const source = new EventSource(url);
-      source.addEventListener('audit', (event) => {
+    const api = new ApiClient();
+
+    function role() { return state.identity ? String(state.identity.role).toLowerCase() : "viewer"; }
+    function canOperate() { return role() === "operator" || role() === "admin"; }
+    function isAdmin() { return role() === "admin"; }
+    function navItems() {
+      const definitions = {
+        home: ["首页", "⌂"], "new-check": ["开始检查", "＋"], records: ["检查记录", "◷"],
+        reports: ["报告中心", "▤"], help: ["帮助", "?"], advanced: ["高级功能", "⚙"]
+      };
+      return Simple.navigationForRole(role()).map((id) => [id, ...definitions[id]]);
+    }
+
+    function render() {
+      const app = document.getElementById("app");
+      if (!state.token) { app.innerHTML = renderLogin(); return; }
+      app.innerHTML = `<div class="layout">
+        <aside class="sidebar">
+          <div class="brand"><div class="brand-mark">SF</div><div><strong>SentinelFlow</strong><small>安全验证工作台</small></div></div>
+          <nav class="nav">${navItems().filter(([id]) => id !== "advanced").map(navButton).join("")}</nav>
+          ${isAdmin() ? `<div class="advanced-nav"><nav class="nav">${navButton(["advanced","高级功能","⚙"])}</nav></div>` : ""}
+        </aside>
+        <div class="main">
+          <header class="topbar"><div class="topbar-title">简单、清晰、默认安全</div>
+            <div class="session"><span>${escapeHtml(state.identity ? state.identity.actorId : "")}</span>${badge(roleLabel(role()), "neutral")}<button class="ghost" data-action="logout">退出</button></div>
+          </header>
+          <main class="content">${renderPage()}</main>
+        </div>
+      </div>${state.toast ? `<div class="toast">${escapeHtml(state.toast)}</div>` : ""}`;
+    }
+
+    function navButton([id, label, icon]) {
+      return `<button class="${state.route === id ? "active" : ""}" data-route="${id}"><span>${icon} ${label}</span><span>›</span></button>`;
+    }
+
+    function renderLogin() {
+      return `<div class="login"><div class="login-card">
+        <div class="brand-mark">SF</div>
+        <h1>SentinelFlow 安全验证工作台</h1>
+        <p class="muted">登录后即可检查已授权资产、查看进度并生成可读报告。</p>
+        <div class="form-group"><label>账号</label><select id="loginUser"><option>operator</option><option>viewer</option><option>admin</option><option>approver</option></select></div>
+        <div class="form-group"><label>密码</label><input id="loginPassword" type="password" value="sentinelflow"></div>
+        <button class="primary" style="width:100%" data-action="login">${state.busy ? "正在登录..." : "登录"}</button>
+        ${state.progressError ? `<div class="notice danger" style="margin-top:14px">${escapeHtml(state.progressError)}</div>` : ""}
+        <p class="small muted">本地开发环境默认密码为 sentinelflow。生产环境应接入正式身份认证。</p>
+      </div></div>`;
+    }
+
+    function renderPage() {
+      switch (state.route) {
+        case "home": return renderHome();
+        case "new-check": return canOperate() ? renderNewCheck() : renderDenied();
+        case "progress": return renderProgress();
+        case "result": return renderResult();
+        case "records": return renderRecords();
+        case "reports": return renderReports();
+        case "report-detail": return renderReportDetail();
+        case "help": return renderHelp();
+        case "advanced": return isAdmin() ? renderAdvanced() : renderDenied();
+        default: return renderHome();
+      }
+    }
+
+    function head(title, subtitle, actions) {
+      return `<div class="page-head"><div><h1>${escapeHtml(title)}</h1><p>${escapeHtml(subtitle)}</p></div><div class="actions">${actions || ""}</div></div>`;
+    }
+
+    function renderHome() {
+      const recent = state.tasks.slice(0, 5);
+      return `<div class="stack">
+        <section class="hero"><h1>欢迎使用 SentinelFlow 安全验证工作台</h1>
+          <p>输入一个已授权的域名，即可完成资产发现、端口检查、服务识别并生成报告。复杂配置由系统安全处理。</p>
+          <div class="actions">${canOperate() ? `<button class="primary" data-route="new-check">开始一次新检查</button>` : ""}<button data-route="reports">查看最近报告</button><button data-route="records">查看历史任务</button></div>
+        </section>
+        <section class="grid-3">
+          ${homeAction("◎","开始一次新检查","输入域名并选择检查方式，三步即可发起。","new-check", canOperate())}
+          ${homeAction("▤","查看最近报告","阅读适合管理和交付场景的中文报告。","reports", true)}
+          ${homeAction("◷","查看历史任务","查看目标、时间、任务状态与结果状态。","records", true)}
+        </section>
+        <section class="panel"><h2>最近检查</h2>${recent.length ? taskTable(recent) : empty("暂无检查记录", canOperate() ? "开始第一次已授权资产检查。" : "当前还没有可查看的检查记录。")}</section>
+        <div class="notice warning"><strong>安全提示：</strong>请仅检查已获得授权的域名或资产。系统会执行安全确认，并记录完整审计日志。</div>
+      </div>`;
+    }
+
+    function homeAction(icon, title, text, route, visible) {
+      if (!visible) return `<div class="card action-card"><div><div class="icon">${icon}</div><h3>${title}</h3><div class="muted">${text}</div></div><span class="small muted">当前角色仅可查看</span></div>`;
+      return `<div class="card action-card"><div><div class="icon">${icon}</div><h3>${title}</h3><div class="muted">${text}</div></div><button data-route="${route}">进入</button></div>`;
+    }
+
+    function renderNewCheck() {
+      const form = state.form;
+      return `${head("开始检查", "输入目标、选择方式、确认授权，系统会自动完成后续安全流程。", `<button data-action="reset-check">重新填写</button>`)}
+        <div class="wizard">${[1,2,3].map((step) => `<div class="wizard-step ${form.step === step ? "active" : form.step > step ? "done" : ""}"><span>${step}</span>${["填写检查目标","选择检查方式","检查前确认"][step-1]}</div>`).join("")}</div>
+        ${form.error ? `<div class="notice danger" style="margin-bottom:16px">${escapeHtml(form.error)}</div>` : ""}
+        ${form.step === 1 ? renderTargetStep() : form.step === 2 ? renderModeStep() : renderConfirmStep()}`;
+    }
+
+    function renderTargetStep() {
+      return `<section class="panel"><h2>填写检查目标</h2>
+        <div class="form-group"><label>要检查的域名</label><input data-form="domain" value="${attr(state.form.domain)}" placeholder="例如：weikan.net.cn" autocomplete="off"><div class="small muted">只填写域名，不需要 http://、https:// 或页面路径。</div></div>
+        <div class="form-group"><label>授权说明</label><textarea data-form="authorizationNote" placeholder="例如：本域名为公司自有资产，已授权进行安全检查。">${escapeHtml(state.form.authorizationNote)}</textarea><div class="small muted">用于帮助团队理解本次检查依据；系统仍会执行授权范围校验。</div></div>
+        <div class="actions"><button class="primary" data-action="next-target">下一步：选择检查方式</button></div>
+      </section>`;
+    }
+
+    function renderModeStep() {
+      return `<section class="panel"><h2>选择检查方式</h2><p class="muted">标准检查是大多数已授权场景的推荐选择。</p>
+        <div class="grid-3">
+          ${modeCard("quick","快速检查","最快，主要使用公开情报和历史缓存，不主动访问目标。","适合：领导查看、售前演示、初步摸底。")}
+          ${modeCard("standard","标准检查","推荐。会进行低影响的 DNS、端口和服务识别。","适合：交付人员、项目经理和安全工程师。", true)}
+          ${modeCard("deep","深度检查","专业模式，可能需要审批，仅适合明确授权窗口。","适合：高级安全工程师。")}
+        </div>
+        <div class="actions" style="margin-top:18px"><button data-action="back-target">上一步</button>${state.form.mode === "deep" ? `<button data-action="open-advanced">进入高级模式</button>` : `<button class="primary" data-action="next-mode">下一步：检查前确认</button>`}</div>
+      </section>`;
+    }
+
+    function modeCard(id, title, text, suitable, recommended) {
+      return `<div class="mode-card ${state.form.mode === id ? "selected" : ""} ${recommended ? "recommended" : ""}" data-mode="${id}">
+        <h3>${title}</h3><p>${text}</p><p class="small muted">${suitable}</p><button class="${state.form.mode === id ? "primary" : ""}" data-mode="${id}">${state.form.mode === id ? "已选择" : id === "deep" ? "进入高级模式" : `选择${title}`}</button>
+      </div>`;
+    }
+
+    function renderConfirmStep() {
+      const active = state.form.mode === "standard";
+      return `<section class="panel"><h2>检查前确认</h2>
+        <div class="confirm-list">
+          ${confirmRow("检查目标", state.form.domain)}${confirmRow("检查方式", modeLabel(state.form.mode))}
+          ${confirmRow("是否会主动访问目标", active ? "是，低影响" : "否")}
+          ${confirmRow("是否启用高风险能力", "否")}${confirmRow("是否进行漏洞利用", "否")}
+          ${confirmRow("是否进行弱口令尝试", "否")}${confirmRow("是否进行目录爆破", "否")}
+          ${confirmRow("是否记录审计日志", "是")}
+        </div>
+        <div class="notice" style="margin-top:16px"><strong>授权说明</strong><div>${escapeHtml(state.form.authorizationNote || "未填写补充说明")}</div><div class="small muted">授权范围：${escapeHtml(state.form.domain)}（系统自动生成）</div></div>
+        <label class="checkline" style="margin-top:16px"><input type="checkbox" data-form-check="authorizationConfirmed" ${state.form.authorizationConfirmed ? "checked" : ""}><span><strong>我确认已获得授权</strong><br><span class="small">我确认有权对上述目标进行所选方式的安全检查。</span></span></label>
+        <div class="actions" style="margin-top:18px"><button data-action="back-mode">上一步</button><button class="primary" data-action="start-check" ${state.form.authorizationConfirmed ? "" : "disabled"}>${state.busy ? "正在安全确认..." : "开始检查"}</button></div>
+      </section>`;
+    }
+
+    function confirmRow(label, value) { return `<div class="confirm-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`; }
+
+    function renderProgress() {
+      const steps = [
+        ["subdomain","子域名发现","正在查找该域名下可能存在的网站入口。"],
+        ["dns","DNS 解析","正在确认这些入口是否能解析到有效 IP。"],
+        ["ports","端口检查","正在检查常见 Web 服务端口是否开放。"],
+        ["services","服务识别","正在识别开放端口上运行的服务类型。"],
+        ["report","生成报告","正在整理结果、可信度和审计摘要。"]
+      ];
+      return `${head("检查进度", `目标：${state.form.domain}`, "")}
+        <section class="panel"><div class="notice ${state.progressError ? "danger" : ""}" style="margin-bottom:16px">
+          <strong>${progressTitle()}</strong><div class="small">${state.progressError ? escapeHtml(state.progressError) : "系统正在通过 SentinelFlow Core 执行安全检查，请勿重复提交。"}</div>
+        </div>
+        <div class="progress-list">${steps.map((item, index) => progressItem(item, index)).join("")}</div>
+        ${state.progressError ? `<div class="actions" style="margin-top:18px"><button data-route="new-check">返回修改</button><button data-route="records">查看检查记录</button></div>` : ""}
+        <details class="technical"><summary>查看技术流程</summary><p class="small muted">系统已自动执行配置校验、执行计划、安全策略确认、任务运行、结果读取、报告生成和审计摘要读取。浏览器不会直接运行插件。</p></details>
+        </section>`;
+    }
+
+    function progressTitle() {
+      return {validate:"正在校验检查配置", plan:"正在制定安全执行计划", policy:"正在进行检查前安全确认", run:"正在执行检查", report:"正在生成报告", complete:"检查与报告已完成"}[state.progressStage] || "准备开始检查";
+    }
+
+    function progressItem([id,title,text], index) {
+      const order = {validate:0,plan:0,policy:0,run:2,report:4,complete:5};
+      const current = order[state.progressStage] || 0;
+      const status = state.progressError ? (index < current ? "done" : "warning") : index < current ? "done" : index === current || (state.progressStage === "run" && index < 4) ? "running" : "";
+      const label = status === "done" ? "已完成" : status === "running" ? "进行中" : status === "warning" ? "有警告" : "等待中";
+      return `<div class="progress-item ${status}"><div class="progress-icon">${status === "done" ? "✓" : index + 1}</div><div><strong>${title}</strong><div class="small muted">${text}</div></div>${badge(label, status === "done" ? "success" : status === "running" ? "info" : status === "warning" ? "warning" : "neutral")}</div>`;
+    }
+
+    function renderResult() {
+      if (!state.selectedTask) return `${head("检查结果","尚未选择检查任务。","")} ${empty("暂无结果","请从检查记录中打开一项任务。")}`;
+      const summary = reportSummary(state.reportMarkdown);
+      const quality = Simple.qualityPresentation(summary.reportStatus, summary.qualityGate);
+      const confirmed = markdownRows(state.reportMarkdown, "## 5. 已确认子域名");
+      const candidates = markdownRows(state.reportMarkdown, "## 候选子域名");
+      const reviews = reviewItems(state.reportMarkdown, summary);
+      const skipped = skippedMessages(state.reportMarkdown);
+      return `${head("结果摘要", `目标：${summary.target || taskDomain(state.selectedTask)}`, `<button data-action="open-current-report">查看完整报告</button>`)}
+        <div class="notice ${quality.tone}"><strong>${Simple.taskAndReportMessage(state.selectedTask.status, summary.reportStatus, summary.qualityGate)}</strong><div>${quality.message}</div></div>
+        <div class="grid-5" style="margin-top:16px">
+          ${metric("报告可信度", quality.label)}${metric("已确认子域名", summary.confirmed || "0")}${metric("有效公网 IP", summary.publicIps || "0")}${metric("开放端口", summary.ports || "0")}${metric("识别服务", summary.services || "0")}
+        </div>
+        <div class="stack" style="margin-top:16px">
+          <section class="panel"><h2>已确认资产</h2>${confirmed.length ? simpleMarkdownTable(confirmed) : empty("暂无已确认资产","本次没有形成可确认的资产结果，候选项不会计入这里。")}</section>
+          <section class="panel"><h2>候选资产</h2><p class="muted">候选资产是系统根据字典或情报推测出的结果，尚未被 DNS 或服务验证确认。</p>${candidates.length ? simpleMarkdownTable(candidates) : empty("暂无候选资产","本次未记录候选资产。")}</section>
+          <section class="panel"><h2>需要复核</h2>${reviews.length ? `<ul>${reviews.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : empty("暂无明确复核项","仍建议结合业务资产台账进行人工确认。")}</section>
+          <section class="panel"><h2>未执行或已跳过</h2>${skipped.length ? skipped.map((item) => `<div class="notice warning" style="margin-top:8px">${escapeHtml(item)}</div>`).join("") : `<div class="notice success">所有计划阶段均已执行或未记录跳过原因。</div>`}</section>
+          <details class="panel"><summary>查看技术详情</summary><div class="actions" style="margin:12px 0"><button data-action="load-technical-logs" data-task="${attr(state.selectedTask.taskId)}">查看技术日志</button></div>${state.technicalLogs.length ? `<pre>${escapeHtml(JSON.stringify(state.technicalLogs, null, 2))}</pre>` : ""}<pre>${escapeHtml(JSON.stringify({task: state.selectedTask, reportSummary: summary}, null, 2))}</pre></details>
+        </div>`;
+    }
+
+    function metric(label, value) { return `<div class="card summary-card"><span class="small muted">${label}</span><span class="value">${escapeHtml(value)}</span></div>`; }
+
+    function renderRecords() {
+      return `${head("检查记录","任务状态与报告可信度分别展示，任务完成不代表报告可信。",`<button data-action="refresh-records">刷新</button>`)}
+        <section class="panel">${state.tasks.length ? taskTable(state.tasks) : empty("暂无检查记录","完成检查后，任务会显示在这里。")}</section>`;
+    }
+
+    function taskTable(tasks) {
+      return `<div style="overflow:auto"><table><thead><tr><th>目标</th><th>检查时间</th><th>任务状态</th><th>报告状态</th><th>检查方式</th><th>操作</th></tr></thead><tbody>
+        ${tasks.map((task) => `<tr><td><strong>${escapeHtml(taskDomain(task))}</strong><div class="small muted">${escapeHtml(task.name || task.taskId || "")}</div></td>
+          <td>${formatTime(task.startedAt)}</td><td>${taskStatusBadge(task.status)}</td><td>${reportStatusForTask(task.taskId)}</td>
+          <td>${escapeHtml(taskMode(task))}</td><td><button data-action="open-task-result" data-task="${attr(task.taskId)}">查看详情</button>${canOperate() ? ` <button data-action="generate-task-report" data-task="${attr(task.taskId)}">生成报告</button>` : ""}</td></tr>`).join("")}
+      </tbody></table></div>`;
+    }
+
+    function renderReports() {
+      return `${head("报告中心","面向管理、售前和交付场景的中文可读报告。",`<button data-action="refresh-reports">刷新</button>`)}
+        <section class="panel">${state.reports.length ? `<div style="overflow:auto"><table><thead><tr><th>报告名称</th><th>目标</th><th>生成时间</th><th>检查方式</th><th>可信度</th><th>操作</th></tr></thead><tbody>
+        ${state.reports.map((report) => { const id = reportId(report); const task = state.tasks.find((item) => item.taskId === id); return `<tr>
+          <td><strong>SentinelFlow 授权资产发现报告</strong><div class="small muted">${escapeHtml(id)}</div></td>
+          <td>${escapeHtml(task ? taskDomain(task) : "打开后查看")}</td><td>${formatTime(report.createdAt || report.updatedAt)}</td>
+          <td>${escapeHtml(task ? taskMode(task) : "-")}</td><td>${reportStatusForTask(id)}</td>
+          <td><button data-action="read-report" data-report="${attr(id)}">查看</button> <button data-action="download-report-id" data-report="${attr(id)}">下载 Markdown</button></td>
+        </tr>`; }).join("")}</tbody></table></div>` : empty("暂无报告","完成检查后可自动生成报告，也可以从检查记录重新生成。")}</section>`;
+    }
+
+    function renderReportDetail() {
+      const summary = reportSummary(state.reportMarkdown);
+      const quality = Simple.qualityPresentation(summary.reportStatus, summary.qualityGate);
+      return `${head("SentinelFlow 授权资产发现报告", `目标：${summary.target || "-"}`, `<button data-action="download-current-report">下载 Markdown</button><button data-action="copy-report">复制报告</button><button data-action="copy-management-summary">复制管理摘要</button>`)}
+        <div class="notice ${quality.tone}"><strong>报告状态：${quality.label}</strong><div>${quality.message}</div></div>
+        <div class="grid-5" style="margin-top:16px">${metric("已确认子域名", summary.confirmed || "0")}${metric("候选资产", summary.candidates || "0")}${metric("公网 IP", summary.publicIps || "0")}${metric("开放端口", summary.ports || "0")}${metric("识别服务", summary.services || "0")}</div>
+        <section class="panel report-content" style="margin-top:16px">
+          <h2>管理摘要</h2><p>${managementSummary(summary, quality)}</p>
+          <h2>资产总览</h2>${summaryTable(summary)}
+          <h2>已确认资产</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 5. 已确认子域名"), "没有已确认资产。")}
+          <h2>候选资产</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 候选子域名"), "没有候选资产。")}
+          <h2>需要复核</h2>${reviewItems(state.reportMarkdown, summary).map((item) => `<div class="notice warning" style="margin-top:8px">${escapeHtml(item)}</div>`).join("") || `<p class="muted">暂无明确复核项。</p>`}
+          <h2>未执行或已跳过</h2>${skippedMessages(state.reportMarkdown).map((item) => `<div class="notice warning" style="margin-top:8px">${escapeHtml(item)}</div>`).join("") || `<p class="muted">未记录跳过阶段。</p>`}
+          <h2>数据源状态</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 11. 错误与跳过项"), "未记录数据源异常。")}
+          <h2>审计摘要</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 12. 审计摘要"), "未读取到审计摘要。")}
+          <h2>建议</h2>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("") ? `<ul>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>建议人工确认关键公网服务归属，并将确认资产纳入资产台账。</p>`}
+          <details class="technical"><summary>查看技术详情</summary><pre>${escapeHtml(state.reportMarkdown)}</pre></details>
+        </section>`;
+    }
+
+    function renderHelp() {
+      const faqs = [
+        ["什么是授权检查？","指你已获得资产所有者或组织负责人的明确许可，可以在约定范围内进行检查。请勿检查未经授权的目标。"],
+        ["快速检查和标准检查有什么区别？","快速检查主要使用公开情报和缓存数据，不主动连接目标；标准检查会执行低影响的 DNS、端口连通性和服务识别。"],
+        ["为什么有些结果是候选资产？","候选结果来自公开情报或字典推测，但尚未被 DNS 或服务验证确认，因此不能直接视为真实资产。"],
+        ["为什么报告显示未确认？","任务流程可能已完成，但没有获得足够的可验证资产证据。此时报告会保持克制，不会宣称检查成功。"],
+        ["什么情况下需要高级模式？","需要自定义插件链、限速、并发、原始检查配置或审批高风险能力时，由管理员或高级安全工程师使用。"],
+        ["什么是公开情报？","来自证书透明日志、公开资产信息或已有缓存的数据，通常不需要主动访问目标。"],
+        ["什么是低影响检查？","在严格限速和范围控制下进行 DNS 查询、TCP 连接和安全服务识别，不包含漏洞利用、弱口令、目录爆破或拒绝服务。"]
+      ];
+      return `${head("帮助","用普通语言了解授权检查、结果状态和使用边界。","")}<section class="panel">${faqs.map(([q,a]) => `<details class="faq"><summary>${q}</summary><p class="muted">${a}</p></details>`).join("")}</section>`;
+    }
+
+    function renderAdvanced() {
+      const tabs = [["plugins","插件管理"],["tasks","任务配置"],["approvals","审批"],["raw","原始结果"],["audit","审计日志"],["settings","系统设置"]];
+      return `${head("高级功能","仅供管理员和高级安全工程师使用。普通检查不需要修改这里的配置。","")}
+        <div class="actions" style="margin-bottom:14px">${tabs.map(([id,label]) => `<button class="${state.advancedTab === id ? "primary" : ""}" data-advanced="${id}">${label}</button>`).join("")}</div>
+        ${state.advancedTab === "plugins" ? renderAdvancedPlugins() : state.advancedTab === "tasks" ? renderAdvancedTasks() : state.advancedTab === "approvals" ? renderAdvancedApprovals() : state.advancedTab === "raw" ? renderAdvancedRaw() : state.advancedTab === "audit" ? renderAdvancedAudit() : renderAdvancedSettings()}`;
+    }
+
+    function renderAdvancedPlugins() {
+      return `<section class="panel"><h2>插件管理</h2><p class="muted">工具仍通过 Manifest + Adapter + Parser 接入，浏览器不会直接加载或执行插件代码。</p>
+        <div class="form-group"><label>插件路径</label><input id="pluginPath" value="plugins/official/subdomain-discovery-plus"></div>
+        <div class="actions"><button data-action="validate-plugin">校验插件</button><button data-action="install-plugin">安装插件</button><button data-action="load-tools">刷新工具</button></div>
+        <details class="technical"><summary>查看已注册工具</summary><pre>${escapeHtml(JSON.stringify(state.tools, null, 2))}</pre></details></section>`;
+    }
+    function renderAdvancedTasks() {
+      const content = state.advancedTaskText || (state.selectedTask ? JSON.stringify(state.selectedTask.specSnapshot || state.selectedTask, null, 2) : "");
+      return `<section class="panel"><h2>检查配置</h2><p class="muted">此区域直接使用协议字段，仅供了解 SentinelFlow TaskSpec、插件链和策略边界的管理员使用。</p>
+        <textarea data-advanced-task placeholder="粘贴 TaskSpec JSON">${escapeHtml(content)}</textarea>
+        <div class="actions" style="margin-top:12px"><button data-action="advanced-validate">校验配置</button><button data-action="advanced-plan">查看计划</button><button data-action="advanced-policy">检查前安全确认</button><button class="primary" data-action="advanced-run">运行任务</button></div>
+        ${state.advancedOutput ? `<details class="technical" open><summary>技术响应</summary><pre>${escapeHtml(JSON.stringify(state.advancedOutput, null, 2))}</pre></details>` : ""}
+      </section>`;
+    }
+    function renderAdvancedRaw() {
+      return `<section class="panel"><h2>原始结果</h2><p class="muted">默认产品页面已经按已确认、候选、复核和跳过状态整理；此处保留原始任务与报告供技术排查。</p>
+        ${state.selectedTask ? `<h3>TaskSpec / 任务快照</h3><pre>${escapeHtml(JSON.stringify(state.selectedTask, null, 2))}</pre>` : empty("未选择任务","请先从检查记录打开一个任务。")}
+        ${state.reportMarkdown ? `<h3 style="margin-top:16px">原始报告</h3><pre>${escapeHtml(state.reportMarkdown)}</pre>` : ""}
+      </section>`;
+    }
+    function renderAdvancedApprovals() {
+      return `<section class="panel"><h2>高风险审批</h2><p class="muted">深度检查默认仍关闭高风险能力。确需使用时，应先提交审批，再将审批编号写入检查配置。</p>
+        <div class="grid-2"><div><label>任务名称</label><input id="approvalResource" placeholder="Task metadata.name"></div><div><label>风险等级</label><select id="approvalRisk"><option>high</option><option>critical</option></select></div></div>
+        <div class="actions" style="margin-top:12px"><button data-action="request-approval">提交审批</button><button data-action="refresh-approvals">刷新</button></div>
+        ${state.approvals.length ? `<div style="overflow:auto;margin-top:16px"><table><thead><tr><th>审批编号</th><th>任务</th><th>风险</th><th>状态</th><th>操作</th></tr></thead><tbody>${state.approvals.map((item)=>`<tr><td>${escapeHtml(item.approvalId||"-")}</td><td>${escapeHtml(item.resourceRef||"-")}</td><td>${escapeHtml(item.risk||"-")}</td><td>${escapeHtml(item.status||"-")}</td><td><button data-action="approve-request" data-approval="${attr(item.approvalId)}">批准</button> <button data-action="reject-request" data-approval="${attr(item.approvalId)}">拒绝</button></td></tr>`).join("")}</tbody></table></div>` : empty("暂无审批","提交深度检查审批后会显示在这里。")}
+      </section>`;
+    }
+    function renderAdvancedAudit() {
+      return `<section class="panel"><h2>审计日志</h2><div class="actions"><button data-action="load-audit">刷新</button></div>${state.audit.length ? `<pre>${escapeHtml(JSON.stringify(state.audit, null, 2))}</pre>` : empty("暂无审计事件","执行关键操作后会生成审计事件。")}</section>`;
+    }
+    function renderAdvancedSettings() {
+      return `<section class="panel"><h2>系统设置</h2><div class="form-group"><label>API 地址</label><input id="apiBase" value="${attr(state.apiBase)}"></div><div class="actions"><button data-action="save-api-base">保存</button><button data-action="load-system">刷新运行信息</button></div><pre>${escapeHtml(JSON.stringify({health:state.health, system:state.system}, null, 2))}</pre></section>`;
+    }
+
+    function renderDenied() { return `${head("无法访问","当前角色没有此功能权限。","")}<div class="notice warning">请联系管理员调整角色，或返回可访问页面。</div>`; }
+    function empty(title, text) { return `<div class="empty"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(text)}</p></div>`; }
+    function badge(text, tone) { return `<span class="badge ${tone || "neutral"}">${escapeHtml(text)}</span>`; }
+    function roleLabel(value) { return {viewer:"查看者",operator:"操作员",admin:"管理员",approver:"审批员"}[value] || value; }
+    function modeLabel(value) { return {quick:"快速检查",standard:"标准检查",deep:"深度检查"}[value] || value; }
+
+    async function login() {
+      const username = document.getElementById("loginUser").value;
+      const password = document.getElementById("loginPassword").value;
+      state.busy = true; state.progressError = ""; render();
+      try {
+        const session = await api.post("/api/session/login", {username,password});
+        state.token = session.token; state.identity = session.identity;
+        localStorage.setItem("sentinelflow.token", state.token);
+        await bootstrap(); state.route = "home";
+      } catch (error) { state.progressError = error.message; }
+      finally { state.busy = false; render(); }
+    }
+
+    async function bootstrap() {
+      state.health = await api.get("/health").catch(() => null);
+      if (!state.token) return;
+      const results = await Promise.allSettled([
+        api.get("/api/session"), api.get("/api/tasks?limit=100"), api.get("/api/reports?limit=100"),
+        api.get("/api/tools"), api.get("/api/audit?limit=200"), api.get("/api/system/status"), api.get("/api/approvals?limit=100")
+      ]);
+      if (results[0].status === "fulfilled") state.identity = results[0].value;
+      if (results[1].status === "fulfilled") state.tasks = results[1].value;
+      if (results[2].status === "fulfilled") state.reports = results[2].value;
+      if (results[3].status === "fulfilled") state.tools = results[3].value;
+      if (results[4].status === "fulfilled") state.audit = results[4].value;
+      if (results[5].status === "fulfilled") state.system = results[5].value;
+      if (results[6].status === "fulfilled") state.approvals = results[6].value;
+    }
+
+    async function startCheck() {
+      state.form.error = "";
+      try {
+        const task = Simple.buildSimpleCheckTaskSpec(
+          {domain:state.form.domain, mode:state.form.mode, authorizationConfirmed:state.form.authorizationConfirmed},
+          {operator: state.identity.actorId}
+        );
+        Simple.assertNoFixtureForRealTarget(task);
+        state.busy = true; state.route = "progress"; state.progressError = ""; state.progressStage = "validate"; render();
+        await api.post("/api/tasks/validate", {task});
+        state.progressStage = "plan"; render();
+        await api.post("/api/tasks/plan", {task});
+        state.progressStage = "policy"; render();
+        const policy = await api.post("/api/policy/explain", {task});
+        const decision = policyDecision(policy);
+        if (!decision.allowed) throw new Error(`检查未开始：当前配置未通过安全确认。${decision.reason ? ` ${translateReason(decision.reason)}` : ""}`);
+        state.progressStage = "run"; render();
+        state.selectedTask = await api.post("/api/tasks/run", {task});
+        state.progressStage = "report"; render();
+        const generated = await api.post("/api/reports/generate", {task: state.selectedTask.taskId, template:"asset-discovery"});
+        state.reportId = generated.reportId || state.selectedTask.taskId;
+        state.reportMarkdown = await api.get(`/api/reports/${encodeURIComponent(state.reportId)}`, true);
+        state.reportCache[state.reportId] = reportSummary(state.reportMarkdown);
+        state.progressStage = "complete";
+        await bootstrap();
+        state.route = "result";
+      } catch (error) {
+        state.progressError = error.message || String(error);
+        state.form.error = state.progressError;
+        if (state.route !== "progress") state.route = "new-check";
+      } finally { state.busy = false; render(); }
+    }
+
+    function policyDecision(policy) {
+      const items = Array.isArray(policy) ? policy : [];
+      const denied = items.find((item) => !((item.decision || {}).allowed));
+      return {allowed: items.length > 0 && !denied, reason: denied && ((denied.decision || {}).reasons || [])[0]};
+    }
+
+    async function openTaskResult(taskId) {
+      state.busy = true; showToast("正在读取检查结果...");
+      try {
+        state.selectedTask = await api.get(`/api/tasks/${encodeURIComponent(taskId)}`);
+        state.advancedTaskText = JSON.stringify(state.selectedTask.specSnapshot || {}, null, 2);
+        try {
+          state.reportMarkdown = await api.get(`/api/reports/${encodeURIComponent(taskId)}`, true);
+        } catch (_) {
+          if (canOperate()) {
+            await api.post("/api/reports/generate", {task:taskId, template:"asset-discovery"});
+            state.reportMarkdown = await api.get(`/api/reports/${encodeURIComponent(taskId)}`, true);
+          } else {
+            state.reportMarkdown = "";
+          }
+        }
+        state.reportId = taskId; state.reportCache[taskId] = reportSummary(state.reportMarkdown); state.route = "result";
+      } catch (error) { showToast(error.message); }
+      finally { state.busy = false; render(); }
+    }
+
+    async function generateTaskReport(taskId) {
+      try {
+        await api.post("/api/reports/generate", {task:taskId, template:"asset-discovery"});
+        showToast("报告已生成"); await bootstrap();
+      } catch (error) { showToast(error.message); }
+    }
+
+    async function loadTechnicalLogs(taskId) {
+      try {
+        state.technicalLogs = await api.get(`/api/tasks/${encodeURIComponent(taskId)}/logs?limit=200`);
+        connectLogs(taskId);
+      } catch (error) { showToast(error.message); }
+      render();
+    }
+
+    function connectLogs(taskId) {
+      if (state.logSource) state.logSource.close();
+      let logCursor = state.logCursor || 0;
+      const source = new EventSource(api.streamUrl(taskId, logCursor));
+      state.logSource = source;
+      source.addEventListener("audit", (event) => {
         const payload = JSON.parse(event.data);
+        state.logCursor = payload.cursor;
         logCursor = payload.cursor;
-        print(payload);
+        if (payload.event) state.technicalLogs.push(payload.event);
+        render();
       });
       source.onerror = () => {
         source.close();
-        setTimeout(connectLogs, 1000);
+        setTimeout(connectLogs, 1000, taskId);
       };
     }
+
+    async function readReport(id) {
+      try {
+        state.reportMarkdown = await api.get(`/api/reports/${encodeURIComponent(id)}`, true);
+        state.reportId = id; state.reportCache[id] = reportSummary(state.reportMarkdown);
+        state.selectedTask = state.tasks.find((item) => item.taskId === id) || state.selectedTask;
+        state.route = "report-detail";
+      } catch (error) { showToast(error.message); }
+      render();
+    }
+
+    async function runAdvancedTask(action) {
+      try {
+        const task = JSON.parse(state.advancedTaskText);
+        if (action === "advanced-validate") state.advancedOutput = await api.post("/api/tasks/validate", {task});
+        if (action === "advanced-plan") state.advancedOutput = await api.post("/api/tasks/plan", {task});
+        if (action === "advanced-policy") state.advancedOutput = await api.post("/api/policy/explain", {task});
+        if (action === "advanced-run") {
+          const policy = await api.post("/api/policy/explain", {task});
+          const decision = policyDecision(policy);
+          if (!decision.allowed) throw new Error(`检查未开始：当前配置未通过安全确认。${decision.reason ? ` ${translateReason(decision.reason)}` : ""}`);
+          state.advancedOutput = await api.post("/api/tasks/run", {task});
+          await bootstrap();
+        }
+        showToast("高级操作已完成");
+      } catch (error) { showToast(error.message); }
+      render();
+    }
+
+    async function approvalAction(action, approvalId) {
+      try {
+        if (action === "request-approval") {
+          const resource = document.getElementById("approvalResource").value.trim();
+          const risk = document.getElementById("approvalRisk").value;
+          if (!resource) throw new Error("请填写需要审批的任务名称。");
+          await api.post("/api/approvals/request", {resource,risk});
+        } else {
+          await api.post(`/api/approvals/${encodeURIComponent(approvalId)}/${action === "approve-request" ? "approve" : "reject"}`);
+        }
+        await bootstrap(); showToast("审批操作已完成");
+      } catch (error) { showToast(error.message); }
+      render();
+    }
+
+    function reportSummary(markdown) {
+      const get = (label) => {
+        const match = String(markdown || "").match(new RegExp(`\\|\\s*${label}\\s*\\|\\s*\`?([^\`|]+)\`?\\s*\\|`));
+        return match ? match[1].trim() : "";
+      };
+      return {
+        target:get("目标域名"), taskStatus:get("执行状态"), qualityGate:get("Quality Gate"), reportStatus:get("Report Status"),
+        confirmed:get("已确认子域名"), candidates:get("候选子域名"), publicIps:get("公网 IP 数量") || get("有效公网 IP"),
+        ports:get("开放端口数量") || get("已确认开放端口"), services:get("服务识别数量") || get("已识别服务"),
+        skipped:get("跳过阶段"), errors:get("错误数量"), audit:get("审计事件数量")
+      };
+    }
+
+    function markdownRows(markdown, heading) {
+      const text = String(markdown || ""); const start = text.indexOf(heading);
+      if (start < 0) return [];
+      const rest = text.slice(start + heading.length); const end = rest.search(/\n##\s/);
+      const section = end >= 0 ? rest.slice(0,end) : rest;
+      const lines = section.split("\n").filter((line) => line.trim().startsWith("|"));
+      if (lines.length < 2) return [];
+      return lines.filter((line) => !/^\|\s*-/.test(line.trim())).map((line) => line.split("|").slice(1,-1).map((cell) => cell.trim()));
+    }
+
+    function markdownBullets(markdown, heading) {
+      const text = String(markdown || ""); const start = text.indexOf(heading); if (start < 0) return [];
+      const rest = text.slice(start + heading.length); const end = rest.search(/\n##\s/); const section = end >= 0 ? rest.slice(0,end) : rest;
+      return section.split("\n").filter((line) => line.trim().startsWith("- ")).map((line) => line.trim().slice(2).replace(/`/g,""));
+    }
+
+    function simpleMarkdownTable(rows) {
+      if (!rows.length) return "";
+      const [headers,...body] = rows;
+      return `<div style="overflow:auto"><table><thead><tr>${headers.map((cell) => `<th>${escapeHtml(cell)}</th>`).join("")}</tr></thead><tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    }
+    function tableOrEmpty(rows, text) { return rows.length > 1 ? simpleMarkdownTable(rows) : `<p class="muted">${escapeHtml(text)}</p>`; }
+
+    function reviewItems(markdown, summary) {
+      const items = [];
+      const text = String(markdown || "").toLowerCase();
+      if (Number(summary.candidates || 0) > 0) items.push("存在候选资产，尚未被 DNS 或服务验证确认。");
+      if (text.includes("conflict") || text.includes("结果不一致")) items.push("不同数据源结果不一致，需要人工复核。");
+      if (text.includes("特殊用途地址") || text.includes("special")) items.push("发现非公网业务地址，已从端口检查中排除。");
+      if (text.includes("仅被动") || text.includes("passive-only")) items.push("部分资产仅由公开情报发现，主动检查未确认。");
+      return items;
+    }
+
+    function skippedMessages(markdown) {
+      const text = String(markdown || "");
+      const messages = [];
+      if (text.includes("no_public_routable_targets") || text.includes("端口探测已跳过")) messages.push(Simple.skippedStageMessage("ports","no_public_routable_targets"));
+      if (text.includes("no_confirmed_open_ports") || text.includes("服务识别已跳过") || text.includes("服务识别已因无确认开放端口跳过")) messages.push(Simple.skippedStageMessage("services","no_confirmed_open_ports"));
+      return messages;
+    }
+
+    function summaryTable(summary) {
+      return `<div class="confirm-list">${confirmRow("任务状态", summary.taskStatus || (state.selectedTask || {}).status || "-")}${confirmRow("报告状态", Simple.qualityPresentation(summary.reportStatus, summary.qualityGate).label)}${confirmRow("跳过阶段", summary.skipped || "0")}${confirmRow("审计事件", summary.audit || "0")}</div>`;
+    }
+    function managementSummary(summary, quality) {
+      return `本次对 ${summary.target || "目标域名"} 的授权资产检查已完成。报告状态为“${quality.label}”。已确认 ${summary.confirmed || 0} 个子域名、${summary.publicIps || 0} 个公网 IP、${summary.ports || 0} 个开放端口和 ${summary.services || 0} 个服务。${quality.message}`;
+    }
+    function taskDomain(task) { return (((task.specSnapshot || {}).spec || {}).targets || [])[0]?.name || "-"; }
+    function taskMode(task) { const labels = ((task.specSnapshot || {}).metadata || {}).labels || {}; return modeLabel(labels.checkMode || "advanced"); }
+    function reportId(report) { return report.reportId || report.id || String(report.path || report).split("/").pop().replace(/\.md$/,""); }
+    function reportStatusForTask(id) { const summary = state.reportCache[id]; return summary ? badge(Simple.qualityPresentation(summary.reportStatus,summary.qualityGate).label,Simple.qualityPresentation(summary.reportStatus,summary.qualityGate).tone) : badge("待查看","neutral"); }
+    function taskStatusBadge(status) { const map = {completed:["已完成","success"],running:["进行中","info"],failed:["失败","danger"],cancelled:["已取消","neutral"],pending:["等待中","neutral"],planning:["准备中","info"]}; const item = map[status] || [status || "未知","neutral"]; return badge(item[0],item[1]); }
+    function formatTime(value) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN"); }
+    function translateReason(reason) { return humanError(reason).replace("high or critical risk requires an approved request","深度检查需要审批。"); }
+    function humanError(message) {
+      return String(message || "")
+        .replace(/real target cannot use local example or fixture data:[^;]+/i,"当前目标是真实域名，不能使用本地示例数据。请切换为快速检查或标准检查。")
+        .replace("target is outside the authorization boundary","目标不在授权范围内。")
+        .replace("missing bearer token","登录已失效，请重新登录。")
+        .replace("invalid bearer token","登录已失效，请重新登录。")
+        .replace("role is not authorized for this operation","当前角色没有权限执行此操作。")
+        .replace("high or critical risk requires an approved request","当前配置需要审批后才能执行。");
+    }
+    function escapeHtml(value) { return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+    function attr(value) { return escapeHtml(value); }
+    function showToast(text) { state.toast = text; render(); setTimeout(() => { state.toast = ""; render(); }, 3200); }
+    async function copyText(text) { await navigator.clipboard.writeText(text); showToast("已复制"); }
+    function downloadText(id, text) { const blob = new Blob([text],{type:"text/markdown;charset=utf-8"}); const url=URL.createObjectURL(blob); const link=document.createElement("a"); link.href=url; link.download=`${id || "sentinelflow-report"}.md`; link.click(); URL.revokeObjectURL(url); }
+
+    document.addEventListener("click", async (event) => {
+      const route = event.target.closest("[data-route]");
+      if (route) { state.route = route.dataset.route; if (state.route === "records" || state.route === "reports") await bootstrap(); render(); return; }
+      const mode = event.target.closest("[data-mode]");
+      if (mode) { state.form.mode = mode.dataset.mode; state.form.error = ""; render(); return; }
+      const tab = event.target.closest("[data-advanced]");
+      if (tab) { state.advancedTab = tab.dataset.advanced; render(); return; }
+      const target = event.target.closest("[data-action]"); if (!target) return;
+      const action = target.dataset.action; const taskId = target.dataset.task; const id = target.dataset.report;
+      if (action === "login") await login();
+      if (action === "logout") { state.token=""; state.identity=null; localStorage.removeItem("sentinelflow.token"); render(); }
+      if (action === "reset-check") { state.form={domain:"",authorizationNote:"",mode:"standard",authorizationConfirmed:false,step:1,error:""}; render(); }
+      if (action === "next-target") { const result=Simple.validateDomain(state.form.domain); if (!result.valid) state.form.error=result.message; else if (!state.form.authorizationNote.trim()) state.form.error="请填写简短的授权说明。"; else { state.form.domain=result.domain; state.form.error=""; state.form.step=2; } render(); }
+      if (action === "back-target") { state.form.step=1; render(); }
+      if (action === "next-mode") { state.form.step=3; state.form.error=""; render(); }
+      if (action === "back-mode") { state.form.step=2; render(); }
+      if (action === "open-advanced") { if (isAdmin()) {state.route="advanced"; state.advancedTab="tasks";} else state.form.error="深度检查仅对管理员开放，并需要审批。"; render(); }
+      if (action === "start-check") await startCheck();
+      if (action === "refresh-records" || action === "refresh-reports") { await bootstrap(); render(); }
+      if (action === "open-task-result") await openTaskResult(taskId);
+      if (action === "generate-task-report") { await generateTaskReport(taskId); render(); }
+      if (action === "load-technical-logs") await loadTechnicalLogs(taskId);
+      if (action === "read-report") await readReport(id);
+      if (action === "open-current-report") { state.route="report-detail"; render(); }
+      if (action === "download-current-report") downloadText(state.reportId,state.reportMarkdown);
+      if (action === "download-report-id") { const text=await api.get(`/api/reports/${encodeURIComponent(id)}`,true); downloadText(id,text); }
+      if (action === "copy-report") await copyText(state.reportMarkdown);
+      if (action === "copy-management-summary") { const s=reportSummary(state.reportMarkdown); await copyText(managementSummary(s,Simple.qualityPresentation(s.reportStatus,s.qualityGate))); }
+      if (action === "validate-plugin" || action === "install-plugin") { const path=document.getElementById("pluginPath").value; try { await api.post(`/api/plugins/${action === "validate-plugin" ? "validate" : "install"}`,{path}); showToast(action === "validate-plugin" ? "插件校验完成" : "插件安装完成"); await bootstrap(); } catch(error){showToast(error.message);} }
+      if (action === "load-tools" || action === "load-audit" || action === "load-system") { await bootstrap(); render(); }
+      if (["advanced-validate","advanced-plan","advanced-policy","advanced-run"].includes(action)) await runAdvancedTask(action);
+      if (["request-approval","approve-request","reject-request"].includes(action)) await approvalAction(action,target.dataset.approval);
+      if (action === "refresh-approvals") { await bootstrap(); render(); }
+      if (action === "save-api-base") { state.apiBase=document.getElementById("apiBase").value; localStorage.setItem("sentinelflow.apiBase",state.apiBase); showToast("API 地址已保存"); }
+    });
+
+    document.addEventListener("input", (event) => {
+      if (event.target.matches("[data-form]")) state.form[event.target.dataset.form]=event.target.value;
+      if (event.target.matches("[data-advanced-task]")) state.advancedTaskText=event.target.value;
+    });
+    document.addEventListener("change", (event) => {
+      if (event.target.matches("[data-form-check]")) { state.form[event.target.dataset.formCheck]=event.target.checked; render(); }
+    });
+
+    window.addEventListener("beforeunload", () => {
+      if (state.logSource) state.logSource.close();
+    });
+
+    bootstrap().catch(() => {}).finally(render);
   </script>
 </body>
 </html>

@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Markdown Report Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "data"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["task_id", "run_id", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "authorization_scope": {"type": "string", "minLength": 1}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": {"type": "string", "enum": ["report", "task", "run"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "title", "include"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["summary", "asset_discovery", "audit"]},
+        "title": {"type": "string", "minLength": 1, "maxLength": 160},
+        "include": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary", "findings", "evidence", "errors", "audit"],
+          "properties": {
+            "summary": {"type": "boolean"},
+            "findings": {"type": "boolean"},
+            "evidence": {"type": "boolean"},
+            "errors": {"type": "boolean"},
+            "audit": {"type": "boolean"}
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_findings": {"type": "integer", "minimum": 0, "maximum": 1000},
+            "max_evidence_per_finding": {"type": "integer", "minimum": 0, "maximum": 20},
+            "max_audit_events": {"type": "integer", "minimum": 0, "maximum": 1000},
+            "max_markdown_bytes": {"type": "integer", "minimum": 1024, "maximum": 1048576}
+          }
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "task": {"type": "object", "additionalProperties": true},
+        "runs": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "findings": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "audit_events": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}}
+      }
+    }
+  }
+}

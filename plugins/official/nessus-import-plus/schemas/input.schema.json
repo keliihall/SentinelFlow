@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nessus Import Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "report"},
+        "value": {"type": "string", "minLength": 1, "maxLength": 256},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "import", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_file"]},
+        "import": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "file", "max_records", "include_info", "minimum_severity"],
+          "properties": {
+            "format": {"type": "string", "enum": ["nessus_xml", "json", "csv"]},
+            "file": {"$ref": "#/definitions/SafeRelativePath"},
+            "max_records": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "include_info": {"type": "boolean"},
+            "minimum_severity": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_description", "include_solution", "include_evidence", "include_source_details"],
+          "properties": {
+            "include_description": {"type": "boolean"},
+            "include_solution": {"type": "boolean"},
+            "include_evidence": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "offline_import"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"const": false},
+        "allow_high_risk": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "context": {
+    "task_id": "task_port_probe_fixture",
+    "run_id": "run_port_probe_fixture",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "addresses": [{"address": "93.184.216.34", "hostnames": ["www.example.com"]}],
+    "findings": []
+  },
+  "options": {
+    "mode": "fixture",
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["fixture"],
+      "allow_missing_secrets": true,
+      "api_timeout_seconds": 10,
+      "api_rate_limit_per_second": 1,
+      "max_queries": 10,
+      "local_cache_file": "examples/fixture.ports.example.com.json",
+      "fixture_file": "examples/fixture.ports.example.com.json"
+    },
+    "active": {
+      "enabled": false,
+      "probe_engine": "tcp_connect",
+      "port_profile": "web",
+      "ports": [80, 443],
+      "timeout_seconds": 1,
+      "concurrency": 2,
+      "rate_limit_per_second": 2,
+      "max_targets": 10,
+      "max_ports": 10
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources",
+      "stale_after_days": 30
+    },
+    "output": {
+      "include_closed": false,
+      "include_filtered": false,
+      "include_source_details": true,
+      "include_conflicts": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

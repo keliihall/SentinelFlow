@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use async_stream::stream;
 use axum::extract::{Path as AxumPath, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
@@ -20,7 +20,9 @@ use sentinelflow_core::constants::{API_GROUP, CLI_BINARY, PRODUCT_NAME, WORKSPAC
 use sentinelflow_orchestrator::plan;
 use sentinelflow_policy::{ApprovalRecord, ApprovalStatus, TaskPolicyRequest, evaluate_task};
 use sentinelflow_registry::{ToolRegistry, discover_plugins, install_plugin, validate_plugin};
-use sentinelflow_report::{generate_markdown, generate_task_markdown};
+use sentinelflow_report::{
+    generate_asset_discovery_markdown, generate_markdown, generate_task_markdown,
+};
 use sentinelflow_schema::v1alpha1::{
     AuditOutcome, RiskLevel, TaskSpec, Validate, ValidationContext,
 };
@@ -32,6 +34,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 const CONSOLE_HTML: &str = include_str!("../web/console.html");
+const SIMPLE_CHECK_JS: &str = include_str!("../web/simple-check.js");
 const DEFAULT_PAGE_LIMIT: usize = 100;
 const MAX_PAGE_LIMIT: usize = 500;
 const DEFAULT_LOG_LIMIT: usize = 200;
@@ -176,10 +179,12 @@ pub fn router(config: ApiConfig, identity_provider: Arc<dyn IdentityProvider>) -
     Router::new()
         .route("/", get(console))
         .route("/console", get(console))
+        .route("/console/simple-check.js", get(simple_check_javascript))
         .route("/health", get(health))
         .route("/openapi.json", get(openapi))
         .route("/api/session/login", post(login))
         .route("/api/session", get(session))
+        .route("/api/system/status", get(system_status))
         .route("/api/tools", get(list_tools))
         .route("/api/tools/:name", get(get_tool))
         .route("/api/plugins", get(list_plugins))
@@ -222,6 +227,13 @@ pub fn development_router(config: ApiConfig) -> Router {
 
 async fn console() -> Html<&'static str> {
     Html(CONSOLE_HTML)
+}
+
+async fn simple_check_javascript() -> ([(header::HeaderName, &'static str); 1], &'static str) {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        SIMPLE_CHECK_JS,
+    )
 }
 
 async fn health() -> Json<Value> {
@@ -271,6 +283,41 @@ async fn session(
     headers: HeaderMap,
 ) -> Result<Json<Identity>, ApiError> {
     Ok(Json(require_identity(&state, &headers, Role::Viewer)?))
+}
+
+async fn system_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let identity = require_identity(&state, &headers, Role::Viewer)?;
+    let store = store(&state)?;
+    let state_db = state.config.workspace_dir.join("state.db");
+    audit_api(
+        &state,
+        &identity,
+        "api.system.status",
+        AuditOutcome::Allowed,
+        None,
+    )?;
+    Ok(Json(json!({
+        "product": PRODUCT_NAME,
+        "cliBinary": CLI_BINARY,
+        "apiGroup": API_GROUP,
+        "protocolVersion": format!("{API_GROUP}/v1alpha1"),
+        "runMode": "single-node local/small-team trial",
+        "workspaceDir": state.config.workspace_dir.display().to_string(),
+        "schemaRoot": state.config.schema_root.display().to_string(),
+        "sqlite": {
+            "path": state_db.display().to_string(),
+            "exists": state_db.is_file(),
+            "schemaVersion": store.schema_version()?,
+        },
+        "webConsoleBoundary": {
+            "apiClientOnly": true,
+            "browserExecutesTools": false,
+            "policyExplainRequiredBeforeRun": true,
+        }
+    })))
 }
 
 async fn list_tools(
@@ -750,7 +797,11 @@ async fn generate_report_endpoint(
                 let audit = store.task_audit(task_id)?;
                 Ok((
                     task_id.clone(),
-                    generate_task_markdown(&task, &bundles, &audit),
+                    if request.template.as_deref() == Some("asset-discovery") {
+                        generate_asset_discovery_markdown(&task, &bundles, &audit)
+                    } else {
+                        generate_task_markdown(&task, &bundles, &audit)
+                    },
                 ))
             })?
         } else {
@@ -982,6 +1033,7 @@ struct TaskDocumentRequest {
 struct ReportRequest {
     run: Option<String>,
     task: Option<String>,
+    template: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1278,7 +1330,37 @@ fn parse_task_request(
     };
     task.validate(&ValidationContext::new(schema_root))
         .map_err(|errors| ApiError::bad_request(errors.to_string()))?;
+    validate_real_target_sources(&task)?;
     Ok(task)
+}
+
+fn validate_real_target_sources(task: &TaskSpec) -> Result<(), ApiError> {
+    const FORBIDDEN: [&str; 9] = [
+        "fixture:local-only",
+        "example.com",
+        "fixture.passive.example.com.json",
+        "fixture.ports.example.com.json",
+        "fixture.web.example.com.json",
+        "passive_fixture",
+        "fixture_resolver",
+        "mock_resolver",
+        "\"sources\":[\"fixture\"]",
+    ];
+    if !task.spec.authorization_scope.starts_with("real:") {
+        return Ok(());
+    }
+    let serialized = serde_json::to_string(task)
+        .map_err(|error| ApiError::system(format!("failed to inspect Task Spec: {error}")))?
+        .to_ascii_lowercase();
+    if let Some(marker) = FORBIDDEN
+        .iter()
+        .find(|marker| serialized.contains(**marker))
+    {
+        return Err(ApiError::bad_request(format!(
+            "real target cannot use local example or fixture data: {marker}"
+        )));
+    }
+    Ok(())
 }
 
 fn persist_api_task(workspace_dir: &Path, task: &TaskSpec) -> Result<PathBuf, ApiError> {
@@ -1398,6 +1480,7 @@ fn openapi_document() -> Value {
         },
         "paths": {
             "/api/session/login": {"post": {"summary": "Issue a replaceable-provider session token"}},
+            "/api/system/status": {"get": {"summary": "Read local v1.0-rc runtime context for the Web Console settings page"}},
             "/api/tools": {"get": {"summary": "List tools"}},
             "/api/tools/{name}": {"get": {"summary": "Get tool details and Manifest"}},
             "/api/plugins": {"get": {"summary": "List plugin directories"}},
@@ -1574,6 +1657,25 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn system_status_exposes_read_only_console_context() {
+        let temporary = tempfile::TempDir::new().expect("temporary directory");
+        let workspace = temporary.path().join(".sentinelflow");
+        let app = development_router(ApiConfig {
+            workspace_dir: workspace.clone(),
+            schema_root: PathBuf::from("."),
+        });
+        let (status, body) =
+            request_json(app, "GET", "/api/system/status", "viewer-token", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["product"], PRODUCT_NAME);
+        assert_eq!(body["protocolVersion"], format!("{API_GROUP}/v1alpha1"));
+        assert_eq!(body["workspaceDir"], workspace.display().to_string());
+        assert_eq!(body["webConsoleBoundary"]["apiClientOnly"], true);
+        assert_eq!(body["webConsoleBoundary"]["browserExecutesTools"], false);
     }
 
     #[tokio::test]
@@ -2055,9 +2157,36 @@ spec:
     #[test]
     fn web_console_reconnects_logs_with_cursor() {
         assert!(CONSOLE_HTML.contains("cursor=${logCursor}"));
-        assert!(CONSOLE_HTML.contains("logCursor = payload.cursor"));
+        assert!(CONSOLE_HTML.contains("state.logCursor = payload.cursor"));
         assert!(CONSOLE_HTML.contains("source.onerror"));
         assert!(CONSOLE_HTML.contains("source.close()"));
         assert!(CONSOLE_HTML.contains("setTimeout(connectLogs"));
+        assert!(CONSOLE_HTML.contains("SentinelFlow 安全验证工作台"));
+        assert!(CONSOLE_HTML.contains("任务状态与报告可信度分别展示"));
+        assert!(SIMPLE_CHECK_JS.contains("subdomain-discovery-plus"));
+        assert!(SIMPLE_CHECK_JS.contains("buildSimpleCheckTaskSpec"));
+        assert!(SIMPLE_CHECK_JS.contains("不能使用本地示例数据"));
+        assert!(SIMPLE_CHECK_JS.contains("端口检查已跳过"));
+    }
+
+    #[test]
+    fn real_targets_reject_fixture_sources_at_api_boundary() {
+        let root = workspace_root();
+        let content = fs::read_to_string(
+            root.join("docs/examples/task.weikan-full-asset-discovery.authorized.yaml"),
+        )
+        .expect("authorized real-target example");
+        let task: TaskSpec = serde_yaml::from_str(&content).expect("valid real-target task");
+        validate_real_target_sources(&task).expect("real task without fixtures is accepted");
+
+        let fixture_content = content.replace(
+            "sources: [crtsh, local_cache, passive_dns_cache]",
+            "sources: [fixture]",
+        );
+        let fixture_task: TaskSpec =
+            serde_yaml::from_str(&fixture_content).expect("fixture-injected task parses");
+        let error = validate_real_target_sources(&fixture_task)
+            .expect_err("real targets must reject fixture sources");
+        assert!(error.message.contains("real target cannot use"));
     }
 }

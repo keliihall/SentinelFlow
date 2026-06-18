@@ -12,7 +12,9 @@ tests/e2e/p5_5_smoke.sh
 The script starts the local API service, logs in with the development operator
 identity, validates and installs the safe `example-echo` plugin, plans and runs a
 synthetic Task Spec, verifies logs and SSE cursor reconnect behavior, reads
-findings, generates a report, and checks audit events.
+findings, generates a report, and checks audit events. It also verifies that the
+productized Chinese Console and the simple-check task builder are served before
+the existing P5.5 workflow starts.
 
 ## P5.5 CLI/API/Web Consistency
 
@@ -71,6 +73,17 @@ deployment, installs and runs `example-echo`, generates a report, verifies
 SQLite schema metadata, and upgrades a previous-version workspace fixture while
 preserving tools, tasks, runs, findings, audit, and reports. It writes
 `docs/release/p5_5_deployment_report.md`.
+
+## Asset Discovery Flow
+
+```sh
+tests/e2e/asset_discovery_flow/run.sh
+```
+
+The script builds the workspace, validates and installs `dns-resolve-plus` and
+`service-detect-plus`, runs both fixture inputs through the normal
+Manifest/Adapter/Parser/Normalizer path, and validates/plans the documented
+subdomain-DNS-port-service fixture chain. It uses only local fixture data.
 
 ## P5.5 Performance
 

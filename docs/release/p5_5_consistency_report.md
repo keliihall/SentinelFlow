@@ -1,6 +1,6 @@
 # SentinelFlow P5.5 Consistency Report
 
-Generated: 2026-06-16T04:26:22Z
+Generated: 2026-06-17T01:46:38Z
 
 Command: `tests/e2e/p5_5_consistency.sh`
 
@@ -26,7 +26,7 @@ Because Web must not duplicate Policy or execution logic, per-fixture Web semant
 | low-risk | 合法低风险任务 | pass | pass | pass | pass | 2 | pass | pass | pass |
 | unauthorized-target | 未授权目标任务 | pass | pass | pass | pass | 0 | pass | pass | pass |
 | high-risk-unapproved | 高风险未审批任务 | pass | pass | pass | pass | 0 | pass | pass | pass |
-| cross-midnight-window | 跨午夜时间窗任务 | pass | pass | pass | pass | 0 | pass | pass | pass |
+| cross-midnight-window | 跨午夜时间窗任务 | pass | pass | pass | pass | 1 | pass | pass | pass |
 | parser-invalid-output | Parser 非法输出任务 | pass | pass | pass | pass | 0 | pass | pass | pass |
 | partial-failure | 部分失败任务 | pass | pass | pass | pass | 1 | pass | pass | pass |
 
@@ -64,12 +64,12 @@ Because Web must not duplicate Policy or execution logic, per-fixture Web semant
 
 ### cross-midnight-window
 
-- CLI run status/error: `4` / `AuthorizationDenied`
-- API run status/error: `403` / `AuthorizationDenied`
+- CLI run status/error: `0` / `None`
+- API run status/error: `200` / `None`
 - Execution order: `['echo']`
-- Step states: `{"fixture-one/echo": "pending"}`
-- Finding fingerprints: `[]`
-- Core audit actions: `["policy.denied", "report.generated"]`
+- Step states: `{"fixture-one/echo": "completed"}`
+- Finding fingerprints: `["a7ca0dddf7ad935abb0246991efd6c74a8c9d495eb5c112cb9fd46ef27c980ed"]`
+- Core audit actions: `["report.generated", "result.normalized", "tool.run.finished", "tool.run.started"]`
 - Differences: `[]`
 
 ### parser-invalid-output

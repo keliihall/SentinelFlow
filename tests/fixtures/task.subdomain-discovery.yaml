@@ -1,0 +1,27 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: passive-subdomain-discovery-example
+spec:
+  authorizationScope: public:passive-discovery
+  targets:
+    - name: example.com
+      input:
+        spec:
+          root_domain: example.com
+          providers:
+            - crtsh
+            - hackertarget
+            - buffer_over
+          timeout: 30
+  steps:
+    - name: discover-subdomains
+      toolRef: subdomain-discovery
+      capability: passive.subdomain.discovery
+  policy:
+    allowedTargets:
+      - example.com
+    approveHighRisk: false
+    timeoutSeconds: 30
+extensions: {}
+

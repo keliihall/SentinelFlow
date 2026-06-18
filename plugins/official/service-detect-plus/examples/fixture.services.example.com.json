@@ -1,0 +1,44 @@
+{
+  "services": [
+    {
+      "address": "93.184.216.34",
+      "port": 443,
+      "protocol": "tcp",
+      "service": "https",
+      "transport": "tls",
+      "product": "example-http-service",
+      "version": null,
+      "hostnames": ["www.example.com"],
+      "banner_summary": "HTTP service metadata from fixture.",
+      "http": {"status": 200, "server": "example-server", "title": "Example Domain"},
+      "tls": {"subject": "CN=example.com", "issuer": "CN=Example CA", "not_before": null, "not_after": null, "san_count": 2},
+      "source": "fixture",
+      "source_type": "fixture",
+      "detection_depth": "fixture",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "source_updated_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.70,
+      "evidence": {"summary": "HTTPS service observed from fixture.", "items": []}
+    },
+    {
+      "address": "93.184.216.34",
+      "port": 80,
+      "protocol": "tcp",
+      "service": "http",
+      "transport": null,
+      "product": "example-http-service",
+      "version": null,
+      "hostnames": ["www.example.com"],
+      "banner_summary": "Server: example-server",
+      "http": {"status": 301, "server": "example-server", "title": "Moved"},
+      "tls": {},
+      "source": "passive_service_cache",
+      "source_type": "passive_intel",
+      "detection_depth": "passive",
+      "observed_at": "2026-06-01T00:00:00Z",
+      "source_updated_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.75,
+      "evidence": {"summary": "HTTP service observed from passive service cache.", "items": []}
+    }
+  ]
+}

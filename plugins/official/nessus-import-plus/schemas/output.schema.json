@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nessus Import Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "format", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "nessus-import-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_file"]},
+    "format": {"type": "string", "enum": ["nessus_xml", "json", "csv"]},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "host", "plugin_id", "plugin_name", "severity", "severity_label", "sources", "confidence", "evidence"],
+        "properties": {
+          "type": {"const": "vulnerability_import_result"},
+          "host": {"type": "string"},
+          "port": {"type": ["integer", "null"], "minimum": 0, "maximum": 65535},
+          "protocol": {"type": ["string", "null"]},
+          "service": {"type": ["string", "null"]},
+          "plugin_id": {"type": "string"},
+          "plugin_name": {"type": "string"},
+          "plugin_family": {"type": ["string", "null"]},
+          "severity": {"type": "integer", "minimum": 0, "maximum": 4},
+          "severity_label": {"type": "string", "enum": ["info", "low", "medium", "high", "critical"]},
+          "cve": {"type": "array", "items": {"type": "string"}},
+          "cvss_base_score": {"type": ["number", "null"], "minimum": 0, "maximum": 10},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

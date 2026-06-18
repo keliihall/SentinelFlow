@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cloud Asset Import Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "cloud_inventory"},
+        "value": {"type": "string", "minLength": 1, "maxLength": 256},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "sources", "filters", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_file"]},
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider", "resource_type", "file", "scope_id", "region"],
+            "properties": {
+              "provider": {"type": "string", "enum": ["alibaba", "tencent", "huawei", "aws", "azure"]},
+              "resource_type": {"type": "string", "enum": ["compute", "public_ip", "load_balancer", "security_group", "dns", "object_storage", "waf", "cdn"]},
+              "file": {"$ref": "#/definitions/SafeRelativePath"},
+              "scope_id": {"type": "string", "minLength": 1, "maxLength": 256},
+              "region": {"type": "string", "minLength": 1, "maxLength": 128}
+            }
+          }
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providers", "resource_types", "internet_exposed_only"],
+          "properties": {
+            "providers": {
+              "type": "array",
+              "maxItems": 5,
+              "items": {"type": "string", "enum": ["alibaba", "tencent", "huawei", "aws", "azure"]}
+            },
+            "resource_types": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {"type": "string", "enum": ["compute", "public_ip", "load_balancer", "security_group", "dns", "object_storage", "waf", "cdn"]}
+            },
+            "internet_exposed_only": {"type": "boolean"}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_records", "include_tags", "include_security_rules", "include_source_details", "deduplicate"],
+          "properties": {
+            "max_records": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "include_tags": {"type": "boolean"},
+            "include_security_rules": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"},
+            "deduplicate": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "offline_import"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_cloud_api", "allow_credential_use", "allow_asset_connections", "allow_mutation"],
+      "properties": {
+        "allow_cloud_api": {"const": false},
+        "allow_credential_use": {"const": false},
+        "allow_asset_connections": {"const": false},
+        "allow_mutation": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

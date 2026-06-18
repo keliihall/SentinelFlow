@@ -21,6 +21,10 @@ fn example(name: &str) -> PathBuf {
     workspace_root().join("plugins/examples").join(name)
 }
 
+fn official(name: &str) -> PathBuf {
+    workspace_root().join("plugins/official").join(name)
+}
+
 #[test]
 fn example_echo_passes_every_validation_stage() {
     let report = validate_plugin(example_echo()).expect("validation must run");
@@ -51,12 +55,234 @@ fn all_safe_example_plugins_are_valid() {
 }
 
 #[test]
+fn official_subdomain_discovery_plugin_is_valid() {
+    let report = validate_plugin(official("subdomain-discovery")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "subdomain-discovery");
+    assert_eq!(manifest.spec.parser.name, "example-file-import-v1");
+}
+
+#[test]
+fn official_subdomain_discovery_plus_plugin_is_valid() {
+    let report =
+        validate_plugin(official("subdomain-discovery-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "subdomain-discovery-plus");
+    assert_eq!(manifest.spec.parser.name, "subdomain-discovery-plus-v1");
+}
+
+#[test]
+fn official_dns_resolve_plus_plugin_is_valid() {
+    let report = validate_plugin(official("dns-resolve-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "dns-resolve-plus");
+    assert_eq!(manifest.spec.parser.name, "dns-resolve-plus-v1");
+}
+
+#[test]
+fn official_crtsh_subdomain_plus_plugin_is_valid() {
+    let report = validate_plugin(official("crtsh-subdomain-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "crtsh-subdomain-plus");
+    assert_eq!(manifest.spec.parser.name, "crtsh-subdomain-plus-v1");
+}
+
+#[test]
+fn official_ip_enrichment_plus_plugin_is_valid() {
+    let report = validate_plugin(official("ip-enrichment-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "ip-enrichment-plus");
+    assert_eq!(manifest.spec.parser.name, "ip-enrichment-plus-v1");
+}
+
+#[test]
+fn official_service_detect_plus_plugin_is_valid() {
+    let report = validate_plugin(official("service-detect-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "service-detect-plus");
+    assert_eq!(manifest.spec.parser.name, "service-detect-plus-v1");
+}
+
+#[test]
+fn official_http_probe_plus_plugin_is_valid() {
+    let report = validate_plugin(official("http-probe-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "http-probe-plus");
+    assert_eq!(manifest.spec.parser.name, "http-probe-plus-v1");
+}
+
+#[test]
+fn official_web_fingerprint_plus_plugin_is_valid() {
+    let report = validate_plugin(official("web-fingerprint-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "web-fingerprint-plus");
+    assert_eq!(manifest.spec.parser.name, "web-fingerprint-plus-v1");
+}
+
+#[test]
+fn official_tls_certificate_check_plus_plugin_is_valid() {
+    let report =
+        validate_plugin(official("tls-certificate-check-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "tls-certificate-check-plus");
+    assert_eq!(manifest.spec.parser.name, "tls-certificate-check-plus-v1");
+}
+
+#[test]
+fn official_fofa_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("fofa-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "fofa-import-plus");
+    assert_eq!(manifest.spec.parser.name, "fofa-import-plus-v1");
+}
+
+#[test]
+fn official_shodan_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("shodan-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "shodan-import-plus");
+    assert_eq!(manifest.spec.parser.name, "shodan-import-plus-v1");
+}
+
+#[test]
+fn official_censys_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("censys-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "censys-import-plus");
+    assert_eq!(manifest.spec.parser.name, "censys-import-plus-v1");
+}
+
+#[test]
+fn official_nessus_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("nessus-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "nessus-import-plus");
+    assert_eq!(manifest.spec.parser.name, "nessus-import-plus-v1");
+}
+
+#[test]
+fn official_openvas_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("openvas-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "openvas-import-plus");
+    assert_eq!(manifest.spec.parser.name, "openvas-import-plus-v1");
+}
+
+#[test]
+fn official_nuclei_adapter_plus_plugin_is_valid() {
+    let report = validate_plugin(official("nuclei-adapter-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "nuclei-adapter-plus");
+    assert_eq!(manifest.spec.parser.name, "nuclei-adapter-plus-v1");
+}
+
+#[test]
+fn official_zap_baseline_plus_plugin_is_valid() {
+    let report = validate_plugin(official("zap-baseline-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "zap-baseline-plus");
+    assert_eq!(manifest.spec.parser.name, "zap-baseline-plus-v1");
+}
+
+#[test]
+fn official_cloud_asset_import_plus_plugin_is_valid() {
+    let report = validate_plugin(official("cloud-asset-import-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "cloud-asset-import-plus");
+    assert_eq!(manifest.spec.parser.name, "cloud-asset-import-plus-v1");
+}
+
+#[test]
+fn official_cmdb_sync_plus_plugin_is_valid() {
+    let report = validate_plugin(official("cmdb-sync-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "cmdb-sync-plus");
+    assert_eq!(manifest.spec.parser.name, "cmdb-sync-plus-v1");
+}
+
+#[test]
+fn official_markdown_report_plus_plugin_is_valid() {
+    let report = validate_plugin(official("markdown-report-plus")).expect("validation must run");
+    assert!(report.is_valid(), "{:?}", report.checks);
+    let manifest = report.manifest.expect("manifest");
+    assert_eq!(manifest.metadata.name, "markdown-report-plus");
+    assert_eq!(manifest.spec.parser.name, "markdown-report-plus-v1");
+}
+
+#[test]
 fn examples_root_is_supported_by_discovery() {
     let root = workspace_root().join("plugins/examples");
     let discovery = discover_plugins([root]).expect("discovery must succeed");
     for name in ["example-echo", "example-dns-resolve", "example-file-import"] {
         assert!(discovery.plugins.contains(&example(name)));
     }
+}
+
+#[test]
+fn official_plugins_root_is_supported_by_discovery() {
+    let root = workspace_root().join("plugins/official");
+    let discovery = discover_plugins([root]).expect("discovery must succeed");
+    assert!(discovery.plugins.contains(&official("subdomain-discovery")));
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("subdomain-discovery-plus"))
+    );
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("crtsh-subdomain-plus"))
+    );
+    assert!(discovery.plugins.contains(&official("dns-resolve-plus")));
+    assert!(discovery.plugins.contains(&official("ip-enrichment-plus")));
+    assert!(discovery.plugins.contains(&official("http-probe-plus")));
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("web-fingerprint-plus"))
+    );
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("tls-certificate-check-plus"))
+    );
+    assert!(discovery.plugins.contains(&official("fofa-import-plus")));
+    assert!(discovery.plugins.contains(&official("shodan-import-plus")));
+    assert!(discovery.plugins.contains(&official("censys-import-plus")));
+    assert!(discovery.plugins.contains(&official("nessus-import-plus")));
+    assert!(discovery.plugins.contains(&official("openvas-import-plus")));
+    assert!(discovery.plugins.contains(&official("nuclei-adapter-plus")));
+    assert!(discovery.plugins.contains(&official("zap-baseline-plus")));
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("cloud-asset-import-plus"))
+    );
+    assert!(discovery.plugins.contains(&official("cmdb-sync-plus")));
+    assert!(
+        discovery
+            .plugins
+            .contains(&official("markdown-report-plus"))
+    );
+    assert!(discovery.plugins.contains(&official("service-detect-plus")));
 }
 
 #[test]

@@ -1,0 +1,13 @@
+{
+  "domain": "example.com",
+  "ports": [
+    {
+      "address": "93.184.216.34",
+      "port": 443,
+      "state": "open",
+      "source": "fixture",
+      "confidence": 0.7,
+      "hostnames": ["www.example.com"]
+    }
+  ]
+}

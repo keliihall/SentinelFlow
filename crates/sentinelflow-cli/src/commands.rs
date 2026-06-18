@@ -14,7 +14,9 @@ use sentinelflow_policy::{ApprovalRecord, ApprovalStatus, TaskPolicyRequest, eva
 use sentinelflow_registry::{
     InstallOutcome, RegistryError, ToolRegistry, discover_plugins, install_plugin, validate_plugin,
 };
-use sentinelflow_report::{generate_markdown, generate_task_markdown};
+use sentinelflow_report::{
+    generate_asset_discovery_markdown, generate_markdown, generate_task_markdown,
+};
 use sentinelflow_runtime::{
     Adapter, ExecutionIdentifiers, ExecutionRequest, ExecutionResult, ExecutionStatus,
     ParserContext, ParserInput, RawOutputReference, RuntimeEnvironment, RuntimeError,
@@ -1125,13 +1127,13 @@ fn mapped_step_input(
     target: &TaskTargetSpec,
     step: &TaskStepSpec,
 ) -> Result<serde_json::Value, CliError> {
-    let mut input = target.input.clone();
-    let object = input.as_object_mut().ok_or_else(|| {
-        CliError::schema(
-            "task target input must be a JSON object when using DAG mappings",
-            Some("$.spec.targets.input".to_owned()),
-        )
-    })?;
+    let mut input = step.input.clone().unwrap_or_else(|| target.input.clone());
+    if !input.is_object() {
+        return Err(CliError::schema(
+            "task step input must be a JSON object when using DAG mappings",
+            Some("$.spec.steps.input".to_owned()),
+        ));
+    }
     let store = open_store(workspace_dir)?;
     for mapping in &step.input_from {
         let source_name = task
@@ -1171,18 +1173,82 @@ fn mapped_step_input(
                 Some("$.task.outputs".to_owned()),
             )
         })?;
-        let mapped = value.pointer(&mapping.pointer).cloned().ok_or_else(|| {
-            CliError::schema(
-                format!(
-                    "JSON Pointer {} did not match output {}",
-                    mapping.pointer, mapping.from
-                ),
-                Some("$.spec.steps.inputFrom.pointer".to_owned()),
-            )
-        })?;
-        object.insert(mapping.target.clone(), mapped);
+        let mapped = value.pointer(&mapping.pointer).cloned().map_or_else(
+            || {
+                if mapping.pointer == "/spec/findings" {
+                    Ok(serde_json::Value::Array(Vec::new()))
+                } else {
+                    Err(CliError::schema(
+                        format!(
+                            "JSON Pointer {} did not match output {}",
+                            mapping.pointer, mapping.from
+                        ),
+                        Some("$.spec.steps.inputFrom.pointer".to_owned()),
+                    ))
+                }
+            },
+            Ok,
+        )?;
+        if mapping.target.starts_with('/') {
+            set_json_pointer(&mut input, &mapping.target, mapped)?;
+        } else {
+            input
+                .as_object_mut()
+                .expect("input object was validated above")
+                .insert(mapping.target.clone(), mapped);
+        }
     }
     Ok(input)
+}
+
+fn set_json_pointer(
+    target: &mut serde_json::Value,
+    pointer: &str,
+    value: serde_json::Value,
+) -> Result<(), CliError> {
+    if !pointer.starts_with('/') {
+        return Err(CliError::schema(
+            "mapping target JSON Pointer must start with /",
+            Some("$.spec.steps.inputFrom.target".to_owned()),
+        ));
+    }
+    let mut current = target;
+    let tokens = pointer
+        .split('/')
+        .skip(1)
+        .map(|token| token.replace("~1", "/").replace("~0", "~"))
+        .collect::<Vec<_>>();
+    if tokens.is_empty() || tokens.iter().any(String::is_empty) {
+        return Err(CliError::schema(
+            "mapping target JSON Pointer must not contain empty path segments",
+            Some("$.spec.steps.inputFrom.target".to_owned()),
+        ));
+    }
+    for token in &tokens[..tokens.len() - 1] {
+        if !current.is_object() {
+            *current = serde_json::json!({});
+        }
+        let object = current.as_object_mut().ok_or_else(|| {
+            CliError::schema(
+                "mapping target cannot create object at non-object value",
+                Some("$.spec.steps.inputFrom.target".to_owned()),
+            )
+        })?;
+        current = object
+            .entry(token.clone())
+            .or_insert_with(|| serde_json::json!({}));
+    }
+    if !current.is_object() {
+        *current = serde_json::json!({});
+    }
+    let object = current.as_object_mut().ok_or_else(|| {
+        CliError::schema(
+            "mapping target parent is not an object",
+            Some("$.spec.steps.inputFrom.target".to_owned()),
+        )
+    })?;
+    object.insert(tokens[tokens.len() - 1].clone(), value);
+    Ok(())
 }
 
 fn read_task_spec(
@@ -1874,7 +1940,11 @@ fn generate_report(
         );
         (
             task_id.clone(),
-            generate_task_markdown(&task, &bundles, &audit),
+            if arguments.template == "asset-discovery" {
+                generate_asset_discovery_markdown(&task, &bundles, &audit)
+            } else {
+                generate_task_markdown(&task, &bundles, &audit)
+            },
             identifiers,
             task.actor_id,
         )

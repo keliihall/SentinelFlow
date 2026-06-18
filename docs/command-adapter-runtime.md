@@ -2,9 +2,10 @@
 
 ## Scope
 
-The runtime executes only validated local example plugins through the Command Adapter. It
-does not provide arbitrary command execution, shell execution, scanning, exploitation,
-credential testing, persistence, or network automation.
+The runtime executes only validated allowlisted repository plugins through the
+Command Adapter. It does not provide arbitrary command execution, shell
+execution, scanning, exploitation, credential testing, persistence, or network
+automation.
 
 ## Adapter Lifecycle
 
@@ -76,7 +77,7 @@ a second protocol validation before any result is persisted.
 
 The minimum P2-2 policy is default deny:
 
-- Only explicitly allowlisted, example-labelled repository tools may execute.
+- Only explicitly allowlisted repository tools may execute.
 - Missing or blank `authorizationScope` is denied.
 - High and critical risk capabilities require explicit approval.
 - A zero timeout is denied.

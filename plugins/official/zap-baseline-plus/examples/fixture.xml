@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OWASPZAPReport version="2.15.0" generated="Thu, 18 Jun 2026 09:00:00">
+  <site name="https://api.example.com" host="api.example.com" port="443" ssl="true">
+    <alerts>
+      <alertitem>
+        <pluginid>10021</pluginid>
+        <alertRef>10021</alertRef>
+        <alert>X-Content-Type-Options Header Missing</alert>
+        <riskcode>1</riskcode>
+        <confidence>3</confidence>
+        <riskdesc>Low (High)</riskdesc>
+        <desc>&lt;p&gt;The response is missing a defensive header.&lt;/p&gt;</desc>
+        <instances>
+          <instance>
+            <uri>https://api.example.com/health</uri>
+            <method>GET</method>
+            <param></param>
+            <attack></attack>
+            <evidence>HTTP/1.1 200 OK Authorization: Bearer fixture-token</evidence>
+            <otherinfo></otherinfo>
+          </instance>
+        </instances>
+        <solution>&lt;p&gt;Set X-Content-Type-Options to nosniff.&lt;/p&gt;</solution>
+        <reference>https://developer.mozilla.org/docs/Web/HTTP/Headers/X-Content-Type-Options</reference>
+        <cweid>693</cweid>
+        <wascid>15</wascid>
+        <sourceid>3</sourceid>
+      </alertitem>
+    </alerts>
+  </site>
+</OWASPZAPReport>

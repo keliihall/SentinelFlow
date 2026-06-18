@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Shodan Import Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "query", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "shodan-import-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_cache", "api_lookup", "hybrid"]},
+    "query": {"type": "object", "additionalProperties": true},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "host", "ip", "port", "protocol", "service", "sources", "confidence", "evidence"],
+        "properties": {
+          "type": {"const": "exposure_intel_result"},
+          "host": {"type": "string"},
+          "ip": {"type": "string"},
+          "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "protocol": {"type": "string"},
+          "service": {"type": ["string", "null"]},
+          "banner": {"type": ["string", "null"]},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

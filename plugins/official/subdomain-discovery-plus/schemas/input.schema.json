@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Subdomain Discovery Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "run_id",
+        "operator",
+        "workspace",
+        "authorization_scope"
+      ],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.:-]+$"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "domain"},
+        "value": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 253,
+          "pattern": "^(?=.{3,253}$)(?!.*[/:@\\\\*\\s;&|`$<>])(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "passive", "active", "output"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "fixture",
+            "dry_run",
+            "passive_intel",
+            "active_dictionary",
+            "hybrid",
+            "passive",
+            "active"
+          ]
+        },
+        "passive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "sources",
+            "crtsh_enabled",
+            "crtsh_timeout_seconds"
+          ],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "fixture",
+                  "crtsh",
+                  "local_cache",
+                  "passive_dns_cache",
+                  "fofa",
+                  "shodan"
+                ]
+              }
+            },
+            "fixture_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+            },
+            "crtsh_enabled": {"type": "boolean"},
+            "crtsh_timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          }
+        },
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "wordlist_file",
+            "resolvers",
+            "record_types",
+            "timeout_seconds",
+            "concurrency",
+            "rate_limit_per_second",
+            "max_candidates",
+            "detect_wildcard"
+          ],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "dry_run": {"type": "boolean"},
+            "wordlist_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+            },
+            "resolvers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 5,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "anyOf": [
+                  {
+                    "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$"
+                  },
+                  {
+                    "pattern": "^[0-9A-Fa-f:]{2,45}$"
+                  },
+                  {
+                    "const": "system"
+                  }
+                ]
+              }
+            },
+            "record_types": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["A", "AAAA"]}
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "concurrency": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "rate_limit_per_second": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "max_candidates": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "detect_wildcard": {"type": "boolean"}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_unresolved", "include_sources"],
+          "properties": {
+            "include_unresolved": {"type": "boolean"},
+            "include_sources": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"type": "boolean"},
+        "allow_high_risk": {"const": false}
+      }
+    }
+  }
+}

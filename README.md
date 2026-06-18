@@ -73,7 +73,8 @@ Stable identifiers:
 | Environment prefix | `SENTINELFLOW_` |
 
 Crates live under `crates/sentinelflow-*`. Schemas live under
-`schemas/v1alpha1/`. Safe example plugins live under `plugins/examples/`.
+`schemas/v1alpha1/`. Safe example plugins live under `plugins/examples/`;
+repository-maintained official plugins live under `plugins/official/`.
 
 ## Quick Start: CLI
 
@@ -149,9 +150,11 @@ Development login:
 | Approver | `approver` | `sentinelflow` | `approver-token` |
 | Admin | `admin` | `sentinelflow` | `admin-token` |
 
-Use the Console sections in order: login, validate/install plugin, inspect tool,
-edit Task Spec, plan, Policy Explain, run, logs, Findings/Evidence, report, and
-audit. Full steps are in [API Service and Web Console](docs/api-service-and-web-console.md).
+Use the Console as a security validation workbench: Overview, Quick Run, Tools &
+Plugins, Tasks, Findings, Reports, Approvals, Audit, and Settings. Quick Run
+includes a guided `subdomain-discovery-plus` template for the safe `example.com`
+fixture flow. Full steps are in
+[API Service and Web Console](docs/api-service-and-web-console.md).
 
 ## Safety Boundary
 
@@ -165,6 +168,7 @@ SentinelFlow defaults to deny:
 - Key actions and decisions write Audit Events.
 - Untrusted plugins are not loaded as in-process dynamic libraries.
 - Examples use local synthetic fixtures only.
+- Official plugins must stay within their declared passive or validation boundary.
 
 Do not put real targets, real credentials, production secrets, or offensive
 payloads in plugins, fixtures, docs, or tests.
@@ -182,6 +186,22 @@ payloads in plugins, fixtures, docs, or tests.
 
 See [Safe Examples](docs/examples.md) for copyable commands.
 
+## Official Plugins
+
+- `plugins/official/subdomain-discovery`: passive subdomain discovery from public
+  data providers. The checked-in example uses `example.com` and embedded fixture
+  data for deterministic local validation.
+- `plugins/official/subdomain-discovery-plus`: authorized subdomain asset
+  discovery with passive fixture input and optional bounded active DNS dictionary
+  verification. The Web Console Quick Run template keeps active verification off
+  by default.
+- `plugins/official/dns-resolve-plus`: DNS resolution and passive DNS
+  intelligence with fixture/cache defaults and policy-gated active resolver
+  verification.
+- `plugins/official/service-detect-plus`: service identification from upstream
+  port/DNS context, fixtures, and passive cache with policy-gated active or
+  high-risk detection frameworks.
+
 ## Documentation
 
 - [v1.0-rc Trial Guide](docs/v1rc-trial-guide.md)
@@ -193,6 +213,7 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 - [Troubleshooting](docs/troubleshooting.md)
 - [Security Boundary](docs/security-boundary.md)
 - [Results, Audit, and Reports](docs/results-audit-reporting.md)
+- [Asset Discovery Flow](docs/asset-discovery-flow.md)
 - [Deployment: Local Demo](docs/deployment/local-demo.md)
 - [Deployment: Production-like](docs/deployment/production-like.md)
 - [Release Notes](docs/release-v1.0-rc.md)

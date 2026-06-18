@@ -1,0 +1,44 @@
+{
+  "context": {
+    "task_id": "task-http-active",
+    "run_id": "run-http-active",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-lab"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "endpoints": ["http://127.0.0.1:8080/"],
+    "findings": []
+  },
+  "options": {
+    "mode": "active_safe",
+    "passive_intel": {
+      "enabled": false,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json"
+    },
+    "active": {
+      "enabled": true,
+      "methods": ["HEAD", "GET"],
+      "timeout_seconds": 2,
+      "concurrency": 2,
+      "rate_limit_per_second": 5,
+      "max_endpoints": 10,
+      "max_redirects": 2,
+      "max_response_bytes": 65536
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_source_details": true,
+      "include_conflicts": true
+    },
+    "execution_profile": "lab"
+  },
+  "policy": {"allow_active_verify": true, "allow_high_risk": false}
+}

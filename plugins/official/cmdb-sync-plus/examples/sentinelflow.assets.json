@@ -1,0 +1,43 @@
+{
+  "assets": [
+    {
+      "external_id": "ci-web-001",
+      "asset_type": "server",
+      "name": "web-prod-1",
+      "addresses": ["198.51.100.15", "10.0.1.15"],
+      "department": "Digital Commerce",
+      "business_system": "Storefront",
+      "owner": "alice@example.com",
+      "criticality": "critical",
+      "status": "active",
+      "sources": ["cloud-asset-import-plus"],
+      "last_seen_at": "2026-06-18T08:00:00Z"
+    },
+    {
+      "external_id": "ci-new-001",
+      "asset_type": "load_balancer",
+      "name": "edge-public",
+      "addresses": ["203.0.113.20"],
+      "department": "Platform",
+      "business_system": "Public Edge",
+      "owner": "carol@example.com",
+      "criticality": "high",
+      "status": "active",
+      "sources": ["cloud-asset-import-plus"],
+      "last_seen_at": "2026-06-18T08:05:00Z"
+    },
+    {
+      "external_id": "ci-api-001",
+      "asset_type": "service",
+      "name": "api.example.com",
+      "addresses": ["203.0.113.55"],
+      "department": "Platform",
+      "business_system": "Public API",
+      "owner": "bob@example.com",
+      "criticality": "critical",
+      "status": "active",
+      "sources": ["http-probe-plus"],
+      "last_seen_at": "2026-06-18T08:10:00Z"
+    }
+  ]
+}

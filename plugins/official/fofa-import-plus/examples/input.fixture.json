@@ -1,0 +1,41 @@
+{
+  "context": {
+    "task_id": "task-fofa-fixture",
+    "run_id": "run-fofa-fixture",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "lookup": {
+      "scope": "domain",
+      "max_results": 100,
+      "include_headers": true,
+      "include_certificate": true
+    },
+    "local_cache": {
+      "enabled": true,
+      "cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.fofa.example.com.json"
+    },
+    "provider": {
+      "enabled": false,
+      "allow_missing_secret": true,
+      "timeout_seconds": 10,
+      "rate_limit_per_second": 1
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_headers": true,
+      "include_certificate": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

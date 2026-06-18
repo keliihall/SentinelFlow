@@ -1,0 +1,40 @@
+{
+  "context": {
+    "task_id": "task-web-fingerprint-fixture",
+    "run_id": "run-web-fingerprint-fixture",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "observations": [],
+    "findings": []
+  },
+  "options": {
+    "mode": "fixture",
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.web.example.com.json"
+    },
+    "fingerprint": {
+      "use_headers": true,
+      "use_title": true,
+      "use_body_signals": true,
+      "use_favicon_hash": true,
+      "max_body_signal_bytes": 65536
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_signals"
+    },
+    "output": {
+      "include_source_details": true,
+      "include_signal_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

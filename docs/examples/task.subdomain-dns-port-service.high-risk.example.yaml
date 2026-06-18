@@ -1,0 +1,77 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: subdomain-dns-port-service-high-risk-example
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: example.com
+      input:
+        context:
+          task_id: task_asset_discovery_high_risk
+          run_id: run_asset_discovery_high_risk
+          operator: operator
+          workspace: default
+          authorization_scope: fixture:local-only
+        target:
+          type: domain
+          value: example.com
+          metadata: {}
+        options:
+          mode: passive
+          passive:
+            enabled: true
+            sources: [fixture]
+            fixture_file: examples/fixture.passive.example.com.json
+            crtsh_enabled: false
+            crtsh_timeout_seconds: 10
+          active:
+            enabled: false
+            dry_run: false
+            wordlist_file: examples/wordlist.small.txt
+            resolvers: [1.1.1.1, 8.8.8.8]
+            record_types: [A, AAAA]
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_candidates: 100
+            detect_wildcard: true
+          output:
+            include_unresolved: false
+            include_sources: true
+        policy:
+          allow_active_verify: true
+          allow_high_risk: true
+  steps:
+    - name: discover-subdomains
+      toolRef: subdomain-discovery-plus
+      capability: asset.subdomain.discovery
+      outputAs: subdomains
+    - name: resolve-dns
+      toolRef: dns-resolve-plus
+      capability: asset.dns.resolve.active_public_resolver
+      dependsOn: [discover-subdomains]
+      outputAs: dns
+    - name: probe-ports-high-risk
+      toolRef: port-probe-plus
+      capability: asset.port.probe.syn_or_external
+      dependsOn: [resolve-dns]
+      outputAs: ports
+    - name: detect-services-high-risk
+      toolRef: service-detect-plus
+      capability: asset.service.detect.deep
+      dependsOn: [probe-ports-high-risk]
+      outputAs: services
+  policy:
+    allowedTargets: [example.com]
+    targetPatterns:
+      - domain:example.com
+      - domain:*.example.com
+      - ip:93.184.216.34
+    approveHighRisk: false
+    timeoutSeconds: 300
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+extensions:
+  sentinelflow.io/exampleOnly: "true"
+  sentinelflow.io/highRiskNotice: "Validate/plan/policy-explain only unless an authorized assessment approval is attached."

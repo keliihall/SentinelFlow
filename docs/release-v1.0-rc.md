@@ -66,8 +66,8 @@ identity provider before using real users.
   findings per task, 2,000 task log events, and 5,000 findings per report.
 - API sessions use the development identity provider by default.
 - The Web Console is intentionally workflow-focused and not a dashboard.
-- Only allowlisted repository example plugins and generated scaffold fixtures are
-  executable under the current safety policy.
+- Only allowlisted repository example plugins, official plugins, and generated
+  scaffold fixtures are executable under the current safety policy.
 - The release-candidate container favors reproducible local builds over minimal
   image size and uses the Rust Debian base image for both build and runtime
   stages.

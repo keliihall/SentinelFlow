@@ -256,6 +256,7 @@ mod tests {
             capability: "echo".to_owned(),
             depends_on: dependencies.iter().map(ToString::to_string).collect(),
             input_from: vec![],
+            input: None,
             output_as: None,
             failure_policy: FailurePolicy::Stop,
         }

@@ -1,0 +1,32 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: subdomain-discovery
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/passive-only: "true"
+spec:
+  displayName: Passive Subdomain Discovery
+  version: 0.1.0
+  capabilities:
+    - name: passive.subdomain.discovery
+      description: Discovers subdomains from public passive data providers without scanning or DNS brute force
+      risk: low
+      requiresApproval: false
+  runtime:
+    mode: process
+    entrypoint: runner/subdomain_discovery.py
+    args: []
+    environmentAllowlist:
+      - PATH
+    timeoutSeconds: 30
+    outputLimitBytes: 1048576
+  parser:
+    mode: builtin
+    name: example-file-import-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/safetyProfile: passive-public-data-only
+  sentinelflow.io/networkBoundary: public-provider-http-only
+

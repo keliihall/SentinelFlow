@@ -539,7 +539,11 @@ pub struct TaskInputMapping {
     /// JSON Pointer evaluated against the prior normalized `ToolOutput`.
     #[schemars(length(min = 1))]
     pub pointer: String,
-    /// Top-level field inserted into the downstream structured input.
+    /// Field inserted into the downstream structured input.
+    ///
+    /// Plain names keep the legacy top-level replacement behavior. Values
+    /// starting with `/` are treated as JSON Pointers and create intermediate
+    /// objects as needed.
     #[schemars(length(min = 1))]
     pub target: String,
 }
@@ -563,6 +567,12 @@ pub struct TaskStepSpec {
     /// Values mapped from prior normalized outputs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub input_from: Vec<TaskInputMapping>,
+    /// Optional structured input for this step.
+    ///
+    /// When omitted, the target-level input remains the source of truth for
+    /// backward compatibility.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input: Option<serde_json::Value>,
     /// Optional stable alias for this step's normalized output.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_as: Option<String>,

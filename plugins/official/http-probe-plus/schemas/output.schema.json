@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HTTP Probe Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "http-probe-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active_safe", "hybrid"]},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "url", "status_code", "tls_enabled", "sources", "source_agreement", "confidence", "evidence"],
+        "properties": {
+          "type": {"const": "http_result"},
+          "url": {"type": "string"},
+          "status_code": {"type": ["integer", "null"], "minimum": 100, "maximum": 599},
+          "title": {"type": ["string", "null"]},
+          "server": {"type": ["string", "null"]},
+          "content_type": {"type": ["string", "null"]},
+          "content_length": {"type": ["integer", "null"], "minimum": 0},
+          "redirect_chain": {"type": "array", "items": {"type": "string"}},
+          "tls_enabled": {"type": "boolean"},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "source_agreement": {"type": "string"},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

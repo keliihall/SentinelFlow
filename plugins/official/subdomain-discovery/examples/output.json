@@ -1,0 +1,58 @@
+{
+  "source": "passive-subdomain-discovery",
+  "root_domain": "example.com",
+  "providers": [
+    {
+      "name": "crtsh",
+      "status": "succeeded",
+      "source_type": "embedded-fixture",
+      "record_count": 2
+    },
+    {
+      "name": "hackertarget",
+      "status": "succeeded",
+      "source_type": "embedded-fixture",
+      "record_count": 2
+    },
+    {
+      "name": "buffer_over",
+      "status": "succeeded",
+      "source_type": "embedded-fixture",
+      "record_count": 2
+    }
+  ],
+  "records": [
+    {
+      "name": "api.example.com",
+      "root_domain": "example.com",
+      "sources": ["hackertarget"]
+    },
+    {
+      "name": "docs.example.com",
+      "root_domain": "example.com",
+      "sources": ["buffer_over"]
+    },
+    {
+      "name": "mail.example.com",
+      "root_domain": "example.com",
+      "sources": ["buffer_over", "crtsh"]
+    },
+    {
+      "name": "www.example.com",
+      "root_domain": "example.com",
+      "sources": ["crtsh", "hackertarget"]
+    }
+  ],
+  "summary": {
+    "total_subdomains": 4,
+    "provider_count": 3
+  },
+  "safety": {
+    "passive_only": true,
+    "active_dns_queries": 0,
+    "brute_force_attempts": 0,
+    "dictionary_candidates": 0,
+    "port_scan_attempts": 0,
+    "exploit_attempts": 0
+  }
+}

@@ -1,0 +1,66 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: ToolManifest
+metadata:
+  name: port-probe-plus
+  labels:
+    sentinelflow.io/official: "true"
+    sentinelflow.io/asset-category: port
+spec:
+  displayName: Port Probe Plus
+  version: 0.1.0
+  capabilities:
+    - name: asset.port.probe.passive
+      description: Reads passive exposure intelligence and local cache for authorized public addresses
+      risk: low
+      requiresApproval: false
+    - name: asset.port.probe.tcp_connect
+      description: Performs bounded low-impact TCP connect verification when policy.allow_active_verify is true
+      risk: medium
+      requiresApproval: false
+    - name: asset.port.probe.hybrid
+      description: Merges passive exposure intelligence with bounded TCP connect verification
+      risk: medium
+      requiresApproval: false
+  runtime:
+    adapter: command
+    mode: process
+    entrypoint: runner/runner.py
+    args: []
+    environmentAllowlist:
+      - PATH
+      - FOFA_API_KEY
+      - SHODAN_API_KEY
+    timeoutSeconds: 300
+    outputLimitBytes: 4194304
+  parser:
+    mode: builtin
+    name: port-probe-plus-v1
+  inputSchema: schemas/input.schema.json
+  outputSchema: schemas/output.schema.json
+extensions:
+  sentinelflow.io/category: asset.port
+  sentinelflow.io/riskLevel: low
+  sentinelflow.io/safetyProfile: passive-intel-first-bounded-tcp-connect
+  sentinelflow.io/networkBoundary: passive-cache-default-active-tcp-connect-policy-gated
+  sentinelflow.io/capabilities:
+    - name: passive_intel
+      riskLevel: low
+      impact: read_only
+      requiresApproval: false
+    - name: tcp_connect
+      riskLevel: medium
+      impact: low_impact
+      requiresApproval: policy_dependent
+      requiresPolicyFlag: allow_active_verify
+  sentinelflow.io/controls:
+    requiresAuthorization: true
+    requiresApproval: false
+    supportsRateLimit: true
+    supportsConcurrencyLimit: true
+    maxConcurrency: 10
+    defaultMode: passive_intel
+  sentinelflow.io/audit:
+    recordInput: true
+    recordOutputSummary: true
+    recordRawOutput: false
+    evidenceRequired: true

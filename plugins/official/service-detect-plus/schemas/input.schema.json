@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service Detect Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "inputs", "options", "policy"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "options": {
+            "properties": {
+              "active": {
+                "properties": {"enabled": {"const": true}},
+                "required": ["enabled"]
+              }
+            },
+            "required": ["active"]
+          }
+        },
+        "required": ["options"]
+      },
+      "then": {
+        "properties": {
+          "policy": {
+            "properties": {"allow_active_verify": {"const": true}},
+            "required": ["allow_active_verify"]
+          }
+        },
+        "required": ["policy"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "options": {
+            "properties": {"detection_depth": {"enum": ["deep", "external_fingerprint"]}},
+            "required": ["detection_depth"]
+          }
+        },
+        "required": ["options"]
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "properties": {
+              "risk_acknowledged": {"const": true},
+              "execution_profile": {"enum": ["authorized_assessment", "lab"]}
+            },
+            "required": ["risk_acknowledged", "execution_profile"]
+          },
+          "policy": {
+            "properties": {"allow_high_risk": {"const": true}},
+            "required": ["allow_high_risk"]
+          }
+        },
+        "required": ["options", "policy"]
+      }
+    }
+  ],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.:-]+$"
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "service"},
+        "value": {"type": "string", "minLength": 3, "maxLength": 512, "pattern": "^[A-Za-z0-9_.:\\[\\]-]+:[0-9]{1,5}$"},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["services", "findings"],
+      "properties": {
+        "services": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 500,
+          "items": {"$ref": "#/definitions/ServiceTarget"}
+        },
+        "findings": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "findings": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": true}},
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "detection_depth", "passive_intel", "active", "merge", "output", "risk_acknowledged", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active", "hybrid"]},
+        "detection_depth": {"type": "string", "enum": ["fixture", "passive", "safe", "standard", "deep", "external_fingerprint"]},
+        "passive_intel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "sources", "prefer_sources", "api_timeout_seconds", "api_rate_limit_per_second", "max_queries", "allow_missing_secrets", "local_cache_file"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["fixture", "local_cache", "upstream_port_result", "upstream_dns_result", "passive_service_cache", "fofa_enrichment", "shodan_enrichment", "external_fingerprint_intel"]}
+            },
+            "prefer_sources": {
+              "type": "array",
+              "maxItems": 8,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["fixture", "local_cache", "upstream_port_result", "passive_service_cache", "fofa_enrichment", "shodan_enrichment", "external_fingerprint_intel"]}
+            },
+            "api_timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "api_rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 10},
+            "max_queries": {"type": "integer", "minimum": 0, "maximum": 1000},
+            "allow_missing_secrets": {"type": "boolean"},
+            "local_cache_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "fixture_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "passive_service_cache_file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "probe_profiles", "timeout_seconds", "concurrency", "rate_limit_per_second", "max_services", "max_probes_per_service", "max_response_bytes"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "probe_profiles": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 5,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["tcp_banner", "tls_hello", "http_head", "http_get_root", "standard_probe"]}
+            },
+            "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 30},
+            "concurrency": {"type": "integer", "minimum": 1, "maximum": 20},
+            "rate_limit_per_second": {"type": "integer", "minimum": 1, "maximum": 20},
+            "max_services": {"type": "integer", "minimum": 1, "maximum": 500},
+            "max_probes_per_service": {"type": "integer", "minimum": 1, "maximum": 10},
+            "max_response_bytes": {"type": "integer", "minimum": 128, "maximum": 65536},
+            "external_fingerprint": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "tool": {"type": "string", "enum": ["fingerprint-only"]},
+                "profile": {"type": "string", "enum": ["safe-identification", "lab-identification"]}
+              }
+            }
+          }
+        },
+        "merge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deduplicate", "conflict_policy", "mark_source_disagreement", "confidence_strategy", "stale_after_days"],
+          "properties": {
+            "deduplicate": {"type": "boolean"},
+            "conflict_policy": {"type": "string", "enum": ["preserve_all_sources"]},
+            "mark_source_disagreement": {"type": "boolean"},
+            "confidence_strategy": {"type": "string", "enum": ["weighted_sources"]},
+            "stale_after_days": {"type": "integer", "minimum": 1, "maximum": 3650}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_unknown", "include_source_details", "include_conflicts", "mask_sensitive_headers", "truncate_banner_bytes"],
+          "properties": {
+            "include_unknown": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"},
+            "include_conflicts": {"type": "boolean"},
+            "mask_sensitive_headers": {"type": "boolean"},
+            "truncate_banner_bytes": {"type": "integer", "minimum": 64, "maximum": 4096}
+          }
+        },
+        "risk_acknowledged": {"type": "boolean"},
+        "execution_profile": {"type": "string", "enum": ["fixture", "passive_intel", "active_safe", "authorized_assessment", "lab"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"type": "boolean"},
+        "allow_high_risk": {"type": "boolean"}
+      }
+    }
+  },
+  "definitions": {
+    "ServiceTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "port", "protocol", "hostnames"],
+      "properties": {
+        "address": {"type": "string", "minLength": 1, "maxLength": 253, "pattern": "^[A-Za-z0-9_.:-]+$"},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "protocol": {"type": "string", "enum": ["tcp", "udp"]},
+        "hostnames": {"type": "array", "maxItems": 16, "items": {"type": "string", "maxLength": 253}}
+      }
+    },
+    "SafeRelativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+    }
+  }
+}

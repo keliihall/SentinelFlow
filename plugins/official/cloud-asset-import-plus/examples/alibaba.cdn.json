@@ -1,0 +1,10 @@
+{
+  "Domains": {
+    "PageData": [{
+      "DomainName": "static.example.com",
+      "Cname": "static.example.com.w.kunluncan.com",
+      "DomainStatus": "online",
+      "CdnType": "web"
+    }]
+  }
+}

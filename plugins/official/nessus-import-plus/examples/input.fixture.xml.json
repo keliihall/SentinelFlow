@@ -1,0 +1,35 @@
+{
+  "context": {
+    "task_id": "task-nessus-xml",
+    "run_id": "run-nessus-xml",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {
+    "type": "report",
+    "value": "nessus-xml-fixture",
+    "metadata": {}
+  },
+  "options": {
+    "mode": "fixture",
+    "import": {
+      "format": "nessus_xml",
+      "file": "examples/fixture.nessus",
+      "max_records": 100,
+      "include_info": false,
+      "minimum_severity": "low"
+    },
+    "output": {
+      "include_description": true,
+      "include_solution": true,
+      "include_evidence": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {
+    "allow_active_verify": false,
+    "allow_high_risk": false
+  }
+}

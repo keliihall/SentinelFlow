@@ -1,0 +1,64 @@
+apiVersion: sentinelflow.io/v1alpha1
+kind: TaskSpec
+metadata:
+  name: subdomain-discovery-plus-active-dictionary
+spec:
+  authorizationScope: fixture:local-only
+  targets:
+    - name: example.com
+      input:
+        context:
+          task_id: task_example_active
+          run_id: run_example_active
+          operator: operator
+          workspace: default
+          authorization_scope: fixture:local-only
+        target:
+          type: domain
+          value: example.com
+          metadata: {}
+        options:
+          mode: active
+          passive:
+            enabled: false
+            sources:
+              - fixture
+            fixture_file: examples/fixture.passive.example.com.json
+            crtsh_enabled: false
+            crtsh_timeout_seconds: 10
+          active:
+            enabled: true
+            dry_run: true
+            wordlist_file: examples/wordlist.small.txt
+            resolvers:
+              - 1.1.1.1
+              - 8.8.8.8
+            record_types:
+              - A
+              - AAAA
+            timeout_seconds: 3
+            concurrency: 5
+            rate_limit_per_second: 5
+            max_candidates: 12
+            detect_wildcard: true
+          output:
+            include_unresolved: false
+            include_sources: true
+        policy:
+          allow_active_verify: true
+          allow_high_risk: false
+  steps:
+    - name: discover-subdomains
+      toolRef: subdomain-discovery-plus
+      capability: active.subdomain.dictionary
+  policy:
+    allowedTargets:
+      - example.com
+    targetPatterns:
+      - domain:example.com
+      - domain:*.example.com
+    approveHighRisk: false
+    timeoutSeconds: 300
+    maxConcurrency: 1
+    rateLimitPerMinute: 60
+extensions: {}

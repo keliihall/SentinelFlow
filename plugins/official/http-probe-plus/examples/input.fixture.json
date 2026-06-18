@@ -1,0 +1,45 @@
+{
+  "context": {
+    "task_id": "task-http-fixture",
+    "run_id": "run-http-fixture",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "endpoints": ["https://www.example.com/", "http://api.example.com/"],
+    "findings": []
+  },
+  "options": {
+    "mode": "fixture",
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.http.example.com.json"
+    },
+    "active": {
+      "enabled": false,
+      "methods": ["HEAD"],
+      "timeout_seconds": 2,
+      "concurrency": 4,
+      "rate_limit_per_second": 5,
+      "max_endpoints": 100,
+      "max_redirects": 3,
+      "max_response_bytes": 65536
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_source_details": true,
+      "include_conflicts": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

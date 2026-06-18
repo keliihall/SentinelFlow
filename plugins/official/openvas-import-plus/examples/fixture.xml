@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report>
+  <results>
+    <result id="res-1">
+      <host>www.example.com</host>
+      <port>443/tcp</port>
+      <threat>Medium</threat>
+      <severity>5.5</severity>
+      <qod><value>80</value></qod>
+      <description>Example OpenVAS medium finding.</description>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100001">
+        <name>Example OpenVAS TLS Finding</name>
+        <family>General</family>
+        <cvss_base>5.5</cvss_base>
+        <cve>CVE-2026-1001</cve>
+        <solution>Disable the example weak TLS configuration.</solution>
+        <solution_type>Mitigation</solution_type>
+      </nvt>
+    </result>
+    <result id="res-2">
+      <host>api.example.com</host>
+      <port>8443/tcp</port>
+      <threat>High</threat>
+      <severity>9.1</severity>
+      <qod><value>95</value></qod>
+      <description>Example OpenVAS high finding. token: should-redact</description>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100002">
+        <name>Example OpenVAS Critical Web Finding</name>
+        <family>Web application abuses</family>
+        <cvss_base>9.1</cvss_base>
+        <cve>CVE-2026-1002, CVE-2026-1003</cve>
+        <solution>Apply the Greenbone recommended remediation.</solution>
+        <solution_type>VendorFix</solution_type>
+      </nvt>
+    </result>
+    <result id="res-3">
+      <host>info.example.com</host>
+      <port>0/tcp</port>
+      <threat>Log</threat>
+      <severity>0.0</severity>
+      <description>Informational log item.</description>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100003">
+        <name>OpenVAS Scan Log</name>
+        <family>Settings</family>
+      </nvt>
+    </result>
+  </results>
+</report>

@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TLS Certificate Check Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "tls-certificate-check-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active_tls", "hybrid"]},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "host", "port", "subject", "issuer", "not_before", "not_after", "san", "status", "confidence", "sources", "evidence"],
+        "properties": {
+          "type": {"const": "tls_certificate_result"},
+          "host": {"type": "string"},
+          "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+          "subject": {"type": "string"},
+          "issuer": {"type": "string"},
+          "not_before": {"type": "string"},
+          "not_after": {"type": "string"},
+          "san": {"type": "array", "items": {"type": "string"}},
+          "status": {"type": "string"},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

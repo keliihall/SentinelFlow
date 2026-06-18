@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Markdown Report Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "report", "summary", "source_status", "errors", "safety"],
+  "properties": {
+    "source": {"const": "markdown-report-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["summary", "asset_discovery", "audit"]},
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "title", "markdown", "sections", "bytes", "truncated", "redaction_count"],
+      "properties": {
+        "type": {"const": "markdown_report"},
+        "title": {"type": "string"},
+        "markdown": {"type": "string"},
+        "sections": {"type": "array", "items": {"type": "string"}},
+        "bytes": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "redaction_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "summary": {"type": "object", "additionalProperties": true},
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

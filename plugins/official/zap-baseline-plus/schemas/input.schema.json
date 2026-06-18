@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ZAP Baseline Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"type": "string", "enum": ["url", "domain", "report"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 2048},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "import", "filters", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_file"]},
+        "import": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "file", "max_records"],
+          "properties": {
+            "format": {"type": "string", "enum": ["zap_json", "zap_xml"]},
+            "file": {"$ref": "#/definitions/SafeRelativePath"},
+            "max_records": {"type": "integer", "minimum": 0, "maximum": 10000}
+          }
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum_risk", "minimum_confidence", "include_false_positives"],
+          "properties": {
+            "minimum_risk": {"type": "string", "enum": ["info", "low", "medium", "high"]},
+            "minimum_confidence": {"type": "string", "enum": ["false_positive", "low", "medium", "high", "confirmed"]},
+            "include_false_positives": {"type": "boolean"}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_attack", "include_evidence", "include_source_details", "deduplicate"],
+          "properties": {
+            "include_attack": {"type": "boolean"},
+            "include_evidence": {"type": "boolean"},
+            "include_source_details": {"type": "boolean"},
+            "deduplicate": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "offline_import"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_scan", "allow_ajax_spider", "allow_authentication", "allow_attack_mode"],
+      "properties": {
+        "allow_active_scan": {"const": false},
+        "allow_ajax_spider": {"const": false},
+        "allow_authentication": {"const": false},
+        "allow_attack_mode": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

@@ -221,7 +221,7 @@
           "type": "string"
         },
         "target": {
-          "description": "Top-level field inserted into the downstream structured input.",
+          "description": "Field inserted into the downstream structured input.\n\nPlain names keep the legacy top-level replacement behavior. Values starting with `/` are treated as JSON Pointers and create intermediate objects as needed.",
           "minLength": 1,
           "type": "string"
         }
@@ -305,6 +305,9 @@
           ],
           "default": "stop",
           "description": "Failure propagation behavior."
+        },
+        "input": {
+          "description": "Optional structured input for this step.\n\nWhen omitted, the target-level input remains the source of truth for backward compatibility."
         },
         "inputFrom": {
           "description": "Values mapped from prior normalized outputs.",

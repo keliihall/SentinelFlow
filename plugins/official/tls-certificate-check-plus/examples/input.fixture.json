@@ -1,0 +1,44 @@
+{
+  "context": {
+    "task_id": "task-tls-fixture",
+    "run_id": "run-tls-fixture",
+    "operator": "ci",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "endpoints": [{"host": "www.example.com", "port": 443}, {"host": "soon-expire.example.com", "port": 443}],
+    "findings": []
+  },
+  "options": {
+    "mode": "fixture",
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["fixture"],
+      "local_cache_file": "examples/cache.empty.json",
+      "fixture_file": "examples/fixture.tls.example.com.json"
+    },
+    "active": {
+      "enabled": false,
+      "timeout_seconds": 2,
+      "concurrency": 4,
+      "rate_limit_per_second": 5,
+      "max_endpoints": 100
+    },
+    "checks": {
+      "expiry_warning_days": 30,
+      "include_san_assets": true,
+      "include_chain_summary": true
+    },
+    "merge": {
+      "deduplicate": true,
+      "confidence_strategy": "weighted_sources"
+    },
+    "output": {
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

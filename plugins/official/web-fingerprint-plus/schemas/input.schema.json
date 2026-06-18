@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Web Fingerprint Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "inputs", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "domain"},
+        "value": {"type": "string", "minLength": 3, "maxLength": 253},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observations", "findings"],
+      "properties": {
+        "observations": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": true}},
+        "findings": {"type": "array", "maxItems": 10000, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "passive_intel", "fingerprint", "merge", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "from_http_probe"]},
+        "passive_intel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "sources", "local_cache_file"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "sources": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"type": "string", "enum": ["fixture", "local_cache"]}},
+            "local_cache_file": {"$ref": "#/definitions/SafeRelativePath"},
+            "fixture_file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "fingerprint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["use_headers", "use_title", "use_body_signals", "use_favicon_hash", "max_body_signal_bytes"],
+          "properties": {
+            "use_headers": {"type": "boolean"},
+            "use_title": {"type": "boolean"},
+            "use_body_signals": {"type": "boolean"},
+            "use_favicon_hash": {"type": "boolean"},
+            "max_body_signal_bytes": {"type": "integer", "minimum": 0, "maximum": 65536}
+          }
+        },
+        "merge": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["deduplicate", "confidence_strategy"],
+          "properties": {
+            "deduplicate": {"type": "boolean"},
+            "confidence_strategy": {"type": "string", "enum": ["weighted_signals"]}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include_source_details", "include_signal_details"],
+          "properties": {
+            "include_source_details": {"type": "boolean"},
+            "include_signal_details": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "passive_intel"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_active_verify", "allow_high_risk"],
+      "properties": {
+        "allow_active_verify": {"const": false},
+        "allow_high_risk": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

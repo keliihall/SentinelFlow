@@ -1,0 +1,58 @@
+{
+  "context": {
+    "task_id": "task_service_detect_high_risk",
+    "run_id": "run_service_detect_high_risk",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "service", "value": "93.184.216.34:443", "metadata": {}},
+  "inputs": {
+    "services": [
+      {"address": "93.184.216.34", "port": 443, "protocol": "tcp", "hostnames": ["www.example.com"]}
+    ],
+    "findings": []
+  },
+  "options": {
+    "mode": "active",
+    "detection_depth": "deep",
+    "passive_intel": {
+      "enabled": false,
+      "sources": ["fixture"],
+      "prefer_sources": ["fixture"],
+      "api_timeout_seconds": 10,
+      "api_rate_limit_per_second": 1,
+      "max_queries": 0,
+      "allow_missing_secrets": true,
+      "local_cache_file": "examples/fixture.services.example.com.json"
+    },
+    "active": {
+      "enabled": true,
+      "probe_profiles": ["tcp_banner", "tls_hello", "http_head", "standard_probe"],
+      "timeout_seconds": 3,
+      "concurrency": 1,
+      "rate_limit_per_second": 1,
+      "max_services": 5,
+      "max_probes_per_service": 4,
+      "max_response_bytes": 4096,
+      "external_fingerprint": {"tool": "fingerprint-only", "profile": "lab-identification"}
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources",
+      "stale_after_days": 30
+    },
+    "output": {
+      "include_unknown": false,
+      "include_source_details": true,
+      "include_conflicts": true,
+      "mask_sensitive_headers": true,
+      "truncate_banner_bytes": 512
+    },
+    "risk_acknowledged": true,
+    "execution_profile": "lab"
+  },
+  "policy": {"allow_active_verify": true, "allow_high_risk": true}
+}

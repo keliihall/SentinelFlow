@@ -89,12 +89,13 @@ isolated temporary working directory, bounds combined output, enforces timeout a
 cancellation, and terminates the child process group. Only JSON output that passes
 the declared output Schema is returned; stderr and invalid raw output are discarded.
 
-Policy permits execution only for explicitly allowlisted repository example
-plugins carrying the repository example label, plus generated scaffold fixtures.
-The example catalog is limited to local, synthetic, bounded fixtures, including
-echo, mock DNS, file import, adapter contracts, approval, failure, delay, and
-invalid-parser negative tests. Other registered tools remain discoverable but
-cannot execute.
+Policy permits execution only for explicitly allowlisted repository plugins
+carrying the repository example or official label, plus generated scaffold
+fixtures. The example catalog is limited to local, synthetic, bounded fixtures,
+including echo, mock DNS, file import, adapter contracts, approval, failure,
+delay, and invalid-parser negative tests. Official plugins must stay within
+their declared safety profile, such as passive public-data lookup only. Other
+registered tools remain discoverable but cannot execute.
 
 Task execution is also default deny. Every target name must appear in the Task
 Spec's `policy.allowedTargets`; one authorized target does not authorize another.

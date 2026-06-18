@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ZAP Baseline Plus Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "target", "mode", "format", "results", "source_status", "summary", "errors", "safety"],
+  "properties": {
+    "source": {"const": "zap-baseline-plus"},
+    "target": {"type": "object", "additionalProperties": true},
+    "mode": {"type": "string", "enum": ["fixture", "dry_run", "local_file"]},
+    "format": {"type": "string", "enum": ["zap_json", "zap_xml"]},
+    "results": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["type", "url", "alert_id", "alert_name", "risk", "confidence_label", "sources", "confidence", "evidence"],
+        "properties": {
+          "type": {"const": "zap_alert_result"},
+          "url": {"type": "string"},
+          "alert_id": {"type": "string"},
+          "alert_ref": {"type": ["string", "null"]},
+          "alert_name": {"type": "string"},
+          "risk": {"type": "string", "enum": ["info", "low", "medium", "high"]},
+          "confidence_label": {"type": "string", "enum": ["false_positive", "low", "medium", "high", "confirmed"]},
+          "method": {"type": ["string", "null"]},
+          "parameter": {"type": ["string", "null"]},
+          "cwe_id": {"type": ["integer", "null"], "minimum": 0},
+          "wasc_id": {"type": ["integer", "null"], "minimum": 0},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "object", "additionalProperties": true}
+        }
+      }
+    },
+    "source_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "summary": {"type": "object", "additionalProperties": true},
+    "errors": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "safety": {"type": "object", "additionalProperties": true}
+  }
+}

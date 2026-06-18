@@ -10,6 +10,9 @@ queries never execute plugin content.
 Every plugin is integrated through its Manifest, package directories, and Schemas.
 Adding a plugin does not require a change to `sentinelflow-core`.
 
+Repository-maintained official plugins live under `plugins/official/`. They must
+still pass the same package validation and runtime policy path as examples.
+
 ## Package Layout
 
 ```text
@@ -33,7 +36,7 @@ Absolute paths and parent traversal are rejected.
 
 The CLI registry scans `<workspace>/plugins/`, which defaults to
 `.sentinelflow/plugins/`. The scanner also accepts arbitrary roots, including the
-repository `plugins/examples/` directory.
+repository `plugins/examples/` and `plugins/official/` directories.
 
 Discovery examines immediate child directories. It ignores:
 
@@ -100,6 +103,14 @@ sentinelflow tool info <TOOL>
 input and output Schemas accept a bounded string. P2-2 includes a small executable
 runner that reads and writes JSON only; there is no network access, scanning, or
 system modification.
+
+## Official Passive Plugin
+
+`plugins/official/subdomain-discovery/` declares one low-risk passive discovery
+capability. It queries only selected public data provider APIs, uses an embedded
+`example.com` fixture for local acceptance, and records explicit safety counters
+showing no DNS queries, brute force, dictionary candidates, port scans, or exploit
+attempts.
 
 ## Plugin Development Guide
 
@@ -248,6 +259,9 @@ target/debug/sentinelflow plugin test /tmp/sentinelflow-python-example
 
 - No real scanners, exploits, brute force, credential use, stealth, persistence,
   bypass, or attack chains.
+- Passive public-data plugins must not perform active DNS resolution, DNS brute
+  force, dictionary enumeration, port scanning, exploitation, or attack-chain
+  behavior.
 - No plaintext credentials in Manifest files. Use environment-backed secret
   references where supported.
 - No in-process dynamic library loading from untrusted plugins.

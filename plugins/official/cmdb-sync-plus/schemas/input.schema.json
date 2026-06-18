@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CMDB Sync Plus Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context", "target", "options", "policy"],
+  "properties": {
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "run_id", "operator", "workspace", "authorization_scope"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "run_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "operator": {"type": "string", "minLength": 1, "maxLength": 128},
+        "workspace": {"type": "string", "minLength": 1, "maxLength": 128},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "metadata"],
+      "properties": {
+        "type": {"const": "cmdb"},
+        "value": {"type": "string", "minLength": 1, "maxLength": 256},
+        "metadata": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "cmdb", "sentinelflow", "mapping", "writeback", "output", "execution_profile"],
+      "properties": {
+        "mode": {"type": "string", "enum": ["fixture", "dry_run", "import", "reconcile", "writeback_plan"]},
+        "cmdb": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "file"],
+          "properties": {
+            "format": {"type": "string", "enum": ["json", "csv"]},
+            "file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "sentinelflow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "file"],
+          "properties": {
+            "format": {"const": "normalized_json"},
+            "file": {"$ref": "#/definitions/SafeRelativePath"}
+          }
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["external_id", "asset_type", "name", "addresses", "department", "business_system", "owner", "criticality", "status", "updated_at"],
+          "properties": {
+            "external_id": {"type": "string", "minLength": 1, "maxLength": 128},
+            "asset_type": {"type": "string", "minLength": 1, "maxLength": 128},
+            "name": {"type": "string", "minLength": 1, "maxLength": 128},
+            "addresses": {"type": "string", "minLength": 1, "maxLength": 128},
+            "department": {"type": "string", "minLength": 1, "maxLength": 128},
+            "business_system": {"type": "string", "minLength": 1, "maxLength": 128},
+            "owner": {"type": "string", "minLength": 1, "maxLength": 128},
+            "criticality": {"type": "string", "minLength": 1, "maxLength": 128},
+            "status": {"type": "string", "minLength": 1, "maxLength": 128},
+            "updated_at": {"type": "string", "minLength": 1, "maxLength": 128}
+          }
+        },
+        "writeback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["match_fields", "allowed_fields", "conflict_policy", "create_missing", "update_existing"],
+          "properties": {
+            "match_fields": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 3,
+              "items": {"type": "string", "enum": ["external_id", "name", "address"]}
+            },
+            "allowed_fields": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {"type": "string", "enum": ["asset_type", "name", "addresses", "department", "business_system", "owner", "criticality", "status", "source_refs", "last_seen_at"]}
+            },
+            "conflict_policy": {"type": "string", "enum": ["cmdb_wins", "sentinelflow_wins", "manual_review"]},
+            "create_missing": {"type": "boolean"},
+            "update_existing": {"type": "boolean"}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_records", "include_source_details", "include_noop_operations"],
+          "properties": {
+            "max_records": {"type": "integer", "minimum": 0, "maximum": 10000},
+            "include_source_details": {"type": "boolean"},
+            "include_noop_operations": {"type": "boolean"}
+          }
+        },
+        "execution_profile": {"type": "string", "enum": ["fixture", "offline_sync"]}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_network", "allow_credentials", "allow_direct_writeback", "allow_delete"],
+      "properties": {
+        "allow_network": {"const": false},
+        "allow_credentials": {"const": false},
+        "allow_direct_writeback": {"const": false},
+        "allow_delete": {"const": false}
+      }
+    }
+  },
+  "definitions": {
+    "SafeRelativePath": {"type": "string", "minLength": 1, "maxLength": 256, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"}
+  }
+}

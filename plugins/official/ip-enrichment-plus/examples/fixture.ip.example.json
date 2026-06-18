@@ -1,0 +1,26 @@
+{
+  "results": [
+    {
+      "ip": "93.184.216.34",
+      "asn": 15133,
+      "organization": "Edgecast Inc.",
+      "isp": "Edgecast Networks",
+      "geo": {"country": "US", "region": "California", "city": "Los Angeles", "latitude": 34.05, "longitude": -118.24},
+      "cloud": {"provider": null, "service": null, "region": null, "confidence": 0.0},
+      "cdn_waf": {"cdn": true, "waf": false, "provider": "Edgecast", "signals": ["asn_org"], "confidence": 0.74},
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.82
+    },
+    {
+      "ip": "203.0.113.10",
+      "asn": null,
+      "organization": "Documentation Network",
+      "isp": null,
+      "geo": {},
+      "cloud": {"provider": null, "service": null, "region": null, "confidence": 0.0},
+      "cdn_waf": {"cdn": false, "waf": false, "provider": null, "signals": [], "confidence": 0.0},
+      "observed_at": "2026-06-01T00:00:00Z",
+      "confidence": 0.55
+    }
+  ]
+}

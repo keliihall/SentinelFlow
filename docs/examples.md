@@ -1,14 +1,33 @@
-# SentinelFlow Safe Examples
+# SentinelFlow Examples
 
-All examples in this document are local, synthetic, and safe. They do not scan,
-probe, exploit, brute force, bypass authentication, persist access, use real
-credentials, or contact external targets.
+Checked-in examples in this document are safe and use local fixtures or
+`example.com`. They do not scan, probe, exploit, brute force, bypass
+authentication, persist access, use real credentials, or attack targets.
 
 Build once before running examples:
 
 ```sh
 cargo build --workspace
 target/debug/sentinelflow --workspace .sentinelflow init
+```
+
+## subdomain-discovery
+
+Purpose: prove an official passive plugin can run through Manifest, Command
+Adapter, trusted Parser, Normalizer, Store, and Audit without active scanning.
+The checked-in example uses `example.com` and embedded fixture data, so it does
+not depend on external network availability.
+
+```sh
+target/debug/sentinelflow --workspace .sentinelflow plugin validate plugins/official/subdomain-discovery
+target/debug/sentinelflow --workspace .sentinelflow plugin install plugins/official/subdomain-discovery
+target/debug/sentinelflow --workspace .sentinelflow plugin test plugins/official/subdomain-discovery
+target/debug/sentinelflow --workspace .sentinelflow tool run subdomain-discovery \
+  --input plugins/official/subdomain-discovery/examples/input.json \
+  --authorization-scope public:passive-discovery \
+  --target example.com
+target/debug/sentinelflow --workspace .sentinelflow task validate tests/fixtures/task.subdomain-discovery.yaml
+target/debug/sentinelflow --workspace .sentinelflow task plan tests/fixtures/task.subdomain-discovery.yaml
 ```
 
 ## example-echo

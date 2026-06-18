@@ -1,0 +1,20 @@
+{
+  "findings": [
+    {
+      "host": "json.example.com",
+      "port": 443,
+      "protocol": "tcp",
+      "service": "https",
+      "plugin_id": "200001",
+      "plugin_name": "Example JSON Vulnerability",
+      "plugin_family": "General",
+      "severity": "high",
+      "cve": ["CVE-2026-0100"],
+      "cvss_base_score": 8.1,
+      "synopsis": "JSON import finding.",
+      "description": "Synthetic JSON import vulnerability.",
+      "solution": "Patch JSON fixture.",
+      "evidence": "JSON proof text."
+    }
+  ]
+}

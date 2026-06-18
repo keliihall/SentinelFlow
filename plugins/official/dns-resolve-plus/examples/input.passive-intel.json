@@ -1,0 +1,54 @@
+{
+  "context": {
+    "task_id": "task_dns_resolve_passive",
+    "run_id": "run_dns_resolve_passive",
+    "operator": "operator",
+    "workspace": "default",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "domain", "value": "example.com", "metadata": {}},
+  "inputs": {
+    "domains": ["www.example.com", "api.example.com"],
+    "findings": []
+  },
+  "options": {
+    "mode": "passive_intel",
+    "record_types": ["A", "AAAA", "CNAME"],
+    "passive_intel": {
+      "enabled": true,
+      "sources": ["local_cache", "passive_dns_cache", "external_dns_intel"],
+      "api_timeout_seconds": 10,
+      "api_rate_limit_per_second": 1,
+      "max_queries": 100,
+      "allow_missing_secrets": true,
+      "local_cache_file": "examples/fixture.dns.example.com.json",
+      "passive_dns_cache_file": "examples/fixture.dns.example.com.json"
+    },
+    "active": {
+      "enabled": false,
+      "resolver_mode": "public_resolver",
+      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "authoritative_trace": false,
+      "timeout_seconds": 3,
+      "concurrency": 5,
+      "rate_limit_per_second": 5,
+      "max_domains": 100,
+      "max_queries": 500
+    },
+    "merge": {
+      "deduplicate": true,
+      "conflict_policy": "preserve_all_sources",
+      "mark_source_disagreement": true,
+      "confidence_strategy": "weighted_sources",
+      "stale_after_days": 30
+    },
+    "output": {
+      "include_unresolved": false,
+      "include_source_details": true,
+      "include_conflicts": true
+    },
+    "risk_acknowledged": false,
+    "execution_profile": "passive_intel"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false}
+}

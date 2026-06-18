@@ -1,0 +1,31 @@
+{
+  "context": {
+    "task_id": "task-nuclei-fixture",
+    "run_id": "run-nuclei-fixture",
+    "operator": "fixture-operator",
+    "workspace": "fixture-workspace",
+    "authorization_scope": "fixture:local-only"
+  },
+  "target": {"type": "url", "value": "https://www.example.com", "metadata": {}},
+  "options": {
+    "mode": "fixture",
+    "import": {
+      "format": "nuclei_jsonl",
+      "file": "examples/fixture.jsonl",
+      "max_records": 100
+    },
+    "templates": {
+      "allowed_path_prefixes": ["http/"],
+      "allowed_severities": ["info", "low"],
+      "blocked_tags": ["destructive", "intrusive", "dos", "rce"],
+      "allow_medium_or_higher": false
+    },
+    "output": {
+      "include_request": false,
+      "include_extracted_results": true,
+      "include_source_details": true
+    },
+    "execution_profile": "fixture"
+  },
+  "policy": {"allow_active_verify": false, "allow_high_risk": false, "allow_intrusive_templates": false}
+}

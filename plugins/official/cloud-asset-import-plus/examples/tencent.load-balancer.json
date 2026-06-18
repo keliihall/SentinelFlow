@@ -1,0 +1,12 @@
+{
+  "Response": {
+    "LoadBalancerSet": [{
+      "LoadBalancerId": "lb-tencent-001",
+      "LoadBalancerName": "edge-public",
+      "LoadBalancerVips": ["203.0.113.20"],
+      "LoadBalancerDomain": "edge.example.net",
+      "LoadBalancerType": "OPEN",
+      "Status": 1
+    }]
+  }
+}

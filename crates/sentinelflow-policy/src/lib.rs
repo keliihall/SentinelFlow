@@ -278,7 +278,7 @@ fn parse_minute(value: &str) -> Option<u16> {
 /// Inputs evaluated before an adapter prepares a process.
 #[derive(Clone, Debug)]
 pub struct ExecutionPolicyRequest<'a> {
-    /// Whether the tool is explicitly allowlisted as a safe repository example.
+    /// Whether the tool is explicitly allowlisted as a repository plugin.
     pub example_plugin: bool,
     /// Explicit authorization scope.
     pub authorization_scope: Option<&'a str>,
@@ -333,7 +333,7 @@ pub fn authorize(request: &ExecutionPolicyRequest<'_>) -> Result<AuthorizationGr
     if !request.example_plugin {
         return Err(PolicyError {
             field: "$.toolId",
-            message: "execution is limited to allowlisted example plugins",
+            message: "execution is limited to allowlisted repository plugins",
         });
     }
     let scope = request
