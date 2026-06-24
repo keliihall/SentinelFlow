@@ -59,6 +59,7 @@ node --test crates/sentinelflow-api/web/*.test.js
 
 gate "P56-G10 Web Quick Run fixture-only scope guard"
 node --test crates/sentinelflow-api/web/*.test.js
+node scripts/check_p5_6_boundary.js
 node scripts/p5_6_scope_guard.js
 
 gate "P56-G09 Web/API basic smoke"
