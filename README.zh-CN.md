@@ -130,6 +130,17 @@ http://127.0.0.1:8080/console
 
 这些凭据只用于本地开发和测试。任何生产或共享试点环境都必须替换身份提供者。
 
+## P5.6 Web Quick Run 范围
+
+P5.6 Quick Run 仅支持本地 fixture。它只会为 `example.com`、
+`example.test`、`fixture.local`、`fixture.example` 生成
+`fixture:local-only` 的 `example-echo` framework smoke TaskSpec。
+
+P5.6 不支持真实目标检查，不生成 `real:<domain>` 授权范围，不启用
+active DNS、public resolver、端口探测、服务探测或外部情报调用。
+standard/deep 模式在 P5.6 中禁用到 P7。P7 之前不实现真实资产发现和
+真实扫描。
+
 ## Web Console 完整试用流程
 
 进入 Console 后按顺序操作：
@@ -280,8 +291,17 @@ P5.6 官方插件不是默认真实资产发现、主动扫描、public resolver
 
 | 插件 | P5.6 状态 | 用途 |
 | --- | --- | --- |
-| import/report 类插件 | `fixture-only` | 只处理本地 fixture、导入文件或已归一化结果 |
-| `subdomain-discovery-plus` / DNS/端口/服务/HTTP/TLS/外部情报类插件 | `disabled-future` | 仅保留 Manifest 兼容性；P5.6 不安装为默认能力，不被 Web Quick Run 使用，不进入 CI 执行路径 |
+| import/report 类插件 | `fixture-only` | 只处理本地 fixture、本地 mock、导入文件或已归一化结果 |
+
+Future P7 Proposals：
+
+| 插件 | P5.6 状态 | 说明 |
+| --- | --- | --- |
+| `subdomain-discovery` / `subdomain-discovery-plus` / DNS/端口/服务/HTTP/TLS/外部情报类插件 | `disabled-future` | 仅保留 Manifest 兼容性；P5.6 禁用，不安装为默认能力，不被 Web Quick Run 使用，不进入 CI 执行路径 |
+
+P5.6 不把 active DNS verification、active resolver verification、port
+probing、service detection、Shodan / FOFA / Censys / VirusTotal / crt.sh live
+query 或 public intelligence enrichment 宣传为当前可用能力。
 
 ## Task Spec、Policy 与审批
 

@@ -152,9 +152,10 @@ Development login:
 
 Use the Console as a security validation workbench: Overview, Quick Run, Tools &
 Plugins, Tasks, Findings, Reports, Approvals, Audit, and Settings. Quick Run
-generates a fixture-only `example-echo` framework smoke TaskSpec for
-`example.com`, `example.test`, `fixture.local`, or `fixture.example`. Full steps are in
-[API Service and Web Console](docs/api-service-and-web-console.md).
+is fixture-only in P5.6. It generates a local `example-echo` framework smoke
+TaskSpec only for `example.com`, `example.test`, `fixture.local`, or
+`fixture.example`. Real target checks and standard/deep modes are disabled until
+P7. Full steps are in [API Service and Web Console](docs/api-service-and-web-console.md).
 
 ## Safety Boundary
 
@@ -190,21 +191,26 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 ## Official Plugins
 
 P5.6 official plugins are explicitly scoped as either `fixture-only` or
-`disabled-future`. They are not default real-target discovery, active
-DNS verification, port probing, service probing, scanner, or external
-intelligence provider entry points.
+`disabled-future`. They are not current real-target discovery, active DNS or
+active resolver verification, port probing, service detection, scanner, public
+intelligence enrichment, or Shodan/FOFA/Censys/VirusTotal/crt.sh live-query
+entry points.
+
+Current P5.6 capability:
 
 - Import/report plugins such as `nessus-import-plus`, `openvas-import-plus`,
   `nuclei-adapter-plus`, `zap-baseline-plus`, `cloud-asset-import-plus`,
   `cmdb-sync-plus`, and `markdown-report-plus`: fixture/import/report-only
-  processing of local or already-normalized data.
-- Future P7 proposals such as `subdomain-discovery-plus`,
-  `subdomain-discovery`,
-  `dns-resolve-plus`, `port-probe-plus`, `service-detect-plus`,
-  `http-probe-plus`, `tls-certificate-check-plus`, `crtsh-subdomain-plus`,
-  `fofa-import-plus`, `shodan-import-plus`, and `censys-import-plus`: manifest
-  compatibility only in P5.6; disabled in P5.6, not used by Web Quick Run, not
-  installed by default, and not part of the CI execution path.
+  processing of local fixtures, local mock data, or already-normalized results.
+
+Future P7 Proposals:
+
+- `subdomain-discovery`, `subdomain-discovery-plus`, `dns-resolve-plus`,
+  `port-probe-plus`, `service-detect-plus`, `http-probe-plus`,
+  `tls-certificate-check-plus`, `crtsh-subdomain-plus`, `fofa-import-plus`,
+  `shodan-import-plus`, and `censys-import-plus` are retained for manifest
+  compatibility only. They are disabled in P5.6, not installed by default, not
+  used by Web Quick Run, and not part of the CI execution path.
 
 ## Documentation
 

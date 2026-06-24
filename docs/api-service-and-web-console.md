@@ -132,7 +132,8 @@ from the default workflow.
 
 An operator starts a check in three visible steps:
 
-1. Enter `example.com` or `example.test` as the local synthetic fixture target.
+1. Enter `example.com`, `example.test`, `fixture.local`, or `fixture.example`
+   as the local synthetic fixture target.
 2. Choose 快速检查. 标准检查 and 深度检查 are P7 placeholders in P5.6.
 3. Review the safety summary and confirm the fixture-only run.
 
@@ -156,15 +157,20 @@ normalize output, evaluate Policy independently, or bypass Core.
 `web/simple-check.js` provides `buildSimpleCheckTaskSpec()` for the normal-user
 workflow.
 
+- Quick Run is a fixture-only framework smoke path in P5.6. It does not accept
+  real domains as execution targets.
 - Authorization scope is always generated as `fixture:local-only`.
+- The builder does not generate `real:<domain>` authorization scopes.
 - Allowed targets are limited to `example.com`, `example.test`,
   `fixture.local`, or `fixture.example`.
 - 快速检查 creates one local `example-echo` framework smoke step. It does not
   run asset discovery, DNS resolution, port probing, service probing, or live
   external intelligence.
 - The generated task never includes `real:`, `tcp_connect`, `public_resolver`,
-  FOFA/Shodan/Censys/crt.sh live providers, `authorized_assessment`, or active
-  verification enabled by default.
+  FOFA/Shodan/Censys/VirusTotal/crt.sh live providers, `authorized_assessment`,
+  or active verification enabled by default.
+- `allowActiveVerify` and high-risk execution are disabled in the generated Web
+  metadata.
 - 标准检查 and 深度检查 are rejected by the simple builder in P5.6.
 
 ### P5.6 API scope protection

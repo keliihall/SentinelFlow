@@ -104,13 +104,18 @@ input and output Schemas accept a bounded string. P2-2 includes a small executab
 runner that reads and writes JSON only; there is no network access, scanning, or
 system modification.
 
-## Official Passive Plugin
+## Official Plugin Scope In P5.6
 
-`plugins/official/subdomain-discovery/` declares one low-risk passive discovery
-capability. It queries only selected public data provider APIs, uses an embedded
-`example.com` fixture for local acceptance, and records explicit safety counters
-showing no DNS queries, brute force, dictionary candidates, port scans, or exploit
-attempts.
+Official plugins are registry and Manifest compatibility artifacts unless their
+Manifest declares a P5.6-safe local path. P5.6 does not make live public
+provider queries, real asset discovery, active DNS verification, public resolver
+verification, port probing, service probing, or external intelligence enrichment
+available as default capabilities.
+
+`plugins/official/subdomain-discovery/` is retained as a disabled-future P7
+placeholder in P5.6. Its checked-in `example.com` fixture and Manifest can be
+validated locally, but live public provider access is not part of P5.6, is not
+used by Web Quick Run, and is not in the CI execution path.
 
 ## Plugin Development Guide
 
@@ -259,9 +264,9 @@ target/debug/sentinelflow plugin test /tmp/sentinelflow-python-example
 
 - No real scanners, exploits, brute force, credential use, stealth, persistence,
   bypass, or attack chains.
-- Passive public-data plugins must not perform active DNS resolution, DNS brute
-  force, dictionary enumeration, port scanning, exploitation, or attack-chain
-  behavior.
+- Future P7 passive public-data plugins must not perform active DNS resolution,
+  DNS brute force, dictionary enumeration, port scanning, exploitation, or
+  attack-chain behavior.
 - No plaintext credentials in Manifest files. Use environment-backed secret
   references where supported.
 - No in-process dynamic library loading from untrusted plugins.

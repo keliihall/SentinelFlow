@@ -36,7 +36,7 @@ P5.6 must not expand or accept those capabilities as phase deliverables.
 | `tests/fixtures/` | Protocol, task, policy, failure, and P5.5 fixtures | Shared fixtures support repeatable CLI/API comparisons and negative paths. |
 | `tests/integration/` | README only | Cross-crate integration coverage currently lives mainly in crate tests and E2E scripts. |
 | `tests/e2e/` | Smoke, consistency, full-flow, security, reliability, deployment, asset-flow, and plugin flows | Strong reusable P5.5 evidence; browser automation remains limited. |
-| `.github/workflows/` | `ci.yml`, `performance.yml` | CI runs Rust checks and P5.5 E2E gates, but not the new all-features P5.6 aggregate gate. |
+| `.github/workflows/` | `ci.yml`, `performance.yml` | CI builds the workspace with all features and invokes `bash scripts/p5_6_gates.sh`; performance remains a separate manual/scheduled workflow. |
 | `Dockerfile` | Multi-stage Rust build, API/CLI runtime image | Runtime uses the full Rust image, installs Python, and runs without an explicit non-root user. |
 | `compose.yaml` | Single API service with persistent volumes and health check | Suitable for local single-node use; not a production or distributed topology. |
 
@@ -110,12 +110,12 @@ Plugin directory
 | P56-R03 | High | Policy checks are distributed across API preflight, CLI task workflow, Runtime authorization, adapter `prepare`, and RBAC helpers. Read/report/export visibility lacks one shared operation-policy gate. | Must close for all critical operations before P6. Default deny on missing policy context. |
 | P56-R04 | High | Audit calls are manually placed. Several handlers use `require_identity` rather than the audited authorization helper, so denied and failed paths depend on endpoint-specific code. Approval audit events also omit a shared execution context. | Must define and test a critical-action matrix; all allowed, denied, failed, and state-transition outcomes must be auditable. |
 | P56-R05 | High | The normalized execution path is strong, but `WorkspaceStore::save_result` is public and accepts a constructed `ResultArtifact`; architectural enforcement relies on caller discipline. Adapter `collect` validates adapter output before the separate Parser/Normalizer stage. | Must make normalized persistence an explicit trusted boundary and add bypass tests. |
-| P56-R06 | High | Repository plugins, examples, docs, and Web Quick Run previously mixed real-domain, external-intelligence, active DNS, TCP connect, and asset-discovery terminology with P5.6 fixture paths. | Closed for P5.6: Web Quick Run now generates only a local fixture smoke TaskSpec, Web tests and `P56-G10` guard against P7 tokens, official discovery/probing/intelligence plugins are documented as `disabled-future`, and CI invokes `scripts/p5_6_gates.sh`. P7 之前不实现真实资产发现和真实扫描。 |
+| P56-R06 | High | Repository plugins, examples, docs, and Web Quick Run previously mixed real-domain, external-intelligence, active DNS, TCP connect, and asset-discovery terminology with P5.6 fixture paths. | Closed for P5.6: Web Quick Run now generates only a local fixture smoke TaskSpec, Web tests and `P56-G10` guard against P7 tokens, official discovery/probing/intelligence plugins are documented as `disabled-future`, and CI invokes `scripts/p5_6_gates.sh`. Public evidence: CI run `28080425543` on `eeb0525daab7517ad1a1ab18d8b6b750853f5b1e` succeeded at `https://github.com/keliihall/SentinelFlow/actions/runs/28080425543`. P7 之前不实现真实资产发现和真实扫描。 |
 | P56-R07 | High | SSE accepts a bearer-like token in the URL query. Query strings may leak through history or proxy logs. | Must close before broader/private-network P6 deployment; use short-lived stream tickets or cookie-backed sessions. |
 | P56-R08 | High | Static development tokens/passwords can be used while binding beyond localhost; CORS is permissive. | Must add non-local startup guardrails and production authentication/CORS configuration before P6. |
 | P56-R09 | Medium | Report rendering redacts sensitive-looking values, but sensitivity classification before persistence and every export path is incomplete. | Must close before real data is accepted; keep report redaction gate mandatory. |
 | P56-R10 | Medium | Web tests are mostly static Node tests and API-driven E2E; there is no full browser navigation/accessibility suite. | Acceptable during early P5.6; add a stable browser smoke gate before P5.6 completion. |
-| P56-R11 | Medium | CI previously invoked individual P5.5 scripts and omitted `--all-features`; release criteria could drift from local documentation. | Closed: CI now builds `--all-features` and invokes `scripts/p5_6_gates.sh` as the single aggregate release gate. |
+| P56-R11 | Medium | CI previously invoked individual P5.5 scripts and omitted `--all-features`; release criteria could drift from local documentation. | Closed: CI now builds `--all-features` and invokes `bash scripts/p5_6_gates.sh` as the single aggregate release gate. Public evidence: CI run `28080425543` on `eeb0525daab7517ad1a1ab18d8b6b750853f5b1e` succeeded. |
 | P56-R12 | Medium | Integration tests are dispersed and `tests/integration/` contains no executable suite. | Acceptable if the aggregate gate remains authoritative; converge test ownership during P5.6. |
 | P56-R13 | Medium | Docker image is large, runs without an explicit non-root user, and is not a hardened production image. | P6 prerequisite, not a blocker for local P5.6 development. |
 | P56-R14 | Medium | Scheduler and SQLite workspace assume a single process/node; recovery and concurrency are not production-grade. | Accepted for P5.6 single-node scope; must be addressed or explicitly constrained before P6 production use. |
@@ -235,9 +235,10 @@ Run date: 2026-06-18
 | P56-G06 Policy/Audit/Approval coverage | pass | Four Policy tests and 22 P5.5 security checks passed. |
 | P56-G07 Report redaction | pass | Sensitive evidence/error fixture test passed. |
 | P56-G08 Web unit smoke | pass | Checked-in Web Node tests passed. |
+| P56-G10 Web Quick Run fixture-only scope guard | pass | Web Node tests passed and `scripts/p5_6_scope_guard.js` generated the production `example.com` Quick Run TaskSpec, confirmed fixture markers, and found no P7 forbidden tokens. |
 | P56-G09 Web/API basic smoke | pass | The Console-to-report flow completed with two normalized findings. |
-| Aggregate `scripts/p5_6_gates.sh` | pass | All P56-G01 through P56-G09 gates passed in one serial aggregate run. |
-| Public CI wiring | configured | `.github/workflows/ci.yml` prints `P5_6_GATE=scripts/p5_6_gates.sh`, runs `cargo build --workspace --all-features`, and invokes the aggregate gate directly. Public GitHub Actions success evidence is the CI run for the wiring commit. |
+| Aggregate `scripts/p5_6_gates.sh` | pass | All P56-G01 through P56-G10 gates passed in one serial aggregate run. |
+| Public CI wiring | success | `.github/workflows/ci.yml` prints `P5_6_GATE=scripts/p5_6_gates.sh`, runs `cargo build --workspace --all-features`, and invokes `bash scripts/p5_6_gates.sh`. Public GitHub Actions success evidence: `https://github.com/keliihall/SentinelFlow/actions/runs/28080425543` on head SHA `eeb0525daab7517ad1a1ab18d8b6b750853f5b1e`. |
 
 P56-G04 was closed without removing or weakening its checks. The served
 `simple-check.js` asset now exports a machine-readable Web boundary contract

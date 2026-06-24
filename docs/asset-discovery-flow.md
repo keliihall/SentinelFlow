@@ -1,6 +1,9 @@
 # Asset Discovery Flow
 
-This document is a future P7 proposal. It is not a P5.6 runtime capability.
+Future P7 proposal. Not active in P5.6.
+
+This document is not a current release capability. It is not used by Web Quick
+Run and is not part of the default CI execution path.
 
 P5.6 remains fixture-only / passive-local / import / mock / governance
 validation. It does not implement real asset discovery, active DNS verification,

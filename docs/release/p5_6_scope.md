@@ -52,7 +52,13 @@ Web Quick Run is limited to local fixture smoke validation. It may only generate
 `fixture:local-only` TaskSpecs for `example.com`, `example.test`,
 `fixture.local`, or `fixture.example`; it must not call discovery/probing plus
 plugins, public resolvers, active verification, port/service probes, or live
-external intelligence providers.
+external intelligence providers. Web Quick Run standard and deep modes are
+disabled until P7.
+
+Official plugins in P5.6 must be described and validated as `fixture-only`,
+local mock/import/report paths, or `disabled-future` placeholders. Disabled P7
+placeholders are not installed by default, not used by Web Quick Run, and not
+part of the CI execution path.
 
 ## Architecture Constraints
 
