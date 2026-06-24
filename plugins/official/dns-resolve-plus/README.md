@@ -1,9 +1,9 @@
 # dns-resolve-plus
 
 `dns-resolve-plus` is an official SentinelFlow command plugin for DNS
-resolution and DNS intelligence multi-source validation. It is passive-intel
-first: fixture, local cache, passive DNS cache, and external DNS-intel facades
-are preferred; active DNS resolution is an explicit policy-gated supplement.
+fixture/cache validation. In P5.6 it is `disabled-p7-placeholder`: live external
+DNS-intel, system resolver, public resolver, and authoritative trace execution
+are not available.
 
 ## Modes
 
@@ -11,20 +11,17 @@ are preferred; active DNS resolution is an explicit policy-gated supplement.
   no external API.
 - `dry_run`: emits the plan summary only, including domain count, record types,
   estimated API/DNS query counts, and whether active verification is required.
-- `passive_intel`: reads fixture/cache/passive sources and gracefully skips
-  external DNS-intel when secrets are absent.
-- `active`: runs bounded resolver work only when
-  `policy.allow_active_verify=true`.
-- `hybrid`: passive first, then optional active verification, then merge.
+- `passive_intel`: reads local fixture/cache/passive files; live external
+  provider calls return `skipped_p7_disabled` in P5.6.
+- `active`: P7 placeholder. It returns `P7_SCOPE_DISABLED` in P5.6.
+- `hybrid`: P7 placeholder unless only local fixture/cache inputs are used.
 
 ## Sources
 
 Supported sources are `fixture`, `local_cache`, `passive_dns_cache`,
 `external_dns_intel`, `system_resolver`, `public_resolver`, and
-`authoritative_trace`. `external_dns_intel` accepts only provider adapters built
-by SentinelFlow; this release does not hard-code provider endpoints. Missing
-secrets produce `source_status.status=skipped_missing_secret` and do not fail the
-task.
+`authoritative_trace` are schema-compatible P7 placeholders in P5.6. They do not
+execute resolver or provider calls.
 
 Provider integrations should use SentinelFlow secret/config once that channel is
 available for official plugins. The current v1alpha1 runtime reserves the
@@ -38,8 +35,8 @@ variables directly. Planned secret names are:
 - `SENTINELFLOW_CENSYS_API_SECRET`
 
 Do not put real API keys in code, docs, fixtures, tests, reports, or task specs.
-Without a configured secret channel, the source is reported as
-`skipped_missing_secret`.
+Provider secret channels are P7 work; P5.6 reports provider sources as
+`skipped_p7_disabled`.
 
 ## Merge And Confidence
 
@@ -57,7 +54,7 @@ Confidence starts from source weights:
 - fixture/local cache: 0.70
 - passive DNS cache: 0.75
 - external DNS intel: 0.80
-- system/public resolver: 0.85
+- system/public resolver: P7 placeholder in P5.6
 - authoritative trace: 0.90
 
 Multiple sources and passive-active agreement raise confidence; stale or

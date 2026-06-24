@@ -36,6 +36,7 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
+  sentinelflow.io/p5_6_status: fixture-only
   sentinelflow.io/category: data.import
   sentinelflow.io/riskLevel: low
   sentinelflow.io/safetyProfile: bounded-offline-cmdb-reconciliation

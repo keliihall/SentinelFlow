@@ -29,7 +29,7 @@ spec:
             enabled: false
             dry_run: false
             wordlist_file: examples/wordlist.small.txt
-            resolvers: [1.1.1.1, 8.8.8.8]
+            resolvers: []
             record_types: [A, AAAA]
             timeout_seconds: 3
             concurrency: 5
@@ -40,8 +40,8 @@ spec:
             include_unresolved: false
             include_sources: true
         policy:
-          allow_active_verify: true
-          allow_high_risk: true
+          allow_active_verify: false
+          allow_high_risk: false
   steps:
     - name: discover-subdomains
       toolRef: subdomain-discovery-plus
@@ -49,18 +49,18 @@ spec:
       outputAs: subdomains
     - name: resolve-dns
       toolRef: dns-resolve-plus
-      capability: asset.dns.resolve.active_public_resolver
+      capability: asset.dns.resolve.passive
       dependsOn: [discover-subdomains]
       outputAs: dns
-    - name: probe-ports-high-risk
+    - name: probe-ports-high-risk-placeholder
       toolRef: port-probe-plus
-      capability: asset.port.probe.syn_or_external
+      capability: asset.port.probe.passive
       dependsOn: [resolve-dns]
       outputAs: ports
-    - name: detect-services-high-risk
+    - name: detect-services-high-risk-placeholder
       toolRef: service-detect-plus
-      capability: asset.service.detect.deep
-      dependsOn: [probe-ports-high-risk]
+      capability: asset.service.detect.safe
+      dependsOn: [probe-ports-high-risk-placeholder]
       outputAs: services
   policy:
     allowedTargets: [example.com]
@@ -74,4 +74,5 @@ spec:
     rateLimitPerMinute: 60
 extensions:
   sentinelflow.io/exampleOnly: "true"
-  sentinelflow.io/highRiskNotice: "Validate/plan/policy-explain only unless an authorized assessment approval is attached."
+  sentinelflow.io/p5_6_status: disabled-p7-placeholder
+  sentinelflow.io/highRiskNotice: "P7 placeholder only; P5.6 must not enable active verification or high-risk probing."

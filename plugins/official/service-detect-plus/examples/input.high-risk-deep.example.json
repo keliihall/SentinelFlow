@@ -27,7 +27,7 @@
       "local_cache_file": "examples/fixture.services.example.com.json"
     },
     "active": {
-      "enabled": true,
+      "enabled": false,
       "probe_profiles": ["tcp_banner", "tls_hello", "http_head", "standard_probe"],
       "timeout_seconds": 3,
       "concurrency": 1,

@@ -1,7 +1,8 @@
 # http-probe-plus
 
-`http-probe-plus` is an official SentinelFlow command plugin for authorized
-HTTP/HTTPS endpoint discovery and low-impact liveness validation.
+`http-probe-plus` is an official SentinelFlow command plugin for HTTP fixture
+and cache validation. In P5.6 it is `disabled-p7-placeholder`: live HTTP/HTTPS
+probing is not available.
 
 It reports status code, redirect target, title, server header, content type,
 content length, TLS usage, source agreement, and confidence. It does not perform
@@ -15,13 +16,10 @@ fuzzing, DoS, or arbitrary request execution.
 | `fixture` | Local synthetic examples and tests only. |
 | `dry_run` | Configuration preview without probes. |
 | `passive_intel` | Local fixture/cache observations only. |
-| `active_safe` | Bounded HTTP HEAD with optional small GET for titles. |
-| `hybrid` | Passive observations plus bounded active HTTP verification. |
+| `active_safe` | P7 placeholder; returns `P7_SCOPE_DISABLED` in P5.6. |
+| `hybrid` | P7 placeholder unless active is disabled and only local fixture/cache inputs are used. |
 
-Active probing requires `policy.allow_active_verify=true` and is bounded by
-timeout, concurrency, rate limit, max endpoints, max redirects, and max response
-bytes. Non-fixture active probes keep only public routable hosts unless
-`execution_profile=lab`.
+`policy.allow_active_verify=true` does not enable HTTP probing in P5.6.
 
 ## Acceptance
 

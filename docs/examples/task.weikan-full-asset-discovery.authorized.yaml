@@ -1,39 +1,39 @@
 apiVersion: sentinelflow.io/v1alpha1
 kind: TaskSpec
 metadata:
-  name: authorized-weikan-full-asset-discovery
+  name: p7-disabled-placeholder-asset-discovery
   labels:
-    target: weikan.net.cn
-    authorizationScope: real:weikan-net-cn
-    purpose: authorized-asset-discovery
+    target: example.test
+    authorizationScope: placeholder:p7-disabled
+    purpose: future-p7-placeholder
 spec:
-  authorizationScope: real:weikan-net-cn
+  authorizationScope: placeholder:p7-disabled
   targets:
-    - name: weikan.net.cn
+    - name: example.test
       input:
         context:
-          task_id: authorized-weikan-full-asset-discovery
-          run_id: run_weikan_full_asset_discovery
+          task_id: p7-disabled-placeholder-asset-discovery
+          run_id: run_placeholder_full_asset_discovery
           operator: admin
           workspace: default
-          authorization_scope: real:weikan-net-cn
+          authorization_scope: placeholder:p7-disabled
         target:
           type: domain
-          value: weikan.net.cn
+          value: example.test
           metadata:
-            authorization: user-confirmed
+            p5_6_status: disabled-p7-placeholder
         options:
           mode: dry_run
           passive:
             enabled: true
-            sources: [crtsh, local_cache, passive_dns_cache]
-            crtsh_enabled: true
+            sources: []
+            crtsh_enabled: false
             crtsh_timeout_seconds: 10
           active:
-            enabled: true
+            enabled: false
             dry_run: true
             wordlist_file: examples/wordlist.small.txt
-            resolvers: [1.1.1.1, 8.8.8.8]
+            resolvers: []
             record_types: [A, AAAA]
             timeout_seconds: 3
             concurrency: 5
@@ -44,7 +44,7 @@ spec:
             include_unresolved: true
             include_sources: true
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
   steps:
     - name: discover-subdomains
@@ -54,28 +54,28 @@ spec:
       failurePolicy: continue
       input:
         context:
-          task_id: authorized-weikan-full-asset-discovery
-          run_id: run_weikan_subdomains
+          task_id: p7-disabled-placeholder-asset-discovery
+          run_id: run_placeholder_subdomains
           operator: admin
           workspace: default
-          authorization_scope: real:weikan-net-cn
+          authorization_scope: placeholder:p7-disabled
         target:
           type: domain
-          value: weikan.net.cn
+          value: example.test
           metadata:
-            authorization: user-confirmed
+            p5_6_status: disabled-p7-placeholder
         options:
           mode: hybrid
           passive:
             enabled: true
-            sources: [crtsh, local_cache, passive_dns_cache]
-            crtsh_enabled: true
+            sources: []
+            crtsh_enabled: false
             crtsh_timeout_seconds: 10
           active:
-            enabled: true
-            dry_run: false
+            enabled: false
+            dry_run: true
             wordlist_file: examples/wordlist.small.txt
-            resolvers: [1.1.1.1, 8.8.8.8]
+            resolvers: []
             record_types: [A, AAAA]
             timeout_seconds: 3
             concurrency: 5
@@ -86,26 +86,26 @@ spec:
             include_unresolved: true
             include_sources: true
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
     - name: resolve-dns
       toolRef: dns-resolve-plus
-      capability: asset.dns.resolve.active_public_resolver
+      capability: asset.dns.resolve.passive
       dependsOn: [discover-subdomains]
       outputAs: dns_records
       failurePolicy: continue
       input:
         context:
-          task_id: authorized-weikan-full-asset-discovery
-          run_id: run_weikan_dns
+          task_id: p7-disabled-placeholder-asset-discovery
+          run_id: run_placeholder_dns
           operator: admin
           workspace: default
-          authorization_scope: real:weikan-net-cn
+          authorization_scope: placeholder:p7-disabled
         target:
           type: domain
-          value: weikan.net.cn
+          value: example.test
           metadata:
-            authorization: user-confirmed
+            p5_6_status: disabled-p7-placeholder
         inputs:
           domains: []
           findings: []
@@ -122,9 +122,9 @@ spec:
             local_cache_file: examples/cache.empty.json
             passive_dns_cache_file: examples/cache.empty.json
           active:
-            enabled: true
-            resolver_mode: public_resolver
-            resolvers: [1.1.1.1, 8.8.8.8]
+            enabled: false
+            resolver_mode: disabled_p7_placeholder
+            resolvers: []
             authoritative_trace: false
             timeout_seconds: 3
             concurrency: 10
@@ -142,9 +142,9 @@ spec:
             include_source_details: true
             include_conflicts: true
           risk_acknowledged: false
-          execution_profile: authorized_assessment
+          execution_profile: disabled_p7_placeholder
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
       inputFrom:
         - from: subdomains
@@ -152,22 +152,22 @@ spec:
           target: /inputs/findings
     - name: probe-ports
       toolRef: port-probe-plus
-      capability: asset.port.probe.hybrid
+      capability: asset.port.probe.passive
       dependsOn: [resolve-dns]
       outputAs: open_ports
       failurePolicy: continue
       input:
         context:
-          task_id: authorized-weikan-full-asset-discovery
-          run_id: run_weikan_ports
+          task_id: p7-disabled-placeholder-asset-discovery
+          run_id: run_placeholder_ports
           operator: admin
           workspace: default
-          authorization_scope: real:weikan-net-cn
+          authorization_scope: placeholder:p7-disabled
         target:
           type: domain
-          value: weikan.net.cn
+          value: example.test
           metadata:
-            authorization: user-confirmed
+            p5_6_status: disabled-p7-placeholder
         inputs:
           addresses: []
           findings: []
@@ -175,17 +175,17 @@ spec:
           mode: hybrid
           passive_intel:
             enabled: true
-            sources: [fofa, shodan, local_cache]
+            sources: [local_cache]
             allow_missing_secrets: true
             api_timeout_seconds: 10
             api_rate_limit_per_second: 1
             max_queries: 100
             local_cache_file: examples/cache.empty.json
           active:
-            enabled: true
-            probe_engine: tcp_connect
+            enabled: false
+            probe_engine: disabled_p7_placeholder
             port_profile: custom
-            ports: [80, 443, 8080, 8443, 8000, 8888, 3000, 5000, 9000]
+            ports: []
             timeout_seconds: 2
             concurrency: 10
             rate_limit_per_second: 10
@@ -202,9 +202,9 @@ spec:
             include_filtered: false
             include_source_details: true
             include_conflicts: true
-          execution_profile: authorized_assessment
+          execution_profile: disabled_p7_placeholder
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
       inputFrom:
         - from: dns_records
@@ -212,22 +212,22 @@ spec:
           target: /inputs/findings
     - name: detect-services
       toolRef: service-detect-plus
-      capability: asset.service.detect.safe
+      capability: asset.service.detect.passive
       dependsOn: [probe-ports]
       outputAs: services
       failurePolicy: continue
       input:
         context:
-          task_id: authorized-weikan-full-asset-discovery
-          run_id: run_weikan_services
+          task_id: p7-disabled-placeholder-asset-discovery
+          run_id: run_placeholder_services
           operator: admin
           workspace: default
-          authorization_scope: real:weikan-net-cn
+          authorization_scope: placeholder:p7-disabled
         target:
           type: service
-          value: weikan.net.cn:443
+          value: example.test:443
           metadata:
-            authorization: user-confirmed
+            p5_6_status: disabled-p7-placeholder
         inputs:
           services: []
           findings: []
@@ -236,16 +236,16 @@ spec:
           detection_depth: safe
           passive_intel:
             enabled: true
-            sources: [upstream_port_result, upstream_dns_result, local_cache, fofa_enrichment, shodan_enrichment]
-            prefer_sources: [upstream_port_result, local_cache, fofa_enrichment, shodan_enrichment]
+            sources: [local_cache]
+            prefer_sources: [local_cache]
             api_timeout_seconds: 10
             api_rate_limit_per_second: 1
             max_queries: 100
             allow_missing_secrets: true
             local_cache_file: examples/cache.empty.json
           active:
-            enabled: true
-            probe_profiles: [tcp_banner, tls_hello, http_head, http_get_root]
+            enabled: false
+            probe_profiles: []
             timeout_seconds: 3
             concurrency: 5
             rate_limit_per_second: 5
@@ -265,19 +265,19 @@ spec:
             mask_sensitive_headers: true
             truncate_banner_bytes: 512
           risk_acknowledged: false
-          execution_profile: authorized_assessment
+          execution_profile: disabled_p7_placeholder
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
       inputFrom:
         - from: open_ports
           pointer: /spec/findings
           target: /inputs/findings
   policy:
-    allowedTargets: [weikan.net.cn]
+    allowedTargets: [example.test]
     targetPatterns:
-      - domain:weikan.net.cn
-      - domain:*.weikan.net.cn
+      - domain:example.test
+      - domain:*.example.test
     approveHighRisk: false
     timeoutSeconds: 300
     maxConcurrency: 3

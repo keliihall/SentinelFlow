@@ -30,6 +30,19 @@
     "mock_resolver"
   ];
 
+  const P5_6_FORBIDDEN_MARKERS = [
+    "real:",
+    "tcp_connect",
+    "public_resolver",
+    "shodan",
+    "fofa",
+    "censys",
+    "crtsh",
+    "authorized_assessment",
+    "\"allow_active_verify\":true",
+    "\"allowActiveVerify\":true"
+  ];
+
   const SPECIAL_IPV4_RANGES = [
     ["10.0.0.0", 8],
     ["127.0.0.0", 8],
@@ -49,16 +62,13 @@
       return {valid: false, message: "请输入要检查的域名。"};
     }
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(domain) || domain.includes("/") || domain.includes("?") || domain.includes("#")) {
-      return {valid: false, message: "请输入域名，例如 weikan.net.cn，不需要填写 http://、https:// 或页面路径。"};
+      return {valid: false, message: "请输入 example.com 或 example.test，不需要填写 http://、https:// 或页面路径。"};
     }
     if (/^\d{1,3}(?:\.\d{1,3}){3}(?:\/\d{1,2})?$/.test(domain) || domain.includes("/")) {
       return {valid: false, message: "当前入口仅支持域名，不支持 IP 地址或 IP 网段。"};
     }
-    if (domain === "example.com" || domain.endsWith(".example.com")) {
-      return {valid: false, message: "普通检查不能使用 example.com 示例域名，请填写已获得授权的真实域名。"};
-    }
     if (domain.length > 253 || !domain.includes(".")) {
-      return {valid: false, message: "请输入完整域名，例如 weikan.net.cn。"};
+      return {valid: false, message: "P5.6 Quick Run 仅支持本地 fixture 域名，例如 example.com 或 example.test。"};
     }
     const labels = domain.split(".");
     const valid = labels.every((label) =>
@@ -67,17 +77,25 @@
       && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
     );
     if (!valid || !/^[a-z]{2,63}$/i.test(labels[labels.length - 1])) {
-      return {valid: false, message: "域名格式不正确，请输入类似 weikan.net.cn 的完整域名。"};
+      return {valid: false, message: "域名格式不正确，请输入 example.com 或 example.test fixture 域名。"};
+    }
+    if (!isFixtureDomain(domain)) {
+      return {valid: false, message: "P5.6 Quick Run 仅支持 example.com / example.test 本地 fixture。真实资产发现和真实扫描是 P7 能力。"};
     }
     return {valid: true, domain};
+  }
+
+  function isFixtureDomain(domain) {
+    const value = normalizeDomain(domain);
+    return value === "example.com" || value === "example.test";
   }
 
   function domainSlug(domain) {
     return normalizeDomain(domain).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   }
 
-  function authorizationScopeFor(domain) {
-    return `real:${domainSlug(domain)}`;
+  function authorizationScopeFor(_domain) {
+    return "fixture:local-only";
   }
 
   function createContext(taskName, runName, domain, scope, operator) {
@@ -94,191 +112,45 @@
     return {
       type: "domain",
       value: domain,
-      metadata: {authorization: "user-confirmed"}
+      metadata: {fixture: "p5.6-local-only"}
     };
   }
 
-  function commonPolicy(active) {
+  function commonPolicy(_active) {
     return {
-      allow_active_verify: active,
+      allow_active_verify: false,
       allow_high_risk: false
     };
   }
 
   function buildSubdomainInput(domain, taskName, scope, mode, operator) {
-    const active = mode === "standard";
     return {
       context: createContext(taskName, "subdomains", domain, scope, operator),
       target: createTarget(domain),
       options: {
-        mode: active ? "hybrid" : "passive_intel",
+        mode: "fixture",
         passive: {
           enabled: true,
-          sources: ["crtsh", "local_cache", "passive_dns_cache"],
-          crtsh_enabled: true,
-          crtsh_timeout_seconds: 10
+          sources: ["fixture"],
+          fixture_file: domain === "example.test"
+            ? "examples/fixture.passive.example.test.json"
+            : "examples/fixture.passive.example.com.json"
         },
         active: {
-          enabled: active,
-          dry_run: !active,
+          enabled: false,
+          dry_run: true,
           wordlist_file: "examples/wordlist.small.txt",
-          resolvers: ["1.1.1.1", "8.8.8.8"],
+          resolvers: [],
           record_types: ["A", "AAAA"],
           timeout_seconds: 3,
-          concurrency: 5,
-          rate_limit_per_second: 5,
-          max_candidates: active ? 500 : 100,
-          detect_wildcard: true
+          concurrency: 1,
+          rate_limit_per_second: 1,
+          max_candidates: 0,
+          detect_wildcard: false
         },
         output: {include_unresolved: true, include_sources: true}
       },
-      policy: commonPolicy(active)
-    };
-  }
-
-  function buildDnsInput(domain, taskName, scope, mode, operator) {
-    const active = mode === "standard";
-    return {
-      context: createContext(taskName, "dns", domain, scope, operator),
-      target: createTarget(domain),
-      inputs: {domains: [], findings: []},
-      options: {
-        mode: active ? "hybrid" : "passive_intel",
-        record_types: ["A", "AAAA", "CNAME", "MX", "NS", "TXT"],
-        passive_intel: {
-          enabled: true,
-          sources: ["local_cache", "passive_dns_cache"],
-          api_timeout_seconds: 10,
-          api_rate_limit_per_second: 1,
-          max_queries: 100,
-          allow_missing_secrets: true,
-          local_cache_file: "examples/cache.empty.json",
-          passive_dns_cache_file: "examples/cache.empty.json"
-        },
-        active: {
-          enabled: active,
-          resolver_mode: "public_resolver",
-          resolvers: ["1.1.1.1", "8.8.8.8"],
-          authoritative_trace: false,
-          timeout_seconds: 3,
-          concurrency: 10,
-          rate_limit_per_second: 10,
-          max_domains: 1000,
-          max_queries: 5000
-        },
-        merge: {
-          deduplicate: true,
-          conflict_policy: "preserve_all_sources",
-          mark_source_disagreement: true,
-          confidence_strategy: "weighted_sources",
-          stale_after_days: 30
-        },
-        output: {
-          include_unresolved: true,
-          include_source_details: true,
-          include_conflicts: true
-        },
-        risk_acknowledged: false,
-        execution_profile: "authorized_assessment"
-      },
-      policy: commonPolicy(active)
-    };
-  }
-
-  function buildPortInput(domain, taskName, scope, mode, operator) {
-    const active = mode === "standard";
-    return {
-      context: createContext(taskName, "ports", domain, scope, operator),
-      target: createTarget(domain),
-      inputs: {addresses: [], findings: []},
-      options: {
-        mode: active ? "hybrid" : "passive_intel",
-        passive_intel: {
-          enabled: true,
-          sources: ["fofa", "shodan", "local_cache"],
-          allow_missing_secrets: true,
-          api_timeout_seconds: 10,
-          api_rate_limit_per_second: 1,
-          max_queries: 100,
-          local_cache_file: "examples/cache.empty.json"
-        },
-        active: {
-          enabled: active,
-          probe_engine: "tcp_connect",
-          port_profile: "custom",
-          ports: [80, 443, 8080, 8443, 8000, 8888, 3000, 5000, 9000],
-          timeout_seconds: 2,
-          concurrency: 10,
-          rate_limit_per_second: 10,
-          max_targets: 100,
-          max_ports: 20
-        },
-        merge: {
-          deduplicate: true,
-          conflict_policy: "preserve_all_sources",
-          mark_source_disagreement: true,
-          confidence_strategy: "weighted_sources",
-          stale_after_days: 30
-        },
-        output: {
-          include_closed: false,
-          include_filtered: false,
-          include_source_details: true,
-          include_conflicts: true
-        },
-        execution_profile: "authorized_assessment"
-      },
-      policy: commonPolicy(active)
-    };
-  }
-
-  function buildServiceInput(domain, taskName, scope, mode, operator) {
-    const active = mode === "standard";
-    return {
-      context: createContext(taskName, "services", domain, scope, operator),
-      target: {type: "service", value: `${domain}:443`, metadata: {authorization: "user-confirmed"}},
-      inputs: {services: [], findings: []},
-      options: {
-        mode: active ? "hybrid" : "passive_intel",
-        detection_depth: "safe",
-        passive_intel: {
-          enabled: true,
-          sources: ["upstream_port_result", "upstream_dns_result", "local_cache", "fofa_enrichment", "shodan_enrichment"],
-          prefer_sources: ["upstream_port_result", "local_cache", "fofa_enrichment", "shodan_enrichment"],
-          api_timeout_seconds: 10,
-          api_rate_limit_per_second: 1,
-          max_queries: 100,
-          allow_missing_secrets: true,
-          local_cache_file: "examples/cache.empty.json"
-        },
-        active: {
-          enabled: active,
-          probe_profiles: ["tcp_banner", "tls_hello", "http_head", "http_get_root"],
-          timeout_seconds: 3,
-          concurrency: 5,
-          rate_limit_per_second: 5,
-          max_services: 100,
-          max_probes_per_service: 4,
-          max_response_bytes: 4096
-        },
-        merge: {
-          deduplicate: true,
-          conflict_policy: "preserve_all_sources",
-          mark_source_disagreement: true,
-          confidence_strategy: "weighted_sources",
-          stale_after_days: 30
-        },
-        output: {
-          include_unknown: false,
-          include_source_details: true,
-          include_conflicts: true,
-          mask_sensitive_headers: true,
-          truncate_banner_bytes: 512
-        },
-        risk_acknowledged: false,
-        execution_profile: "authorized_assessment"
-      },
-      policy: commonPolicy(active)
+      policy: commonPolicy(false)
     };
   }
 
@@ -290,16 +162,19 @@
     if (!input.authorizationConfirmed) {
       throw new Error("请先确认你已获得该目标的检查授权。");
     }
-    const mode = input.mode || "standard";
+    const mode = input.mode || "quick";
     if (!["quick", "standard", "deep"].includes(mode)) {
       throw new Error("请选择快速检查、标准检查或深度检查。");
+    }
+    if (mode !== "quick") {
+      throw new Error("P5.6 仅开放 fixture-only Quick Run。标准检查、主动验证和真实资产发现是 P7 placeholder。");
     }
     if (mode === "deep") {
       throw new Error("深度检查需要进入高级模式，并在审批后配置。");
     }
 
     const domain = validation.domain;
-    const active = mode === "standard";
+    const active = false;
     const scope = authorizationScopeFor(domain);
     const timestamp = options && options.timestamp
       ? String(options.timestamp)
@@ -316,7 +191,7 @@
         labels: {
           target: domain,
           authorizationScope: scope,
-          purpose: "authorized-asset-discovery",
+          purpose: "p5.6-fixture-only-validation",
           checkMode: mode
         }
       },
@@ -330,40 +205,10 @@
           {
             name: "discover-subdomains",
             toolRef: "subdomain-discovery-plus",
-            capability: active ? "asset.subdomain.discovery" : "passive.subdomain.discovery",
+            capability: "passive.subdomain.discovery",
             outputAs: "subdomains",
             failurePolicy: "continue",
             input: subdomainInput
-          },
-          {
-            name: "resolve-dns",
-            toolRef: "dns-resolve-plus",
-            capability: active ? "asset.dns.resolve.active_public_resolver" : "asset.dns.resolve.passive",
-            dependsOn: ["discover-subdomains"],
-            outputAs: "dns_records",
-            failurePolicy: "continue",
-            input: buildDnsInput(domain, taskName, scope, mode, operator),
-            inputFrom: [{from: "subdomains", pointer: "/spec/findings", target: "/inputs/findings"}]
-          },
-          {
-            name: "probe-ports",
-            toolRef: "port-probe-plus",
-            capability: active ? "asset.port.probe.hybrid" : "asset.port.probe.passive",
-            dependsOn: ["resolve-dns"],
-            outputAs: "open_ports",
-            failurePolicy: "continue",
-            input: buildPortInput(domain, taskName, scope, mode, operator),
-            inputFrom: [{from: "dns_records", pointer: "/spec/findings", target: "/inputs/findings"}]
-          },
-          {
-            name: "detect-services",
-            toolRef: "service-detect-plus",
-            capability: active ? "asset.service.detect.safe" : "asset.service.detect.passive",
-            dependsOn: ["probe-ports"],
-            outputAs: "services",
-            failurePolicy: "continue",
-            input: buildServiceInput(domain, taskName, scope, mode, operator),
-            inputFrom: [{from: "open_ports", pointer: "/spec/findings", target: "/inputs/findings"}]
           }
         ],
         policy: {
@@ -371,8 +216,8 @@
           targetPatterns: [`domain:${domain}`, `domain:*.${domain}`],
           approveHighRisk: false,
           timeoutSeconds: 300,
-          maxConcurrency: active ? 3 : 1,
-          rateLimitPerMinute: active ? 300 : 60,
+          maxConcurrency: 1,
+          rateLimitPerMinute: 60,
           outputRetention: {days: 30, retainEvidence: true}
         }
       },
@@ -382,27 +227,30 @@
           checkMode: mode,
           authorizationConfirmed: true,
           allowActiveVerify: active,
-          allowHighRisk: false
+          allowHighRisk: false,
+          p5_6_status: "fixture-only"
         }
       }
     };
-    assertNoFixtureForRealTarget(task);
+    assertP56FixtureOnly(task);
     return task;
   }
 
-  function assertNoFixtureForRealTarget(task) {
+  function assertP56FixtureOnly(task) {
     const serialized = JSON.stringify(task).toLowerCase();
     const scope = (((task || {}).spec || {}).authorizationScope || "").toLowerCase();
-    if (!scope.startsWith("real:")) {
-      throw new Error("真实域名必须使用自动生成的真实授权范围。");
+    if (scope !== "fixture:local-only") {
+      throw new Error("P5.6 Quick Run 必须使用 fixture:local-only 授权范围。");
     }
-    const marker = FIXTURE_MARKERS.find((value) => serialized.includes(value));
-    const hasFixtureSource = /"sources"\s*:\s*\[[^\]]*"fixture"/.test(serialized);
-    const hasExampleDomain = /(^|[^a-z0-9-])example\.com([^a-z0-9-]|$)/.test(serialized);
-    if (marker || hasFixtureSource || hasExampleDomain) {
-      throw new Error("当前目标是真实域名，不能使用本地示例数据。请切换为快速检查或标准检查。");
+    const marker = P5_6_FORBIDDEN_MARKERS.find((value) => serialized.includes(value.toLowerCase()));
+    if (marker) {
+      throw new Error(`P5.6 Quick Run 禁止生成 P7 能力字段：${marker}`);
     }
     return true;
+  }
+
+  function assertNoFixtureForRealTarget(task) {
+    return assertP56FixtureOnly(task);
   }
 
   function ipv4ToInt(value) {
@@ -476,11 +324,14 @@
   return {
     WEB_BOUNDARY,
     FIXTURE_MARKERS,
+    P5_6_FORBIDDEN_MARKERS,
     normalizeDomain,
     validateDomain,
+    isFixtureDomain,
     domainSlug,
     authorizationScopeFor,
     buildSimpleCheckTaskSpec,
+    assertP56FixtureOnly,
     assertNoFixtureForRealTarget,
     isSpecialAddress,
     qualityPresentation,

@@ -24,9 +24,9 @@
       "local_cache_file": "examples/fixture.dns.example.com.json"
     },
     "active": {
-      "enabled": true,
-      "resolver_mode": "public_resolver",
-      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "enabled": false,
+      "resolver_mode": "disabled_p7_placeholder",
+      "resolvers": [],
       "authoritative_trace": false,
       "timeout_seconds": 3,
       "concurrency": 2,

@@ -25,7 +25,7 @@
     },
     "active": {
       "enabled": false,
-      "probe_engine": "tcp_connect",
+      "probe_engine": "disabled_p7_placeholder",
       "port_profile": "web",
       "ports": [80, 443],
       "timeout_seconds": 1,

@@ -1,4 +1,4 @@
-# Small documentation-only wordlist for example.com fixtures.
+# Small bounded default wordlist for authorized DNS verification.
 www
 api
 docs

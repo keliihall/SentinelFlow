@@ -76,8 +76,8 @@
             "enabled": {"type": "boolean"},
             "sources": {
               "type": "array",
-              "minItems": 1,
-              "maxItems": 6,
+              "minItems": 0,
+              "maxItems": 10,
               "uniqueItems": true,
               "items": {
                 "type": "string",
@@ -87,11 +87,26 @@
                   "local_cache",
                   "passive_dns_cache",
                   "fofa",
-                  "shodan"
+                  "shodan",
+                  "censys",
+                  "securitytrails",
+                  "virustotal"
                 ]
               }
             },
             "fixture_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+            },
+            "local_cache_file": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.)(?!.*\\x00).+$"
+            },
+            "passive_dns_cache_file": {
               "type": "string",
               "minLength": 1,
               "maxLength": 256,
@@ -130,7 +145,7 @@
             },
             "resolvers": {
               "type": "array",
-              "minItems": 1,
+              "minItems": 0,
               "maxItems": 5,
               "uniqueItems": true,
               "items": {
@@ -151,9 +166,9 @@
             "record_types": {
               "type": "array",
               "minItems": 1,
-              "maxItems": 2,
+              "maxItems": 3,
               "uniqueItems": true,
-              "items": {"type": "string", "enum": ["A", "AAAA"]}
+              "items": {"type": "string", "enum": ["A", "AAAA", "CNAME"]}
             },
             "timeout_seconds": {
               "type": "integer",

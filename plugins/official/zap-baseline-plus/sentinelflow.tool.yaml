@@ -32,6 +32,7 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
+  sentinelflow.io/p5_6_status: fixture-only
   sentinelflow.io/category: risk.web_scan
   sentinelflow.io/riskLevel: low
   sentinelflow.io/safetyProfile: bounded-offline-zap-baseline-import

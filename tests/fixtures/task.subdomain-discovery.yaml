@@ -3,16 +3,14 @@ kind: TaskSpec
 metadata:
   name: passive-subdomain-discovery-example
 spec:
-  authorizationScope: public:passive-discovery
+  authorizationScope: fixture:local-only
   targets:
     - name: example.com
       input:
         spec:
           root_domain: example.com
           providers:
-            - crtsh
-            - hackertarget
-            - buffer_over
+            - fixture
           timeout: 30
   steps:
     - name: discover-subdomains
@@ -24,4 +22,3 @@ spec:
     approveHighRisk: false
     timeoutSeconds: 30
 extensions: {}
-

@@ -29,7 +29,7 @@ spec:
             enabled: false
             dry_run: false
             wordlist_file: examples/wordlist.small.txt
-            resolvers: [1.1.1.1, 8.8.8.8]
+            resolvers: []
             record_types: [A, AAAA]
             timeout_seconds: 3
             concurrency: 5
@@ -40,7 +40,7 @@ spec:
             include_unresolved: false
             include_sources: true
         policy:
-          allow_active_verify: true
+          allow_active_verify: false
           allow_high_risk: false
   steps:
     - name: discover-subdomains
@@ -49,12 +49,12 @@ spec:
       outputAs: subdomains
     - name: resolve-dns
       toolRef: dns-resolve-plus
-      capability: asset.dns.resolve.active_public_resolver
+      capability: asset.dns.resolve.passive
       dependsOn: [discover-subdomains]
       outputAs: dns
     - name: probe-ports
       toolRef: port-probe-plus
-      capability: asset.port.probe.active_tcp_connect
+      capability: asset.port.probe.passive
       dependsOn: [resolve-dns]
       outputAs: ports
     - name: detect-services

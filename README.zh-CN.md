@@ -57,6 +57,8 @@ SentinelFlow 的安全模型是默认拒绝：
 - 所有输出必须经过 Schema 校验和 Normalizer。
 - 插件不得以内联动态库方式加载到 Core 进程。
 - 示例插件只能使用本地 synthetic fixture，不得访问真实目标或真实凭据。
+- P5.6 official plugins 必须声明 `sentinelflow.io/p5_6_status`：
+  `fixture-only` 或 `disabled-p7-placeholder`。
 
 禁止能力包括：
 
@@ -272,9 +274,15 @@ sentinelflow approval approve <APPROVAL_ID>
 
 当前官方插件：
 
-| 插件 | 用途 |
-| --- | --- |
-| `subdomain-discovery` | 被动式子域名发现，只查询公开数据源；示例输入使用 `example.com` 和内置 fixture |
+P5.6 官方插件不是默认真实资产发现、主动扫描、public resolver
+验证、端口探测、服务探测或外部情报调用入口。它们只能是
+`fixture-only`，或者作为 P7 兼容性 placeholder 保留。
+
+| 插件 | P5.6 状态 | 用途 |
+| --- | --- | --- |
+| `subdomain-discovery-plus` | `fixture-only` | Web Quick Run 使用 `example.com` / `example.test` 本地 fixture；主动 DNS 和 live provider 为 P7 placeholder |
+| import/report 类插件 | `fixture-only` | 只处理本地 fixture、导入文件或已归一化结果 |
+| DNS/端口/服务/HTTP/TLS/外部情报类插件 | `disabled-p7-placeholder` | 仅保留 Manifest 兼容性，P5.6 不执行真实探测或外部 provider 调用 |
 
 ## Task Spec、Policy 与审批
 

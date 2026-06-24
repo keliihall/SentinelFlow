@@ -1,6 +1,13 @@
 # Asset Discovery Flow
 
-SentinelFlow's asset discovery flow is designed as a low-disturbance,
+This document is a future P7 proposal. It is not a P5.6 runtime capability.
+
+P5.6 remains fixture-only / passive-local / import / mock / governance
+validation. It does not implement real asset discovery, active DNS verification,
+public resolver verification, port probing, service probing, or live external
+intelligence provider calls.
+
+The proposed P7 asset discovery flow is designed as a low-disturbance,
 multi-source, auditable chain:
 
 ```text
@@ -20,31 +27,30 @@ subdomain-discovery-plus
   -> Findings / Evidence / Report / Audit
 ```
 
-The product posture is:
+The proposed P7 product posture is:
 
 1. prefer non-intrusive multi-source intelligence;
 2. keep fixture/cache inputs for stable CI and E2E;
-3. allow active verification only when explicitly configured and policy allows it;
+3. allow active verification only after P7 scope approval, explicit
+   configuration, and policy approval;
 4. normalize, deduplicate, preserve sources, mark conflicts, and calculate confidence;
 5. emit standard Finding/Evidence through Parser, Normalizer, Store, Report, and Audit.
 
 ## Modes
 
-`fixture` is the default CI/E2E mode. It reads only repository fixtures and does
-not use external APIs or connect to real targets.
+`fixture` is the only P5.6 executable mode for this family of examples. It reads
+only repository fixtures and does not use external APIs or connect to real
+targets.
 
-`passive_intel` is the recommended default product mode for public assets. DNS
-and service plugins use local cache, passive cache, upstream Findings, and
-external-intel facades. Missing API secrets become
-`source_status.status=skipped_missing_secret`, not task failure.
+`passive_intel` is P7 proposal language. In P5.6, live public intelligence
+providers are disabled placeholders; local cache/import fixtures may be used for
+governance validation only.
 
-`active_safe` requires `policy.allow_active_verify=true`. DNS can use bounded
-resolver queries; service detection can use low-impact checks such as
-`tcp_banner`, `tls_hello`, or `http_head`.
+`active_safe` is a P7 proposal. In P5.6, `policy.allow_active_verify=true` is
+not enough to enable active DNS, public resolver, TCP, HTTP, TLS, or service
+probing.
 
-`high-risk.example` is not a default run path. It is only for authorized
-assessment or lab environments and requires high-risk policy, risk
-acknowledgement, and approval handling.
+`high-risk.example` is outside P5.6.
 
 ## Source Handling
 
@@ -108,9 +114,9 @@ All tools still execute through Manifest + Adapter + Parser. Web Console and API
 must reuse the existing orchestration path and must not run runners, shell,
 Docker, or system commands directly.
 
-External API keys are passed only through allowed environment variables. Real
-secrets, production targets, exploit payloads, weak-password dictionaries, and
-large scan targets must not be committed.
+P5.6 official plugins must not call live external APIs or connect to real
+targets. Real secrets, production targets, exploit payloads, weak-password
+dictionaries, and large scan targets must not be committed.
 
 ## Current DAG Limitation
 
@@ -119,9 +125,10 @@ supports `inputFrom` only as a top-level field replacement. That is enough for
 validate, plan, policy explain, and same-schema DAG examples, but a full
 heterogeneous run across subdomain, DNS, port, and service schemas requires
 step-specific input support or an already installed compatible `port-probe-plus`
-flow contract.
+flow contract. That heterogeneous chain remains P7 proposal material.
 
 The examples under `docs/examples/task.subdomain-dns-port-service.*.yaml`
 therefore document the intended chain and are safe for validate/plan/policy
-review. Fixture tool-level runs for `dns-resolve-plus` and `service-detect-plus`
-are fully executable today.
+review. P5.6 execution should stay on Web Quick Run fixture-only tasks or
+explicit import/mock fixtures; DNS, port, service, HTTP, TLS, and external
+intelligence plugins remain disabled P7 placeholders.

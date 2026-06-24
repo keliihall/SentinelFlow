@@ -91,8 +91,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     errors: list[dict[str, Any]] = []
     observations: list[dict[str, Any]] = []
     active_requested = mode == "active_tls" or (mode == "hybrid" and bool(active_options.get("enabled")))
-    if active_requested and not bool(policy.get("allow_active_verify")):
-        errors.append(standard_error("PolicyDenied", "TLS certificate inspection requires policy.allow_active_verify=true", "$.policy.allow_active_verify", {"mode": mode}))
+    if active_requested:
+        errors.append(standard_error("P7_SCOPE_DISABLED", "TLS handshake inspection is disabled in P5.6", "$.options.active.enabled", {"mode": mode}))
 
     lab_profile = options.get("execution_profile") == "lab"
     if mode != "fixture" and not lab_profile:
@@ -102,10 +102,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         return build_output(root_domain, mode, authorization_scope, [], source_status, errors, endpoints, active_requested, 0)
     if mode in {"fixture", "passive_intel", "hybrid"}:
         observations.extend(run_passive_sources(passive_options, endpoints, source_status))
-    if active_requested and not errors:
-        observations.extend(run_active_tls(endpoints, active_options, source_status))
-    elif active_requested:
-        source_status.append({"source": "tls_handshake", "status": "skipped_policy_denied", "message": "TLS handshake inspection was not executed.", "probe_count": 0, "query_count": 0})
+    if active_requested:
+        source_status.append({"source": "tls_handshake", "status": "skipped_p7_disabled", "message": "TLS handshake inspection was not executed in P5.6.", "probe_count": 0, "query_count": 0})
 
     results = merge_results([build_result(item, checks) for item in observations])
     if not bool(output_options.get("include_source_details")):

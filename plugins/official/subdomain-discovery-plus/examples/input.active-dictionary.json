@@ -21,10 +21,10 @@
       "crtsh_timeout_seconds": 10
     },
     "active": {
-      "enabled": true,
+      "enabled": false,
       "dry_run": true,
       "wordlist_file": "examples/wordlist.small.txt",
-      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "resolvers": [],
       "record_types": ["A", "AAAA"],
       "timeout_seconds": 3,
       "concurrency": 5,
@@ -38,7 +38,7 @@
     }
   },
   "policy": {
-    "allow_active_verify": true,
+    "allow_active_verify": false,
     "allow_high_risk": false
   }
 }

@@ -29,7 +29,7 @@ spec:
             enabled: false
             dry_run: false
             wordlist_file: examples/wordlist.small.txt
-            resolvers: [1.1.1.1, 8.8.8.8]
+            resolvers: []
             record_types: [A, AAAA]
             timeout_seconds: 3
             concurrency: 5

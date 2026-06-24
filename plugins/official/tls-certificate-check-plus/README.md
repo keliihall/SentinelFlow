@@ -1,13 +1,13 @@
 # tls-certificate-check-plus
 
 `tls-certificate-check-plus` is an official SentinelFlow command plugin for TLS
-certificate inventory and low-impact certificate health checks.
+certificate fixture/cache validation. In P5.6 it is
+`disabled-p7-placeholder`: live TLS handshakes are not available.
 
 It reports subject, issuer, SAN names, validity window, days until expiry,
 signature algorithm, TLS version, certificate-chain summary, expiry status,
 source details, and confidence. Fixture/cache modes do not contact targets.
-Active TLS inspection performs only a bounded TLS handshake and requires
-`policy.allow_active_verify=true`.
+`policy.allow_active_verify=true` does not enable TLS handshakes in P5.6.
 
 It does not scan ports, brute force hosts, test vulnerabilities, downgrade TLS,
 send application payloads, fuzz, use credentials, or perform DoS-like activity.
@@ -19,8 +19,8 @@ send application payloads, fuzz, use credentials, or perform DoS-like activity.
 | `fixture` | Local synthetic examples and tests only. |
 | `dry_run` | Configuration preview without certificate output. |
 | `passive_intel` | Local fixture/cache observations. |
-| `active_tls` | Bounded TLS handshake certificate inspection. |
-| `hybrid` | Passive observations plus bounded TLS verification. |
+| `active_tls` | P7 placeholder; returns `P7_SCOPE_DISABLED` in P5.6. |
+| `hybrid` | P7 placeholder unless active is disabled and only local fixture/cache inputs are used. |
 
 ## Acceptance
 

@@ -32,6 +32,7 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
+  sentinelflow.io/p5_6_status: disabled-p7-placeholder
   sentinelflow.io/category: asset.http
   sentinelflow.io/riskLevel: low
   sentinelflow.io/safetyProfile: passive-first-bounded-http-probe

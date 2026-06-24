@@ -26,8 +26,8 @@
     },
     "active": {
       "enabled": false,
-      "resolver_mode": "public_resolver",
-      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "resolver_mode": "disabled_p7_placeholder",
+      "resolvers": [],
       "authoritative_trace": false,
       "timeout_seconds": 3,
       "concurrency": 5,

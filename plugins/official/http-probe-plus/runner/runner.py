@@ -96,8 +96,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if len(endpoints) > max_endpoints:
         errors.append(standard_error("InputLimitExceeded", "endpoint count exceeds active.max_endpoints", "$.inputs.endpoints", {"endpoint_count": len(endpoints), "max_endpoints": max_endpoints}))
         endpoints = endpoints[:max_endpoints]
-    if active_requested and not bool(policy.get("allow_active_verify")):
-        errors.append(standard_error("PolicyDenied", "HTTP probing requires policy.allow_active_verify=true", "$.policy.allow_active_verify", {"mode": mode, "activeEnabled": True}))
+    if active_requested:
+        errors.append(standard_error("P7_SCOPE_DISABLED", "HTTP probing is disabled in P5.6", "$.options.active.enabled", {"mode": mode, "activeEnabled": True}))
 
     lab_profile = options.get("execution_profile") == "lab"
     if mode != "fixture" and not lab_profile:
@@ -108,10 +108,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if mode in {"fixture", "passive_intel", "hybrid"}:
         observations.extend(run_passive_sources(passive_options, endpoints, source_status))
-    if active_requested and not errors:
-        observations.extend(run_active_http(endpoints, active_options, source_status))
-    elif active_requested:
-        source_status.append({"source": "http_probe", "status": "skipped_policy_denied", "message": "HTTP probing was not executed.", "probe_count": 0, "query_count": 0})
+    if active_requested:
+        source_status.append({"source": "http_probe", "status": "skipped_p7_disabled", "message": "HTTP probing was not executed in P5.6.", "probe_count": 0, "query_count": 0})
 
     results = merge_observations(observations)
     if not bool(output_options.get("include_source_details")):

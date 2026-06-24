@@ -38,8 +38,8 @@ class RunnerFixtureTests(unittest.TestCase):
     def test_fixture_target_mismatch_refuses_synthetic_results(self) -> None:
         payload = load_input("input.passive-fixture.json")
         payload = copy.deepcopy(payload)
-        payload["target"]["value"] = "weikan.net.cn"
-        payload["context"]["authorization_scope"] = "real:weikan-net-cn"
+        payload["target"]["value"] = "example.test"
+        payload["context"]["authorization_scope"] = "fixture:local-only"
 
         output = runner.run(payload)
 
@@ -47,10 +47,10 @@ class RunnerFixtureTests(unittest.TestCase):
         self.assertEqual(output["errors"][0]["code"], "CONFIG_ERROR")
         self.assertIn("fixture_domain", output["errors"][0]["details"])
 
-    def test_fixture_scope_cannot_be_used_for_real_target(self) -> None:
+    def test_fixture_scope_cannot_relabel_another_fixture_domain(self) -> None:
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
-        payload["target"]["value"] = "weikan.net.cn"
+        payload["target"]["value"] = "example.test"
         payload["context"]["authorization_scope"] = "fixture:local-only"
         payload["options"]["mode"] = "active_dictionary"
         payload["policy"]["allow_active_verify"] = True
@@ -58,14 +58,16 @@ class RunnerFixtureTests(unittest.TestCase):
         output = runner.run(payload)
 
         self.assertEqual(output["findings"], [])
-        self.assertEqual(output["errors"][0]["code"], "AUTHZ_ERROR")
+        self.assertEqual(output["errors"][0]["code"], "CONFIG_ERROR")
 
     def test_dry_run_reports_planned_sources_without_findings(self) -> None:
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
-        payload["target"]["value"] = "weikan.net.cn"
-        payload["context"]["authorization_scope"] = "real:weikan-net-cn"
+        payload["target"]["value"] = "example.test"
+        payload["context"]["authorization_scope"] = "fixture:local-only"
+        payload["options"]["passive"]["fixture_file"] = "examples/fixture.passive.example.test.json"
         payload["options"]["mode"] = "dry_run"
+        payload["options"]["active"]["enabled"] = True
 
         output = runner.run(payload)
 
@@ -78,17 +80,19 @@ class RunnerFixtureTests(unittest.TestCase):
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
         payload["policy"]["allow_active_verify"] = False
+        payload["options"]["active"]["dry_run"] = False
 
         output = runner.run(payload)
 
         self.assertEqual(output["summary"]["active_queries"], 0)
         self.assertEqual(output["summary"]["candidate_count"], 0)
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
         self.assertEqual(output["findings"], [])
 
     def test_active_dry_run_reports_candidates_without_queries(self) -> None:
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
+        payload["options"]["active"]["enabled"] = True
         payload["options"]["active"]["dry_run"] = True
 
         output = runner.run(payload)
@@ -97,44 +101,26 @@ class RunnerFixtureTests(unittest.TestCase):
         self.assertEqual(output["summary"]["active_queries"], 0)
         self.assertEqual(output["findings"], [])
 
-    def test_active_dictionary_uses_dns_results_when_authorized(self) -> None:
+    def test_active_dictionary_non_dry_run_is_p7_disabled(self) -> None:
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
         payload["options"]["active"]["dry_run"] = False
         payload["options"]["active"]["max_candidates"] = 2
 
-        original = runner.resolve_candidate
+        output = runner.run(payload)
 
-        def fake_resolve(hostname, record_types, resolvers, timeout):
-            if hostname.startswith("sf-"):
-                return {"records": [], "query_count": 1}
-            return {
-                "records": [{"record_type": "A", "value": "93.184.216.34"}],
-                "query_count": 1,
-            }
+        self.assertEqual(output["summary"]["active_queries"], 0)
+        self.assertEqual(output["summary"]["candidate_count"], 0)
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["findings"], [])
 
-        runner.resolve_candidate = fake_resolve
-        try:
-            output = runner.run(payload)
-        finally:
-            runner.resolve_candidate = original
-
-        self.assertEqual(output["summary"]["candidate_count"], 2)
-        self.assertEqual(output["summary"]["active_queries"], 5)
-        self.assertEqual(len(output["findings"]), 2)
-        self.assertTrue(all(item["resolved"] for item in output["findings"]))
-        self.assertTrue(
-            all("active_dictionary" in item["sources"] for item in output["findings"])
-        )
-
-    def test_unresolved_dictionary_entries_are_candidates_not_findings(self) -> None:
+    def test_active_dictionary_disabled_before_resolver_query(self) -> None:
         payload = load_input("input.active-dictionary.json")
         payload = copy.deepcopy(payload)
         payload["options"]["active"]["dry_run"] = False
         payload["options"]["active"]["max_candidates"] = 3
         payload["options"]["output"]["include_unresolved"] = True
         payload["options"]["passive"]["sources"] = []
-        payload["context"]["authorization_scope"] = "real:example-com"
 
         original = runner.resolve_candidate
 
@@ -147,14 +133,80 @@ class RunnerFixtureTests(unittest.TestCase):
         finally:
             runner.resolve_candidate = original
 
-        self.assertFalse(output["summary"]["synthetic_fixture"])
-        self.assertEqual(output["summary"]["candidate_count"], 3)
-        self.assertEqual(output["summary"]["finding_count"], 0)
-        self.assertEqual(output["summary"]["confirmed_count"], 0)
-        self.assertEqual(output["summary"]["candidate_observation_count"], 3)
-        self.assertTrue(all(item["type"] == "subdomain_candidate" for item in output["findings"]))
-        self.assertTrue(all(item["status"] == "candidate" for item in output["findings"]))
-        self.assertTrue(all(item["confidence"] <= 0.15 for item in output["findings"]))
+        self.assertEqual(output["summary"]["active_queries"], 0)
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["findings"], [])
+        self.assertEqual(output["candidates"], [])
+
+    def test_active_disabled_keeps_special_address_probe_out_of_p5_6(self) -> None:
+        payload = copy.deepcopy(load_input("input.active-dictionary.json"))
+        payload["options"]["active"]["dry_run"] = False
+        payload["options"]["active"]["max_candidates"] = 1
+        payload["options"]["passive"]["sources"] = []
+
+        original = runner.resolve_candidate
+
+        def fake_resolve(hostname, record_types, resolvers, timeout):
+            if hostname.startswith("sf-"):
+                return {"records": [], "query_count": 1, "status": "nxdomain"}
+            return {
+                "records": [{"record_type": "A", "value": "198.18.0.75"}],
+                "query_count": 1,
+                "status": "ok",
+            }
+
+        runner.resolve_candidate = fake_resolve
+        try:
+            output = runner.run(payload)
+        finally:
+            runner.resolve_candidate = original
+
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["findings"], [])
+        self.assertEqual(output["candidates"], [])
+        self.assertEqual(output["summary"]["invalid_count"], 0)
+
+    def test_active_disabled_keeps_wildcard_probe_out_of_p5_6(self) -> None:
+        payload = copy.deepcopy(load_input("input.active-dictionary.json"))
+        payload["options"]["active"]["dry_run"] = False
+        payload["options"]["active"]["max_candidates"] = 2
+        payload["options"]["passive"]["sources"] = []
+        payload["options"]["output"]["include_unresolved"] = True
+
+        original = runner.resolve_candidate
+
+        def fake_resolve(hostname, record_types, resolvers, timeout):
+            return {
+                "records": [{"record_type": "A", "value": "93.184.216.34"}],
+                "query_count": 1,
+                "status": "ok",
+            }
+
+        runner.resolve_candidate = fake_resolve
+        try:
+            output = runner.run(payload)
+        finally:
+            runner.resolve_candidate = original
+
+        self.assertFalse(output["summary"]["wildcard_detected"])
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["findings"], [])
+        self.assertEqual(output["summary"]["wildcard_filtered_count"], 0)
+        self.assertEqual(output["candidates"], [])
+
+    def test_passive_external_sources_are_p7_disabled(self) -> None:
+        payload = copy.deepcopy(load_input("input.passive-fixture.json"))
+        payload["options"]["mode"] = "passive_intel"
+        payload["options"]["passive"]["sources"] = ["local_cache", "crtsh", "shodan"]
+        payload["options"]["passive"]["crtsh_enabled"] = True
+
+        output = runner.run(payload)
+        statuses = {item["source"]: item["status"] for item in output["source_status"]}
+
+        self.assertEqual(statuses["local_cache"], "skipped_not_configured")
+        self.assertEqual(statuses["crtsh"], "skipped_p7_disabled")
+        self.assertEqual(statuses["shodan"], "skipped_p7_disabled")
+        self.assertEqual(output["summary"]["active_queries"], 0)
 
 
 if __name__ == "__main__":

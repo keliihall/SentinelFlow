@@ -139,18 +139,14 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         errors.append(standard_error("InputLimitExceeded", "domain count exceeds active.max_domains", "$.inputs.domains", {"domain_count": len(domains), "max_domains": max_domains}))
     if estimated_queries > max_queries:
         errors.append(standard_error("InputLimitExceeded", "estimated DNS queries exceed active.max_queries", "$.options.active.max_queries", {"estimated_dns_queries": estimated_queries, "max_queries": max_queries}))
-    if active_requested and not bool(policy.get("allow_active_verify")):
-        errors.append(standard_error("PolicyDenied", "active DNS resolution requires policy.allow_active_verify=true", "$.policy.allow_active_verify", {"mode": mode, "activeEnabled": active_enabled}))
-    if active_requested and authoritative_trace and not risk_acknowledged:
-        errors.append(standard_error("PolicyDenied", "authoritative_trace requires options.risk_acknowledged=true", "$.options.risk_acknowledged", {"authoritative_trace": True}))
+    if active_requested:
+        errors.append(standard_error("P7_SCOPE_DISABLED", "active DNS resolution and public resolver verification are disabled in P5.6", "$.options.active.enabled", {"mode": mode, "activeEnabled": active_enabled}))
 
     if mode in {"fixture", "passive_intel", "hybrid"}:
         observations.extend(run_passive_sources(root_domain, domains, record_types, passive_options, mode, source_status))
 
-    if active_requested and not errors:
-        observations.extend(run_active_sources(domains, record_types, active_options, source_status))
-    elif active_requested:
-        source_status.append({"source": "active_dns", "status": "skipped_policy_denied", "message": "Active DNS was not executed.", "query_count": 0})
+    if active_requested:
+        source_status.append({"source": "active_dns", "status": "skipped_p7_disabled", "message": "Active DNS was not executed in P5.6.", "query_count": 0})
 
     results = merge_observations(
         observations,
@@ -239,9 +235,12 @@ def run_passive_sources(
         except Exception as error:
             source_status.append({"source": "passive_dns_cache", "status": "error", "message": safe_message(error), "query_count": 0})
     if "external_dns_intel" in sources:
-        records, status = external_dns_intel.query(domains, record_types, options)
-        observations.extend(normalize_records(records, "external_dns_intel", root_domain, domains, record_types))
-        source_status.append(status)
+        source_status.append({
+            "source": "external_dns_intel",
+            "status": "skipped_p7_disabled",
+            "message": "Live external DNS intelligence provider calls are disabled in P5.6.",
+            "query_count": 0,
+        })
     return observations
 
 
@@ -274,14 +273,17 @@ def run_active_sources(
     options: dict[str, Any],
     source_status: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    resolver_mode = string_or(options.get("resolver_mode"), "public_resolver")
+    resolver_mode = string_or(options.get("resolver_mode"), "disabled_p7_placeholder")
+    if resolver_mode == "disabled_p7_placeholder":
+        source_status.append({"source": "active_dns", "status": "skipped_p7_disabled", "message": "Active DNS resolver work is disabled in P5.6.", "query_count": 0})
+        return []
     if resolver_mode not in {"system_resolver", "public_resolver"}:
         source_status.append({"source": resolver_mode, "status": "error", "message": "unsupported resolver_mode", "query_count": 0})
         return []
     timeout = bounded_int(options.get("timeout_seconds"), 3, 1, 30)
     concurrency = bounded_int(options.get("concurrency"), 5, 1, 20)
     rate_limit = bounded_int(options.get("rate_limit_per_second"), 5, 1, 20)
-    resolvers = list_of_strings(options.get("resolvers", ["1.1.1.1", "8.8.8.8"]), "$.options.active.resolvers")
+    resolvers = list_of_strings(options.get("resolvers", []), "$.options.active.resolvers")
     resolver_client.validate_resolvers(resolvers)
     limiter = RateLimiter(rate_limit)
     observations: list[dict[str, Any]] = []

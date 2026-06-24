@@ -19,7 +19,7 @@
       "local_cache_file": "examples/cache.empty.json"
     },
     "active": {
-      "enabled": true,
+      "enabled": false,
       "timeout_seconds": 2,
       "concurrency": 2,
       "rate_limit_per_second": 5,

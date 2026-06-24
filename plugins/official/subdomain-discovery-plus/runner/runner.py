@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded passive and active subdomain discovery runner for SentinelFlow."""
+"""P5.6 fixture/local subdomain discovery runner for SentinelFlow."""
 
 from __future__ import annotations
 
@@ -50,10 +50,19 @@ SUPPORTED_MODES = {
     "passive",
     "active",
 }
-PASSIVE_INTEL_SOURCES = {"crtsh", "local_cache", "passive_dns_cache", "fofa", "shodan"}
+PASSIVE_INTEL_SOURCES = {
+    "crtsh",
+    "local_cache",
+    "passive_dns_cache",
+    "fofa",
+    "shodan",
+    "censys",
+    "securitytrails",
+    "virustotal",
+}
 SYNTHETIC_SCOPE = "fixture:local-only"
-SYNTHETIC_DOMAINS = {"example.com", "example.org"}
-QTYPE = {"A": 1, "AAAA": 28}
+SYNTHETIC_DOMAINS = {"example.com", "example.org", "example.test"}
+QTYPE = {"A": 1, "CNAME": 5, "AAAA": 28}
 
 
 class InputError(Exception):
@@ -127,6 +136,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     results: dict[str, dict[str, Any]] = {}
     fatal_errors: list[dict[str, Any]] = []
     warnings: list[str] = []
+    source_status: list[dict[str, Any]] = []
+    active_observations: list[dict[str, Any]] = []
     candidate_count = 0
     active_queries = 0
     wildcard_detected = False
@@ -172,6 +183,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             authorization_scope,
             [],
             [],
+            [],
+            source_status,
+            [],
             warnings,
             candidate_count=len(candidates),
             active_queries=0,
@@ -188,6 +202,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
             mode,
             authorization_scope,
             [],
+            [],
+            [],
+            source_status,
             fatal_errors,
             warnings,
             candidate_count=0,
@@ -200,19 +217,27 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     if passive_requested:
-        run_passive(domain, passive_options, results, warnings)
+        run_passive(domain, passive_options, results, source_status, warnings)
 
-    if active_requested and not active_allowed:
+    if active_requested and not bool(active_options.get("dry_run")):
         fatal_errors.append(
             standard_error(
-                "PolicyDenied",
-                "active DNS dictionary discovery requires policy.allow_active_verify=true",
-                field="$.policy.allow_active_verify",
+                "P7_SCOPE_DISABLED",
+                "active DNS dictionary verification is disabled in P5.6; use fixture/local mock input until P7",
+                field="$.options.active.enabled",
                 details={"mode": mode, "activeEnabled": True},
             )
         )
     elif active_requested:
-        active_result = run_active(domain, active_options, output_options, results, warnings)
+        active_result = run_active(
+            domain,
+            active_options,
+            output_options,
+            results,
+            active_observations,
+            source_status,
+            warnings,
+        )
         candidate_count = active_result["candidate_count"]
         active_queries = active_result["active_queries"]
         wildcard_detected = active_result["wildcard_detected"]
@@ -227,9 +252,10 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
                 )
                 del results[subdomain]
 
-    findings = finalize_findings(
+    findings, candidates, invalid_observations = classify_observations(
         domain,
         results,
+        active_observations,
         include_unresolved=bool(output_options.get("include_unresolved")),
         include_sources=bool(output_options.get("include_sources")),
         mode=mode,
@@ -241,6 +267,9 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         mode,
         authorization_scope,
         findings,
+        candidates,
+        invalid_observations,
+        source_status,
         fatal_errors,
         warnings,
         candidate_count=candidate_count,
@@ -248,7 +277,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
         wildcard_detected=wildcard_detected,
         active_allowed=active_allowed,
         synthetic_fixture=fixture_requested,
-        real_scan=not fixture_requested,
+        real_scan=False,
         planned_sources=planned_sources(passive_sources, active_options),
     )
 
@@ -258,6 +287,9 @@ def build_output(
     mode: str,
     authorization_scope: str,
     findings: list[dict[str, Any]],
+    candidates: list[dict[str, Any]],
+    invalid_observations: list[dict[str, Any]],
+    source_status: list[dict[str, Any]],
     fatal_errors: list[dict[str, Any]],
     warnings: list[str],
     *,
@@ -282,18 +314,21 @@ def build_output(
             "planned_sources": planned_sources,
         },
         "findings": findings,
+        "candidates": candidates,
+        "invalid_observations": invalid_observations,
+        "source_status": source_status,
         "summary": {
-            "confirmed_count": sum(
-                1 for item in findings if item.get("type") == "subdomain_finding"
+            "confirmed_count": len(findings),
+            "candidate_count": (
+                candidate_count
+                if mode == "dry_run"
+                or any(item.get("status") == "dry_run" for item in source_status)
+                else len(candidates)
             ),
-            "candidate_observation_count": sum(
-                1 for item in findings if item.get("type") == "subdomain_candidate"
-            ),
-            "invalid_observation_count": sum(
-                1
-                for item in findings
-                if item.get("status") == "invalid_special_address"
-            ),
+            "invalid_count": len(invalid_observations),
+            "candidate_observation_count": len(candidates),
+            "invalid_observation_count": len(invalid_observations),
+            "source_count": len(source_status),
             "domain": domain,
             "mode": mode,
             "target": domain,
@@ -301,12 +336,15 @@ def build_output(
             "synthetic_fixture": synthetic_fixture,
             "real_scan": real_scan,
             "planned_sources": planned_sources,
-            "candidate_count": candidate_count,
-            "finding_count": sum(
-                1 for item in findings if item.get("type") == "subdomain_finding"
-            ),
+            "generated_candidate_count": candidate_count,
+            "finding_count": len(findings),
             "active_queries": active_queries,
             "wildcard_detected": wildcard_detected,
+            "wildcard_filtered_count": sum(
+                1
+                for item in candidates + invalid_observations
+                if item.get("status") == "wildcard_filtered"
+            ),
             "errors": warnings[:MAX_ERRORS],
         },
         "errors": fatal_errors[:MAX_ERRORS],
@@ -383,30 +421,138 @@ def run_passive(
     domain: str,
     options: dict[str, Any],
     results: dict[str, dict[str, Any]],
+    source_status: list[dict[str, Any]],
     warnings: list[str],
 ) -> None:
     sources = options.get("sources", [])
     if "fixture" in sources:
         fixture_file = read_string(options, "fixture_file", "$.options.passive.fixture_file")
-        load_passive_fixture(domain, fixture_file, results)
-    if "crtsh" in sources and bool(options.get("crtsh_enabled")):
-        timeout = bounded_int(options.get("crtsh_timeout_seconds"), 10, 1, 30)
+        before = len(results)
         try:
-            for name in query_crtsh(domain, timeout):
-                add_observation(
-                    results,
-                    domain,
-                    name,
-                    "passive_crtsh",
-                    confidence=0.65,
-                    records=[],
-                    raw={"provider": "crtsh"},
-                )
-        except (OSError, urllib.error.URLError, TimeoutError, ValueError) as error:
-            warnings.append(f"crt.sh query failed: {safe_message(error)}")
-    for source in ("local_cache", "passive_dns_cache", "fofa", "shodan"):
+            load_passive_fixture(domain, fixture_file, results)
+            source_status.append(
+                source_state("fixture", True, "ok", len(results) - before, None)
+            )
+        except (InputError, OSError, json.JSONDecodeError) as error:
+            source_status.append(
+                source_state("fixture", True, "error", 0, safe_message(error))
+            )
+            raise
+    if "crtsh" in sources:
+        source_status.append(
+            source_state(
+                "crtsh",
+                False,
+                "skipped_p7_disabled",
+                0,
+                "crt.sh live queries are disabled in P5.6; use fixture/local cache input",
+            )
+        )
+
+    cache_fields = {
+        "local_cache": "local_cache_file",
+        "passive_dns_cache": "passive_dns_cache_file",
+    }
+    for source, field in cache_fields.items():
         if source in sources:
-            warnings.append(f"{source} skipped: provider is not configured in this plugin build")
+            configured = options.get(field)
+            if not isinstance(configured, str) or not configured:
+                source_status.append(
+                    source_state(
+                        source,
+                        True,
+                        "skipped_not_configured",
+                        0,
+                        f"{field} is not configured",
+                    )
+                )
+                continue
+            try:
+                count = load_passive_cache(domain, configured, source, results)
+                source_status.append(
+                    source_state(source, True, "ok" if count else "empty", count, None)
+                )
+            except (InputError, OSError, json.JSONDecodeError) as error:
+                message = safe_message(error)
+                warnings.append(f"{source} failed: {message}")
+                source_status.append(source_state(source, True, "error", 0, message))
+
+    secret_names = {
+        "fofa": ("FOFA_EMAIL", "FOFA_KEY"),
+        "shodan": ("SHODAN_API_KEY",),
+        "censys": ("CENSYS_API_ID", "CENSYS_API_SECRET"),
+        "securitytrails": ("SECURITYTRAILS_API_KEY",),
+        "virustotal": ("VIRUSTOTAL_API_KEY",),
+    }
+    for source, required_secrets in secret_names.items():
+        if source not in sources:
+            continue
+        source_status.append(
+            source_state(
+                source,
+                False,
+                "skipped_p7_disabled",
+                0,
+                f"{source} live provider calls are disabled in P5.6; use fixture/local cache input",
+            )
+        )
+
+
+def source_state(
+    source: str,
+    enabled: bool,
+    status: str,
+    result_count: int,
+    error: str | None,
+) -> dict[str, Any]:
+    return {
+        "type": "source_status",
+        "source": source,
+        "enabled": enabled,
+        "status": status,
+        "result_count": result_count,
+        "error": error,
+    }
+
+
+def load_passive_cache(
+    domain: str,
+    cache_file: str,
+    source: str,
+    results: dict[str, dict[str, Any]],
+) -> int:
+    path = resolve_plugin_file(cache_file, f"$.options.passive.{source}_file")
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if payload in ({}, [], None):
+        return 0
+    observations = payload.get("subdomains", []) if isinstance(payload, dict) else payload
+    if not isinstance(observations, list):
+        raise InputError("passive cache must contain a subdomains array", f"$.options.passive.{source}_file")
+    count = 0
+    source_name = f"passive_{source}"
+    for item in observations[:MAX_FINDINGS]:
+        name = item.get("name") if isinstance(item, dict) else item
+        if not isinstance(name, str) or not clean_subdomain(name, domain):
+            continue
+        confidence = 0.6
+        if isinstance(item, dict) and isinstance(item.get("confidence"), (int, float)):
+            confidence = min(max(float(item["confidence"]), 0.0), 1.0)
+        add_observation(
+            results,
+            domain,
+            name,
+            source_name,
+            confidence=confidence,
+            records=[],
+            raw={
+                "source": source,
+                "source_type": "passive_intel",
+                "confidence": confidence,
+            },
+        )
+        count += 1
+    return count
 
 
 def load_passive_fixture(
@@ -483,12 +629,23 @@ def run_active(
     options: dict[str, Any],
     output_options: dict[str, Any],
     results: dict[str, dict[str, Any]],
+    active_observations: list[dict[str, Any]],
+    source_status: list[dict[str, Any]],
     warnings: list[str],
 ) -> dict[str, Any]:
     wordlist_file = read_string(options, "wordlist_file", "$.options.active.wordlist_file")
     max_candidates = bounded_int(options.get("max_candidates"), 100, 1, 10_000)
     candidates = load_wordlist(domain, wordlist_file, max_candidates)
     if bool(options.get("dry_run")):
+        source_status.append(
+            source_state(
+                "active_dictionary",
+                True,
+                "dry_run",
+                0,
+                f"planned {len(candidates)} bounded dictionary candidates",
+            )
+        )
         return {
             "candidate_count": len(candidates),
             "active_queries": 0,
@@ -501,25 +658,30 @@ def run_active(
     concurrency = bounded_int(options.get("concurrency"), 5, 1, 5)
     rate_limit = bounded_int(options.get("rate_limit_per_second"), 5, 1, 5)
     wildcard_detected = False
-    wildcard_addresses: set[str] = set()
+    wildcard_fingerprints: set[tuple[tuple[str, str], ...]] = set()
     active_queries = 0
 
     if bool(options.get("detect_wildcard")):
         wildcard_names = [
-            f"sf-{secrets.token_hex(6)}-{index}.{domain}" for index in range(3)
+            f"sf-{secrets.token_hex(6)}-{index}.{domain}" for index in range(5)
         ]
-        wildcard_hits = 0
+        fingerprint_counts: dict[tuple[tuple[str, str], ...], int] = {}
         for name in wildcard_names:
-            result = resolve_candidate(name, record_types, resolvers, timeout)
+            result = normalize_dns_result(
+                resolve_candidate(name, record_types, resolvers, timeout)
+            )
             active_queries += result["query_count"]
             records = result["records"]
             if records:
-                wildcard_hits += 1
-                wildcard_addresses.update(record["value"] for record in records)
-        wildcard_detected = wildcard_hits >= 2
+                fingerprint = record_fingerprint(records)
+                fingerprint_counts[fingerprint] = fingerprint_counts.get(fingerprint, 0) + 1
+        wildcard_fingerprints = {
+            fingerprint for fingerprint, count in fingerprint_counts.items() if count >= 3
+        }
+        wildcard_detected = bool(wildcard_fingerprints)
         if wildcard_detected:
             warnings.append(
-                "wildcard DNS detected; active records matching wildcard addresses were filtered"
+                "wildcard DNS detected from repeated random-name record fingerprints; matching dictionary results were filtered"
             )
 
     limiter = RateLimiter(rate_limit)
@@ -538,56 +700,226 @@ def run_active(
         for future in concurrent.futures.as_completed(future_to_name):
             name = future_to_name[future]
             try:
-                result = future.result()
+                result = normalize_dns_result(future.result())
             except OSError as error:
-                warnings.append(f"DNS query warning for {name}: {safe_message(error)}")
+                message = safe_message(error)
+                warnings.append(f"DNS query warning for {name}: {message}")
+                active_observations.append(
+                    candidate_observation(
+                        domain,
+                        name,
+                        "query_error",
+                        records=[],
+                        query_status="query_error",
+                        detail=message,
+                    )
+                )
                 continue
             active_queries += result["query_count"]
             records = result["records"]
-            wildcard_filtered = False
-            if wildcard_detected:
-                filtered = [
-                    record for record in records if record["value"] not in wildcard_addresses
-                ]
-                wildcard_filtered = len(filtered) != len(records)
-                records = filtered
-                existing_sources = results.get(name, {}).get("sources", set())
-                if records and not (existing_sources - {"active_dictionary"}):
-                    records = []
-                    wildcard_filtered = True
-            if records:
+            query_status = result.get("status", "ok" if records else "candidate_unresolved")
+            fingerprint = record_fingerprint(records)
+            wildcard_filtered = bool(records) and fingerprint in wildcard_fingerprints
+            if wildcard_filtered:
+                active_observations.append(
+                    candidate_observation(
+                        domain,
+                        name,
+                        "wildcard_filtered",
+                        records=records,
+                        query_status=query_status,
+                        detail="DNS records matched the wildcard fingerprint.",
+                    )
+                )
+                continue
+
+            public_records = [
+                enrich_record(record)
+                for record in records
+                if record.get("record_type") in {"A", "AAAA"}
+                and is_public_routable_ip(record["value"])
+            ]
+            special_records = [
+                enrich_record(record)
+                for record in records
+                if record.get("record_type") in {"A", "AAAA"}
+                and not is_public_routable_ip(record["value"])
+            ]
+            if public_records:
                 add_observation(
                     results,
                     domain,
                     name,
                     "active_dictionary",
-                    confidence=0.65 if wildcard_detected else 0.85,
-                    records=records,
+                    confidence=0.68 if wildcard_detected else 0.78,
+                    records=public_records,
                     raw={
                         "source": "active_dictionary",
+                        "source_type": "active_verify",
+                        "resolved": True,
+                        "records": public_records,
+                        "confidence": 0.68 if wildcard_detected else 0.78,
                         "wildcard_filtered": wildcard_filtered,
+                        "query_status": query_status,
                     },
+                )
+                if special_records:
+                    active_observations.append(
+                        invalid_observation(
+                            domain,
+                            name,
+                            "invalid_special_address",
+                            special_records,
+                            "DNS also returned non-public or special-use addresses.",
+                        )
+                    )
+            elif special_records:
+                active_observations.append(
+                    invalid_observation(
+                        domain,
+                        name,
+                        "invalid_special_address",
+                        special_records,
+                        "DNS result points only to non-public or special-use addresses.",
+                    )
                 )
             elif bool(output_options.get("include_unresolved")):
-                add_observation(
-                    results,
-                    domain,
-                    name,
-                    "active_dictionary",
-                    confidence=0.10,
-                    records=[],
-                    raw={
-                        "source": "active_dictionary",
-                        "resolved": False,
-                        "status": "candidate",
-                    },
+                status = (
+                    query_status
+                    if query_status in {"nxdomain", "timeout", "servfail", "query_error"}
+                    else "candidate_unresolved"
+                )
+                active_observations.append(
+                    candidate_observation(
+                        domain,
+                        name,
+                        status,
+                        records=[],
+                        query_status=query_status,
+                        detail="Generated from the bounded dictionary but DNS resolution was not confirmed.",
+                    )
                 )
 
+    source_status.append(
+        source_state(
+            "active_dictionary",
+            True,
+            "ok",
+            sum(
+                1
+                for entry in results.values()
+                if "active_dictionary" in entry.get("sources", set())
+            ),
+            None,
+        )
+    )
     return {
         "candidate_count": len(candidates),
         "active_queries": active_queries,
         "wildcard_detected": wildcard_detected,
     }
+
+
+def normalize_dns_result(result: dict[str, Any]) -> dict[str, Any]:
+    records = result.get("records", [])
+    return {
+        "records": records if isinstance(records, list) else [],
+        "query_count": int(result.get("query_count", 0)),
+        "status": str(result.get("status", "ok" if records else "candidate_unresolved")),
+    }
+
+
+def record_fingerprint(records: list[dict[str, Any]]) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        sorted(
+            (
+                str(record.get("record_type", "")),
+                str(record.get("value", "")).lower().rstrip("."),
+            )
+            for record in records
+            if record.get("record_type") and record.get("value")
+        )
+    )
+
+
+def candidate_observation(
+    domain: str,
+    subdomain: str,
+    status: str,
+    *,
+    records: list[dict[str, Any]],
+    query_status: str,
+    detail: str,
+) -> dict[str, Any]:
+    return {
+        "type": "subdomain_candidate",
+        "status": status,
+        "domain": domain,
+        "subdomain": subdomain,
+        "sources": ["active_dictionary"],
+        "resolved": bool(records),
+        "confirmed": False,
+        "public_routable": False,
+        "records": records,
+        "confidence": 0.1 if status == "candidate_unresolved" else 0.0,
+        "synthetic": False,
+        "real_scan": True,
+        "query_status": query_status,
+        "evidence": {"summary": detail},
+    }
+
+
+def invalid_observation(
+    domain: str,
+    subdomain: str,
+    status: str,
+    records: list[dict[str, Any]],
+    detail: str,
+) -> dict[str, Any]:
+    return {
+        "type": "invalid_observation",
+        "status": status,
+        "domain": domain,
+        "subdomain": subdomain,
+        "records": records,
+        "confidence": 0.0,
+        "synthetic": False,
+        "real_scan": True,
+        "evidence": {"summary": detail},
+    }
+
+
+def enrich_record(record: dict[str, Any]) -> dict[str, Any]:
+    value = str(record.get("value", ""))
+    public = is_public_routable_ip(value)
+    return {
+        "record_type": str(record.get("record_type", "unknown")),
+        "value": value,
+        "address_class": address_class(value),
+        "public_routable": public,
+    }
+
+
+def address_class(value: str) -> str:
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return "hostname" if DOMAIN_RE.fullmatch(value.rstrip(".")) else "invalid"
+    if address in ipaddress.ip_network("198.18.0.0/15"):
+        return "benchmark"
+    if address.is_loopback:
+        return "loopback"
+    if address.is_link_local:
+        return "link_local"
+    if address.is_private:
+        return "private"
+    if address.is_reserved:
+        return "reserved"
+    if address.is_multicast:
+        return "multicast"
+    if address.is_unspecified:
+        return "unspecified"
+    return "public" if is_public_routable_ip(value) else "non_public"
 
 
 def load_wordlist(domain: str, wordlist_file: str, max_candidates: int) -> list[str]:
@@ -623,43 +955,74 @@ def resolve_candidate(
 ) -> dict[str, Any]:
     records: dict[tuple[str, str], dict[str, str]] = {}
     query_count = 0
+    statuses: list[str] = []
     if resolvers == ["system"]:
         for record_type in record_types:
-            for address in resolve_system(hostname, record_type):
+            values, status = resolve_system(hostname, record_type)
+            statuses.append(status)
+            for address in values:
                 records[(record_type, address)] = {
                     "record_type": record_type,
                     "value": address,
                 }
             query_count += 1
-        return {"records": list(records.values()), "query_count": query_count}
+        return {
+            "records": list(records.values()),
+            "query_count": query_count,
+            "status": aggregate_query_status(statuses, bool(records)),
+        }
 
     for record_type in record_types:
         for resolver in resolvers:
             query_count += 1
-            for address in udp_dns_query(hostname, record_type, resolver, timeout):
+            values, status = udp_dns_query(hostname, record_type, resolver, timeout)
+            statuses.append(status)
+            for address in values:
                 records[(record_type, address)] = {
                     "record_type": record_type,
                     "value": address,
                 }
             if any(key[0] == record_type for key in records):
                 break
-    return {"records": sorted(records.values(), key=lambda item: (item["record_type"], item["value"])), "query_count": query_count}
+    return {
+        "records": sorted(
+            records.values(), key=lambda item: (item["record_type"], item["value"])
+        ),
+        "query_count": query_count,
+        "status": aggregate_query_status(statuses, bool(records)),
+    }
 
 
-def resolve_system(hostname: str, record_type: str) -> list[str]:
+def aggregate_query_status(statuses: list[str], has_records: bool) -> str:
+    if has_records:
+        return "ok"
+    for status in ("servfail", "timeout", "query_error", "nxdomain", "empty"):
+        if status in statuses:
+            return status
+    return "candidate_unresolved"
+
+
+def resolve_system(hostname: str, record_type: str) -> tuple[list[str], str]:
+    if record_type == "CNAME":
+        return [], "skipped_unsupported"
     family = socket.AF_INET if record_type == "A" else socket.AF_INET6
     addresses: set[str] = set()
     try:
         infos = socket.getaddrinfo(hostname, None, family, socket.SOCK_STREAM)
-    except socket.gaierror:
-        return []
+    except socket.gaierror as error:
+        return [], "nxdomain" if error.errno == socket.EAI_NONAME else "query_error"
     for info in infos:
         address = info[4][0]
         addresses.add(address)
-    return sorted(addresses)
+    return sorted(addresses), "ok" if addresses else "empty"
 
 
-def udp_dns_query(hostname: str, record_type: str, resolver: str, timeout: int) -> list[str]:
+def udp_dns_query(
+    hostname: str,
+    record_type: str,
+    resolver: str,
+    timeout: int,
+) -> tuple[list[str], str]:
     query_id = random.SystemRandom().randint(0, 65535)
     qtype = QTYPE[record_type]
     packet = build_dns_query(query_id, hostname, qtype)
@@ -670,7 +1033,9 @@ def udp_dns_query(hostname: str, record_type: str, resolver: str, timeout: int) 
             sock.sendto(packet, (resolver, 53))
             response, _ = sock.recvfrom(4096)
         except socket.timeout:
-            return []
+            return [], "timeout"
+        except OSError:
+            return [], "query_error"
     return parse_dns_response(response, query_id, qtype)
 
 
@@ -682,9 +1047,13 @@ def build_dns_query(query_id: int, hostname: str, qtype: int) -> bytes:
     return header + labels + b"\x00" + struct.pack("!HH", qtype, 1)
 
 
-def parse_dns_response(response: bytes, query_id: int, qtype: int) -> list[str]:
+def parse_dns_response(
+    response: bytes,
+    query_id: int,
+    qtype: int,
+) -> tuple[list[str], str]:
     if len(response) < 12:
-        return []
+        return [], "query_error"
     (
         response_id,
         flags,
@@ -693,19 +1062,26 @@ def parse_dns_response(response: bytes, query_id: int, qtype: int) -> list[str]:
         _nscount,
         _arcount,
     ) = struct.unpack("!HHHHHH", response[:12])
-    if response_id != query_id or flags & 0x000F != 0:
-        return []
+    rcode = flags & 0x000F
+    if response_id != query_id:
+        return [], "query_error"
+    if rcode == 3:
+        return [], "nxdomain"
+    if rcode == 2:
+        return [], "servfail"
+    if rcode != 0:
+        return [], "query_error"
     offset = 12
     for _ in range(qdcount):
         offset = skip_dns_name(response, offset)
         offset += 4
         if offset > len(response):
-            return []
-    addresses: set[str] = set()
+            return [], "query_error"
+    values: set[str] = set()
     for _ in range(ancount):
         offset = skip_dns_name(response, offset)
         if offset + 10 > len(response):
-            return []
+            return [], "query_error"
         record_type, record_class, _ttl, rdlength = struct.unpack(
             "!HHIH", response[offset : offset + 10]
         )
@@ -715,10 +1091,47 @@ def parse_dns_response(response: bytes, query_id: int, qtype: int) -> list[str]:
         if record_class != 1 or record_type != qtype:
             continue
         if record_type == 1 and len(rdata) == 4:
-            addresses.add(socket.inet_ntop(socket.AF_INET, rdata))
+            values.add(socket.inet_ntop(socket.AF_INET, rdata))
         elif record_type == 28 and len(rdata) == 16:
-            addresses.add(socket.inet_ntop(socket.AF_INET6, rdata))
-    return sorted(addresses)
+            values.add(socket.inet_ntop(socket.AF_INET6, rdata))
+        elif record_type == 5:
+            cname, _ = decode_dns_name(response, offset - rdlength)
+            if cname:
+                values.add(cname.rstrip(".").lower())
+    return sorted(values), "ok" if values else "empty"
+
+
+def decode_dns_name(message: bytes, offset: int) -> tuple[str, int]:
+    labels: list[str] = []
+    consumed = offset
+    jumped = False
+    seen: set[int] = set()
+    while offset < len(message):
+        if offset in seen:
+            return "", consumed
+        seen.add(offset)
+        length = message[offset]
+        if length & 0xC0 == 0xC0:
+            if offset + 1 >= len(message):
+                return "", consumed
+            pointer = ((length & 0x3F) << 8) | message[offset + 1]
+            if not jumped:
+                consumed = offset + 2
+            offset = pointer
+            jumped = True
+            continue
+        if length == 0:
+            if not jumped:
+                consumed = offset + 1
+            return ".".join(labels), consumed
+        offset += 1
+        if offset + length > len(message):
+            return "", consumed
+        labels.append(message[offset : offset + length].decode("ascii", errors="ignore"))
+        offset += length
+        if not jumped:
+            consumed = offset
+    return "", consumed
 
 
 def skip_dns_name(message: bytes, offset: int) -> int:
@@ -759,7 +1172,7 @@ def add_observation(
     for record in records:
         record_type = record.get("record_type")
         value = record.get("value")
-        if record_type in {"A", "AAAA"} and isinstance(value, str):
+        if record_type in {"A", "AAAA", "CNAME"} and isinstance(value, str):
             entry["records"][(record_type, value)] = {
                 "record_type": record_type,
                 "value": value,
@@ -769,71 +1182,91 @@ def add_observation(
         entry["raw"].append(raw)
 
 
-def finalize_findings(
+def classify_observations(
     domain: str,
     results: dict[str, dict[str, Any]],
+    active_observations: list[dict[str, Any]],
     include_unresolved: bool,
     include_sources: bool,
     mode: str,
     authorization_scope: str,
     synthetic_fixture: bool,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     findings: list[dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
+    invalid_observations: list[dict[str, Any]] = []
     for subdomain in sorted(results):
         entry = results[subdomain]
         sources = sorted(entry["sources"], key=lambda item: SOURCE_ORDER.get(item, 99))
         records = sorted(
             entry["records"].values(), key=lambda item: (item["record_type"], item["value"])
         )
-        active_only = sources == ["active_dictionary"]
         source_set = set(sources)
         public_records = [record for record in records if is_public_routable_ip(record["value"])]
         special_records = [record for record in records if record not in public_records]
-        trusted_passive = bool(source_set & {"passive_crtsh", "passive_local_cache", "passive_dns_cache", "passive_fofa", "passive_shodan"})
-        multi_source = len(sources) > 1
-        confirmed = (
-            synthetic_fixture
-            or trusted_passive
-            or multi_source
-            or bool(public_records)
+        trusted_passive = bool(
+            source_set
+            & {
+                "passive_crtsh",
+                "passive_fofa",
+                "passive_shodan",
+                "passive_censys",
+                "passive_securitytrails",
+                "passive_virustotal",
+            }
         )
-        invalid_special = bool(records) and not public_records and active_only
-        if active_only and not records and not include_unresolved:
-            continue
+        multi_source = len(sources) > 1
+        confirmed = synthetic_fixture or trusted_passive or multi_source or bool(public_records)
         addresses = sorted({record["value"] for record in records})[:MAX_RECORDS_PER_NAME]
         primary_record_type = "unknown"
         if any(record["record_type"] == "A" for record in records):
             primary_record_type = "A"
         elif any(record["record_type"] == "AAAA" for record in records):
             primary_record_type = "AAAA"
-        if not confirmed:
-            if invalid_special:
-                confidence = 0.0
-            elif active_only and not records:
-                confidence = min(float(entry["confidence"]), 0.15)
-            else:
-                confidence = min(float(entry["confidence"]), 0.3)
-        else:
-            confidence = min(float(entry["confidence"]) + 0.05 * (len(sources) - 1), 0.95)
+        confidence = (
+            min(max(float(entry["confidence"]), 0.8) + 0.05 * (len(sources) - 1), 0.95)
+            if confirmed
+            else min(float(entry["confidence"]), 0.45)
+        )
         summary = evidence_summary(subdomain, sources, records)
-        status = "confirmed" if confirmed else ("invalid_special_address" if invalid_special else "candidate")
-        finding = {
-            "type": "subdomain_finding" if confirmed else "subdomain_candidate",
+        source_details = source_details_for(entry, sources)
+        common = {
             "domain": domain,
             "subdomain": subdomain,
             "source": sources[0] if len(sources) == 1 else "merged",
             "sources": sources if include_sources else sources[:1],
             "resolved": bool(records),
             "confirmed": confirmed,
-            "status": status,
             "record_type": primary_record_type,
             "addresses": addresses,
-            "records": records[:MAX_RECORDS_PER_NAME],
+            "records": [enrich_record(record) for record in records[:MAX_RECORDS_PER_NAME]],
             "confidence": round(confidence, 3),
+            "public_routable": bool(public_records),
+            "synthetic": synthetic_fixture,
+            "real_scan": not synthetic_fixture,
             "evidence": {
                 "summary": fixture_notice(summary) if synthetic_fixture else summary,
                 "items": [],
             },
+            "source_details": source_details,
+        }
+        if not confirmed:
+            if include_unresolved:
+                candidates.append(
+                    {
+                        **common,
+                        "type": "subdomain_candidate",
+                        "confirmed": False,
+                        "status": "candidate_unconfirmed",
+                    }
+                )
+            continue
+
+        finding = {
+            **common,
+            "type": "subdomain_result",
+            "confirmed": True,
+            "status": "confirmed",
             "raw": {
                 "retained": True,
                 "policy": "non-sensitive-subdomain-metadata-only",
@@ -845,35 +1278,66 @@ def finalize_findings(
                     "synthetic_fixture": synthetic_fixture,
                     "real_scan": not synthetic_fixture,
                 },
-                "source_details": [
-                    {
-                        "source": source,
-                        "type": "fixture" if source == "passive_fixture" else "passive_or_active",
-                    }
-                    for source in sources
-                ],
-                "status": status,
-                "confirmed": confirmed,
+                "source_details": source_details,
+                "status": "confirmed",
+                "confirmed": True,
                 "public_routable_records": public_records,
                 "special_records": special_records,
                 "x-sentinelflow-fixture.synthetic": synthetic_fixture,
                 "x-sentinelflow-fixture.source": "local_fixture" if synthetic_fixture else None,
                 "x-sentinelflow-fixture.real_scan": not synthetic_fixture,
             },
-            "source_details": [
-                {
-                    "source": source,
-                    "type": "fixture" if source == "passive_fixture" else "passive_or_active",
-                }
-                for source in sources
-            ],
             "synthetic_fixture": synthetic_fixture,
-            "real_scan": not synthetic_fixture,
         }
         findings.append(finding)
         if len(findings) >= MAX_FINDINGS:
             break
-    return findings
+
+    for observation in active_observations:
+        if observation.get("type") == "invalid_observation":
+            invalid_observations.append(observation)
+        elif include_unresolved:
+            candidates.append(observation)
+    return findings, candidates[:MAX_FINDINGS], invalid_observations[:MAX_FINDINGS]
+
+
+def source_details_for(
+    entry: dict[str, Any],
+    sources: list[str],
+) -> list[dict[str, Any]]:
+    details: list[dict[str, Any]] = []
+    raw_observations = entry.get("raw", [])
+    for source in sources:
+        matching = next(
+            (
+                item
+                for item in raw_observations
+                if isinstance(item, dict)
+                and (
+                    item.get("source") == source
+                    or f"passive_{item.get('source')}" == source
+                )
+            ),
+            {},
+        )
+        details.append(
+            {
+                "source": source,
+                "source_type": (
+                    "fixture"
+                    if source == "passive_fixture"
+                    else "active_verify"
+                    if source == "active_dictionary"
+                    else "passive_intel"
+                ),
+                "resolved": bool(matching.get("resolved", False)),
+                "records": matching.get("records", []),
+                "confidence": float(
+                    matching.get("confidence", entry.get("confidence", 0.0))
+                ),
+            }
+        )
+    return details
 
 
 def fixture_notice(summary: str) -> str:

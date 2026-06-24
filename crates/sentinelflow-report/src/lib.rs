@@ -194,6 +194,7 @@ pub fn generate_asset_discovery_markdown(
     let mut ports = Vec::new();
     let mut services = Vec::new();
     let mut candidate_subdomains = Vec::new();
+    let mut invalid_subdomains = Vec::new();
     let mut invalid_dns = Vec::new();
     let mut skipped_stages = Vec::new();
     let mut evidence_rows = Vec::new();
@@ -222,13 +223,24 @@ pub fn generate_asset_discovery_markdown(
             if output.spec.values.get("source").and_then(Value::as_str)
                 == Some("subdomain-discovery-plus")
             {
-                if let Some(raw_findings) =
-                    output.spec.values.get("findings").and_then(Value::as_array)
+                if let Some(raw_candidates) = output
+                    .spec
+                    .values
+                    .get("candidates")
+                    .and_then(Value::as_array)
                 {
-                    for item in raw_findings {
-                        if item.get("type").and_then(Value::as_str) == Some("subdomain_candidate") {
-                            candidate_subdomains.push(item.clone());
-                        }
+                    for item in raw_candidates {
+                        candidate_subdomains.push(item.clone());
+                    }
+                }
+                if let Some(raw_invalid) = output
+                    .spec
+                    .values
+                    .get("invalid_observations")
+                    .and_then(Value::as_array)
+                {
+                    for item in raw_invalid {
+                        invalid_subdomains.push(item.clone());
                     }
                 }
             }
@@ -355,6 +367,7 @@ pub fn generate_asset_discovery_markdown(
         auth_scope,
         &subdomains,
         &candidate_subdomains,
+        &invalid_subdomains,
         &dns,
         &invalid_dns,
         &ports,
@@ -400,6 +413,7 @@ pub fn generate_asset_discovery_markdown(
     writeln!(report, "| 使用插件 | `subdomain-discovery-plus`, `dns-resolve-plus`, `port-probe-plus`, `service-detect-plus` |").expect("String write");
     writeln!(report, "| 已确认子域名 | {} |", subdomains.len()).expect("String write");
     writeln!(report, "| 候选子域名 | {} |", candidate_subdomains.len()).expect("String write");
+    writeln!(report, "| 无效或过滤结果 | {} |", invalid_subdomains.len()).expect("String write");
     writeln!(report, "| 有效 DNS 记录 | {} |", dns.len()).expect("String write");
     writeln!(report, "| 无效 DNS 记录 | {} |", invalid_dns.len()).expect("String write");
     writeln!(
@@ -432,6 +446,25 @@ pub fn generate_asset_discovery_markdown(
         )
         .expect("String write");
     }
+    let used_fixture = subdomains
+        .iter()
+        .any(|item| bool_value(item, "x-sentinelflow-fixture.synthetic"));
+    let used_mock_dns = source_status.iter().any(|item| {
+        matches!(
+            item.get("source").and_then(Value::as_str),
+            Some("mock_resolver" | "fixture_resolver")
+        )
+    });
+    writeln!(report, "\n### 子域名结果质量说明\n").expect("String write");
+    writeln!(
+        report,
+        "- 未解析字典候选是否计入正式发现：否\n- 是否使用 fixture：{}\n- 是否使用 mock DNS：{}\n- 是否存在特殊地址或无效子域名结果：{}\n- 是否通过质量门禁：{}\n",
+        bool_label(used_fixture),
+        bool_label(used_mock_dns),
+        bool_label(!invalid_dns.is_empty() || !invalid_subdomains.is_empty()),
+        bool_label(!quality_gate_failed)
+    )
+    .expect("String write");
     writeln!(report, "\n报告可信状态：`{report_status}`。\n").expect("String write");
 
     writeln!(report, "## 2. 执行范围与授权说明\n").expect("String write");
@@ -443,7 +476,11 @@ pub fn generate_asset_discovery_markdown(
         redact_text(&target)
     )
     .expect("String write");
-    writeln!(report, "- 本次采用非侵入优先和低影响主动验证策略。").expect("String write");
+    writeln!(
+        report,
+        "- P5.6 仅采用 fixture/local/import 数据；真实主动验证为 P7 placeholder。"
+    )
+    .expect("String write");
     writeln!(
         report,
         "- 未启用 `syn_probe`、`external_scanner`、`deep fingerprint`、`external_fingerprint`。"
@@ -456,10 +493,10 @@ pub fn generate_asset_discovery_markdown(
     .expect("String write");
 
     writeln!(report, "## 3. 方法与数据源\n").expect("String write");
-    writeln!(report, "### 子域名探测\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| crt.sh | 是 | 被动 | 证书透明日志 | 见 source status |\n| local_cache | 是 | 被动 | 本地缓存 | empty/skipped |\n| passive_dns_cache | 是 | 被动 | 被动 DNS 缓存 | empty/skipped |\n| active_dictionary | 是 | 主动低影响 | DNS 字典枚举 | limited |\n").expect("String write");
-    writeln!(report, "### DNS 解析\n\n| 方法 | 是否启用 | 记录类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| local_cache | 是 | A/AAAA/CNAME/MX/NS/TXT | 本地缓存 | 见 source status |\n| public_resolver | 是 | A/AAAA/CNAME/MX/NS/TXT | 公共解析器 | 见 source status |\n| system_resolver | 可选 | A/AAAA | 系统解析器 | skipped/ok |\n").expect("String write");
-    writeln!(report, "### 端口探测\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| FOFA | 如有密钥 | 被动情报 | 公网暴露面 | skipped_missing_secret/ok |\n| Shodan | 如有密钥 | 被动情报 | 公网暴露面 | skipped_missing_secret/ok |\n| tcp_connect | 是 | 主动低影响 | TCP Connect | limited |\n").expect("String write");
-    writeln!(report, "### 服务识别\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| upstream_port_result | 是 | 被动 | 复用端口结果 | ok |\n| fofa_enrichment | 如有密钥 | 被动 | 资产情报增强 | skipped/ok |\n| shodan_enrichment | 如有密钥 | 被动 | 资产情报增强 | skipped/ok |\n| tls_hello/http_head/tcp_banner | 是 | 主动低影响 | 安全服务识别 | limited |\n").expect("String write");
+    writeln!(report, "### 子域名探测\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| fixture | 是 | 本地 | 合成 fixture | ok/skipped |\n| local_cache | 可选 | 本地 | 本地缓存 | empty/skipped |\n| live CT/provider | 否 | P7 placeholder | P5.6 禁用外部 provider | skipped_p7_disabled |\n| active_dictionary | 否 | P7 placeholder | P5.6 禁用主动 DNS | P7_SCOPE_DISABLED |\n").expect("String write");
+    writeln!(report, "### DNS 解析\n\n| 方法 | 是否启用 | 记录类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| local_cache | 可选 | A/AAAA/CNAME/MX/NS/TXT | 本地缓存 | 见 source status |\n| passive_dns_cache | 可选 | A/AAAA/CNAME/MX/NS/TXT | 本地缓存文件 | 见 source status |\n| active resolver | 否 | P7 placeholder | P5.6 禁用真实 resolver | skipped_p7_disabled |\n").expect("String write");
+    writeln!(report, "### 端口探测\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| fixture/local_cache | 可选 | 本地 | 本地端口 fixture 或缓存 | ok/skipped |\n| live exposure provider | 否 | P7 placeholder | P5.6 禁用外部 provider | skipped_p7_disabled |\n| active connect | 否 | P7 placeholder | P5.6 禁用端口探测 | P7_SCOPE_DISABLED |\n").expect("String write");
+    writeln!(report, "### 服务识别\n\n| 方法 | 是否启用 | 类型 | 说明 | 状态 |\n| --- | --- | --- | --- | --- |\n| upstream/local_cache | 可选 | 本地 | 复用已归一化或本地缓存结果 | ok/skipped |\n| live enrichment | 否 | P7 placeholder | P5.6 禁用外部 provider | skipped_p7_disabled |\n| active service probe | 否 | P7 placeholder | P5.6 禁用服务探测 | P7_SCOPE_DISABLED |\n").expect("String write");
 
     writeln!(report, "## 4. 资产发现总览\n").expect("String write");
     writeln!(report, "| 指标 | 数量 |\n| --- | --- |").expect("String write");
@@ -471,7 +508,12 @@ pub fn generate_asset_discovery_markdown(
     writeln!(report, "| 已识别服务 | {} |", services.len()).expect("String write");
     writeln!(report, "| 跳过阶段 | {} |\n", skipped_stages.len()).expect("String write");
 
-    write_subdomain_table(&mut report, &subdomains, &candidate_subdomains);
+    write_subdomain_table(
+        &mut report,
+        &subdomains,
+        &candidate_subdomains,
+        &invalid_subdomains,
+    );
     write_dns_table(&mut report, &dns, &invalid_dns);
     write_port_table(&mut report, &ports, &skipped_stages, public_ip_count == 0);
     write_service_table(&mut report, &services, &skipped_stages, ports.is_empty());
@@ -615,7 +657,7 @@ pub fn generate_asset_discovery_markdown(
     writeln!(report, "- TaskSpec: `{}`", task.name).expect("String write");
     writeln!(
         report,
-        "- 策略：`allowActiveVerify=true`，`allowHighRisk=false`。"
+        "- 策略：`allowActiveVerify=false`，`allowHighRisk=false`；P5.6 仅允许 fixture/passive-local/import/mock 路径。"
     )
     .expect("String write");
     writeln!(
@@ -625,13 +667,18 @@ pub fn generate_asset_discovery_markdown(
     .expect("String write");
     writeln!(
         report,
-        "- 限制：被动来源依赖第三方可用性；主动探测仅覆盖配置的候选、端口与速率限制。"
+        "- 限制：真实主动探测、public resolver、端口探测、服务探测和外部情报源调用均为 P7 占位能力。"
     )
     .expect("String write");
     report
 }
 
-fn write_subdomain_table(report: &mut String, rows: &[Value], candidates: &[Value]) {
+fn write_subdomain_table(
+    report: &mut String,
+    rows: &[Value],
+    candidates: &[Value],
+    invalid_rows: &[Value],
+) {
     writeln!(report, "## 5. 已确认子域名\n").expect("String write");
     writeln!(report, "| 子域名 | 是否解析 | 解析地址 | 来源 | 置信度 | 备注 |\n| --- | --- | --- | --- | --- | --- |").expect("String write");
     for item in rows.iter().take(100) {
@@ -679,6 +726,31 @@ fn write_subdomain_table(report: &mut String, rows: &[Value], candidates: &[Valu
     }
     if candidates.is_empty() {
         writeln!(report, "| 无 | - | - | - | 0 | 无未确认候选项。 |").expect("String write");
+    }
+    report.push('\n');
+    writeln!(report, "## 无效或被过滤的子域名结果\n").expect("String write");
+    writeln!(
+        report,
+        "| 子域名 | 状态 | 记录 | 说明 |\n| --- | --- | --- | --- |"
+    )
+    .expect("String write");
+    for item in invalid_rows.iter().take(100) {
+        writeln!(
+            report,
+            "| {} | {} | {} | {} |",
+            table_value(item, "subdomain"),
+            table_value(item, "status"),
+            table_array(item, "records"),
+            item.get("evidence")
+                .and_then(|value| value.get("summary"))
+                .and_then(Value::as_str)
+                .map(table_text)
+                .unwrap_or_default()
+        )
+        .expect("String write");
+    }
+    if invalid_rows.is_empty() {
+        writeln!(report, "| 无 | - | - | 无无效或过滤结果。 |").expect("String write");
     }
     report.push('\n');
 }
@@ -844,6 +916,7 @@ fn quality_gate_results(
     auth_scope: &str,
     confirmed_subdomains: &[Value],
     candidate_subdomains: &[Value],
+    invalid_subdomains: &[Value],
     dns: &[Value],
     invalid_dns: &[Value],
     ports: &[Value],
@@ -859,7 +932,7 @@ fn quality_gate_results(
         .iter()
         .filter(|item| !bool_value(item, "resolved"))
         .count();
-    let special_dns = invalid_dns.len();
+    let special_dns = invalid_dns.len() + invalid_subdomains.len();
     let mock_dns = dns.iter().chain(invalid_dns.iter()).any(|item| {
         table_array(item, "x-sentinelflow-dns.sources").contains("mock_resolver")
             || table_array(item, "sources").contains("mock_resolver")
@@ -1393,7 +1466,7 @@ mod tests {
             .map(|index| {
                 serde_json::json!({
                     "type": "subdomain_candidate",
-                    "subdomain": format!("candidate{index}.weikan.net.cn"),
+                    "subdomain": format!("candidate{index}.example.test"),
                     "sources": ["active_dictionary"],
                     "resolved": false,
                     "status": "candidate",
@@ -1403,45 +1476,46 @@ mod tests {
             .collect::<Vec<_>>();
         let invalid_dns = vec![
             serde_json::json!({
-                "domain": "candidate0.weikan.net.cn",
+                "domain": "candidate0.example.test",
                 "record_type": "A",
                 "value": "198.18.0.75",
                 "status": "invalid_special_address",
                 "address_class": "benchmark",
                 "valid_for_port_probe": false,
                 "public_routable": false,
-                "sources": ["public_resolver"]
+                "sources": ["fixture"]
             }),
             serde_json::json!({
-                "domain": "candidate0.weikan.net.cn",
+                "domain": "candidate0.example.test",
                 "record_type": "AAAA",
                 "value": "::ffff:198.18.0.75",
                 "status": "invalid_special_address",
                 "address_class": "ipv4_mapped_benchmark",
                 "valid_for_port_probe": false,
                 "public_routable": false,
-                "sources": ["public_resolver"]
+                "sources": ["fixture"]
             }),
         ];
         let skipped = vec![
             serde_json::json!({
-                "source": "tcp_connect",
-                "status": "skipped",
+                "source": "active_connect",
+                "status": "skipped_p7_disabled",
                 "reason": "no_public_routable_targets",
                 "message": "Port probing skipped because upstream DNS produced no public routable targets."
             }),
             serde_json::json!({
                 "source": "active_service",
-                "status": "skipped",
+                "status": "skipped_p7_disabled",
                 "reason": "no_confirmed_open_ports",
                 "message": "Service detection skipped because upstream port stage produced no confirmed open ports."
             }),
         ];
 
         let gate = quality_gate_results(
-            "real:weikan-net-cn",
+            "fixture:local-only",
             &[],
             &candidates,
+            &[],
             &[],
             &invalid_dns,
             &[],

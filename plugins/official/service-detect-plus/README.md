@@ -1,9 +1,9 @@
 # service-detect-plus
 
 `service-detect-plus` is an official SentinelFlow command plugin for service
-identification multi-source validation. It defaults to passive intelligence:
-upstream `port-probe-plus` Findings, DNS context, local cache, fixture, passive
-service cache, and optional external fingerprint-intel facades.
+fixture/cache validation. In P5.6 it is `disabled-p7-placeholder`: active service
+probing and live external fingerprint/intelligence provider calls are not
+available.
 
 ## Modes And Depth
 
@@ -13,13 +13,11 @@ Detection depth is one of `fixture`, `passive`, `safe`, `standard`, `deep`, or
 `external_fingerprint`.
 
 - `fixture`: reads only `examples/fixture.services.example.com.json`.
-- `passive_intel`: does not connect to targets and gracefully skips missing
-  external secrets.
-- `active` with `safe` or `standard`: requires
-  `policy.allow_active_verify=true`.
-- `deep` and `external_fingerprint`: require `policy.allow_active_verify=true`,
-  `policy.allow_high_risk=true`, `options.risk_acknowledged=true`, and
-  `execution_profile=authorized_assessment` or `lab`.
+- `passive_intel`: local fixture/cache/upstream findings only in P5.6; live
+  external providers return `skipped_p7_disabled`.
+- `active` with `safe` or `standard`: P7 placeholder; returns
+  `P7_SCOPE_DISABLED` in P5.6.
+- `deep` and `external_fingerprint`: outside P5.6.
 
 ## Sources
 
@@ -31,8 +29,8 @@ Supported sources are `fixture`, `local_cache`, `upstream_port_result`,
 
 The plugin prefers `upstream_port_result`; FOFA/Shodan enrichment is extracted
 from upstream source details when present to avoid duplicate external API calls.
-Missing external fingerprint secrets produce
-`source_status.status=skipped_missing_secret`.
+Live external fingerprint provider calls produce
+`source_status.status=skipped_p7_disabled` in P5.6.
 
 Provider integrations should use SentinelFlow secret/config once that channel is
 available for official plugins. The current v1alpha1 runtime reserves the
@@ -68,10 +66,10 @@ Confidence starts from source weights:
 - upstream port result: 0.80
 - passive service cache: 0.75
 - FOFA/Shodan enrichment: 0.80/0.85
-- safe active probes: 0.80 to 0.85
+- safe active probes: P7 placeholder in P5.6
 - standard/deep/external fingerprint: 0.90/0.92/0.85
 
-Multiple agreeing sources and passive-active agreement raise confidence. Stale
+Multiple agreeing local/passive sources raise confidence. Stale
 passive results, service/product conflicts, and weak banners lower it. Final
 confidence is clamped to `[0, 1]`.
 

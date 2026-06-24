@@ -13,7 +13,6 @@ sys.path.insert(0, str(PLUGIN_ROOT / "parser"))
 
 import runner  # noqa: E402
 import parser as parser_helper  # noqa: E402
-from sources import resolver_client  # noqa: E402
 
 
 def load_input(name: str) -> dict:
@@ -35,7 +34,7 @@ class DnsResolvePlusRunnerTests(unittest.TestCase):
         output = runner.run(load_input("input.passive-intel.json"))
 
         statuses = {(item["source"], item["status"]) for item in output["source_status"]}
-        self.assertIn(("external_dns_intel", "skipped_missing_secret"), statuses)
+        self.assertIn(("external_dns_intel", "skipped_p7_disabled"), statuses)
         self.assertEqual(output["errors"], [])
 
     def test_local_cache_and_passive_cache_merge_consistent_sources(self) -> None:
@@ -82,18 +81,17 @@ class DnsResolvePlusRunnerTests(unittest.TestCase):
         self.assertTrue(conflicts)
         self.assertEqual(conflicts[0]["conflict_reason"], "dns_value_mismatch")
 
-    def test_active_policy_denial_does_not_query(self) -> None:
+    def test_active_dns_is_p7_disabled_and_does_not_query(self) -> None:
         payload = load_input("input.active.json")
         payload = copy.deepcopy(payload)
-        payload["policy"]["allow_active_verify"] = False
 
         output = runner.run(payload)
 
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
-        self.assertIn(("active_dns", "skipped_policy_denied"), {(item["source"], item["status"]) for item in output["source_status"]})
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertIn(("active_dns", "skipped_p7_disabled"), {(item["source"], item["status"]) for item in output["source_status"]})
         self.assertEqual(output["safety"]["active_dns_queries"], 0)
 
-    def test_authoritative_trace_requires_risk_acknowledgement(self) -> None:
+    def test_authoritative_trace_is_p7_disabled(self) -> None:
         payload = load_input("input.active.json")
         payload = copy.deepcopy(payload)
         payload["options"]["active"]["authoritative_trace"] = True
@@ -101,8 +99,8 @@ class DnsResolvePlusRunnerTests(unittest.TestCase):
 
         output = runner.run(payload)
 
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
-        self.assertEqual(output["errors"][0]["field"], "$.options.risk_acknowledged")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["errors"][0]["field"], "$.options.active.enabled")
 
     def test_invalid_domain_is_rejected(self) -> None:
         payload = load_input("input.fixture.json")
@@ -140,72 +138,38 @@ class DnsResolvePlusRunnerTests(unittest.TestCase):
         data = parsed["findings"][0]["evidence"][0]["data"]
         self.assertIn("x-sentinelflow-dns.source_details", data)
 
-    def test_benchmark_addresses_are_invalid_observations_not_findings(self) -> None:
+    def test_active_special_address_resolution_is_not_executed_in_p5_6(self) -> None:
         payload = load_input("input.active.json")
         payload = copy.deepcopy(payload)
         payload["inputs"]["domains"] = ["admin.example.com"]
         payload["options"]["record_types"] = ["A", "AAAA"]
 
-        original = runner.resolver_client.resolve_public
+        output = runner.run(payload)
 
-        def fake_resolve_public(domain, record_types, resolvers, timeout_seconds):
-            return (
-                [
-                    {"record_type": "A", "value": "198.18.0.75", "ttl": None},
-                    {"record_type": "AAAA", "value": "::ffff:198.18.0.75", "ttl": None},
-                ],
-                2,
-            )
-
-        runner.resolver_client.resolve_public = fake_resolve_public
-        try:
-            output = runner.run(payload)
-        finally:
-            runner.resolver_client.resolve_public = original
-
-        self.assertTrue(output["results"])
-        for item in output["results"]:
-            self.assertEqual(item["status"], "invalid_special_address")
-            self.assertFalse(item["public_routable"])
-            self.assertFalse(item["valid_for_port_probe"])
-            self.assertEqual(item["confidence"], 0.0)
-        classes = {item["address_class"] for item in output["results"]}
-        self.assertIn("benchmark", classes)
-        self.assertIn("ipv4_mapped_benchmark", classes)
-        self.assertEqual(output["summary"]["invalid_special_address_count"], 2)
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["results"], [])
+        self.assertEqual(output["summary"]["invalid_special_address_count"], 0)
         self.assertEqual(output["summary"]["public_routable_result_count"], 0)
         self.assertEqual(output["summary"]["valid_for_port_probe_count"], 0)
         parsed = parser_helper.parse(output)
         self.assertEqual(parsed["findings"], [])
 
-    def test_public_resolver_uses_udp_client_not_system_resolver(self) -> None:
-        original_system = resolver_client.resolve_system
-        original_udp = resolver_client.udp_dns_query
+    def test_active_path_does_not_call_resolver_client(self) -> None:
+        payload = load_input("input.active.json")
+        payload = copy.deepcopy(payload)
+        original = runner.run_active_sources
 
-        def fail_system(domain, record_types, timeout_seconds):
-            raise AssertionError("public_resolver must not call system resolver")
+        def fail_active(*args, **kwargs):
+            raise AssertionError("active DNS runner must not be called in P5.6")
 
-        def fake_udp(domain, record_type, resolver, timeout_seconds):
-            self.assertEqual(domain, "www.example.com")
-            self.assertEqual(record_type, "A")
-            self.assertEqual(resolver, "1.1.1.1")
-            return [{"record_type": "A", "value": "93.184.216.34", "ttl": 60}]
-
-        resolver_client.resolve_system = fail_system
-        resolver_client.udp_dns_query = fake_udp
+        runner.run_active_sources = fail_active
         try:
-            records, query_count = resolver_client.resolve_public(
-                "www.example.com",
-                ["A"],
-                ["1.1.1.1"],
-                1,
-            )
+            output = runner.run(payload)
         finally:
-            resolver_client.resolve_system = original_system
-            resolver_client.udp_dns_query = original_udp
+            runner.run_active_sources = original
 
-        self.assertEqual(query_count, 1)
-        self.assertEqual(records, [{"record_type": "A", "value": "93.184.216.34", "ttl": 60}])
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["safety"]["active_dns_queries"], 0)
 
 
 if __name__ == "__main__":

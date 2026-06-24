@@ -35,7 +35,7 @@ class ServiceDetectPlusRunnerTests(unittest.TestCase):
 
         statuses = {(item["source"], item["status"]) for item in output["source_status"]}
         self.assertIn(("upstream_port_result", "ok"), statuses)
-        self.assertIn(("external_fingerprint_intel", "skipped_missing_secret"), statuses)
+        self.assertIn(("external_fingerprint_intel", "skipped_p7_disabled"), statuses)
         sources = {source for item in output["results"] for source in item["sources"]}
         self.assertIn("upstream_port_result", sources)
 
@@ -86,17 +86,16 @@ class ServiceDetectPlusRunnerTests(unittest.TestCase):
         self.assertTrue(conflicts)
         self.assertIn(conflicts[0]["conflict_reason"], {"product_version_mismatch", "service_product_mismatch"})
 
-    def test_safe_mode_policy_denial(self) -> None:
+    def test_safe_mode_is_p7_disabled(self) -> None:
         payload = load_input("input.safe.json")
         payload = copy.deepcopy(payload)
-        payload["policy"]["allow_active_verify"] = False
 
         output = runner.run(payload)
 
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
         self.assertEqual(output["safety"]["active_service_probes"], 0)
 
-    def test_deep_mode_policy_and_approval_requirements(self) -> None:
+    def test_deep_mode_is_p7_disabled(self) -> None:
         payload = load_input("input.high-risk-deep.example.json")
         payload = copy.deepcopy(payload)
         payload["policy"]["allow_high_risk"] = False
@@ -106,8 +105,7 @@ class ServiceDetectPlusRunnerTests(unittest.TestCase):
         output = runner.run(payload)
 
         codes = [error["code"] for error in output["errors"]]
-        self.assertIn("PolicyDenied", codes)
-        self.assertIn("ApprovalRequired", codes)
+        self.assertIn("P7_SCOPE_DISABLED", codes)
 
     def test_external_fingerprint_rejects_arbitrary_command_config(self) -> None:
         payload = load_input("input.high-risk-deep.example.json")
@@ -127,9 +125,8 @@ class ServiceDetectPlusRunnerTests(unittest.TestCase):
         output = runner.run(payload)
 
         self.assertEqual(output["results"], [])
-        self.assertEqual(output["summary"]["status"], "skipped")
-        self.assertEqual(output["summary"]["reason"], "no_confirmed_open_ports")
-        self.assertEqual(output["source_status"][0]["status"], "skipped")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["source_status"][0]["status"], "skipped_p7_disabled")
 
     def test_banner_and_headers_are_redacted_and_truncated(self) -> None:
         record = {

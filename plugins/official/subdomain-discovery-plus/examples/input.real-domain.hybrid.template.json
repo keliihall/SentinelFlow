@@ -4,27 +4,28 @@
     "run_id": "run_real_domain_hybrid",
     "operator": "operator",
     "workspace": "default",
-    "authorization_scope": "YOUR_AUTHORIZATION_SCOPE"
+    "authorization_scope": "placeholder:p7-disabled"
   },
   "target": {
     "type": "domain",
-    "value": "YOUR_AUTHORIZED_DOMAIN.example",
-    "metadata": {}
+    "value": "example.test",
+    "metadata": {
+      "p5_6_status": "disabled-p7-placeholder"
+    }
   },
   "options": {
-    "mode": "hybrid",
+    "mode": "dry_run",
     "passive": {
-      "enabled": true,
-      "sources": ["crtsh", "local_cache", "passive_dns_cache"],
-      "fixture_file": "examples/fixture.passive.example.com.json",
-      "crtsh_enabled": true,
+      "enabled": false,
+      "sources": [],
+      "crtsh_enabled": false,
       "crtsh_timeout_seconds": 10
     },
     "active": {
-      "enabled": true,
-      "dry_run": false,
+      "enabled": false,
+      "dry_run": true,
       "wordlist_file": "examples/wordlist.small.txt",
-      "resolvers": ["1.1.1.1", "8.8.8.8"],
+      "resolvers": [],
       "record_types": ["A", "AAAA"],
       "timeout_seconds": 3,
       "concurrency": 5,
@@ -38,7 +39,7 @@
     }
   },
   "policy": {
-    "allow_active_verify": true,
+    "allow_active_verify": false,
     "allow_high_risk": false
   }
 }

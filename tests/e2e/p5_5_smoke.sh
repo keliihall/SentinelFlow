@@ -68,7 +68,8 @@ assert "任务状态与报告可信度分别展示" in console, "missing product
 
 status, simple_check = request("GET", "/console/simple-check.js", raw=True)
 assert status == 200 and "buildSimpleCheckTaskSpec" in simple_check, simple_check[:500]
-assert "fixture:local-only" in simple_check and "不能使用本地示例数据" in simple_check
+assert "fixture:local-only" in simple_check and "example.com" in simple_check and "example.test" in simple_check
+assert "P5_6_FORBIDDEN_MARKERS" in simple_check and "assertP56FixtureOnly" in simple_check
 
 status, session = request(
     "POST",

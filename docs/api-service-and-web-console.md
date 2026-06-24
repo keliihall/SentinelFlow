@@ -128,13 +128,13 @@ raw task configuration, audit logs, and system settings. Plugin names,
 `TaskSpec`, Policy internals, raw findings, evidence, and audit JSON are hidden
 from the default workflow.
 
-### Three-step authorized check
+### Three-step P5.6 fixture-only check
 
 An operator starts a check in three visible steps:
 
-1. Enter a real authorized domain and a plain-language authorization note.
-2. Choose 快速检查 or 标准检查. 深度检查 remains in the administrator path.
-3. Review the safety summary and confirm authorization.
+1. Enter `example.com` or `example.test` as the local synthetic fixture target.
+2. Choose 快速检查. 标准检查 and 深度检查 are P7 placeholders in P5.6.
+3. Review the safety summary and confirm the fixture-only run.
 
 The browser then automatically calls the existing API chain:
 
@@ -144,7 +144,7 @@ validate task
 → policy explain
 → run task
 → fetch task result
-→ generate asset-discovery report
+→ generate P5.6 fixture validation report
 → fetch report and audit-backed status
 ```
 
@@ -156,34 +156,29 @@ normalize output, evaluate Policy independently, or bypass Core.
 `web/simple-check.js` provides `buildSimpleCheckTaskSpec()` for the normal-user
 workflow.
 
-- Authorization scope is generated as `real:<domain-slug>`.
-- Allowed targets and domain patterns are generated from the entered domain.
-- 快速检查 uses passive-intelligence modes and keeps active and high-risk
-  capabilities disabled.
-- 标准检查 enables only bounded low-impact DNS, TCP connect, and safe service
-  identification. SYN probing, deep fingerprinting, exploitation, password
-  attempts, directory brute force, and high-risk capabilities remain disabled.
-- 深度检查 is rejected by the simple builder and must enter the advanced,
-  approval-aware path.
+- Authorization scope is always generated as `fixture:local-only`.
+- Allowed targets are limited to `example.com` or `example.test`.
+- 快速检查 creates one `subdomain-discovery-plus` step using a local fixture
+  file and `passive.subdomain.discovery`.
+- The generated task never includes `real:`, `tcp_connect`, `public_resolver`,
+  FOFA/Shodan/Censys/crt.sh live providers, `authorized_assessment`, or active
+  verification enabled by default.
+- 标准检查 and 深度检查 are rejected by the simple builder in P5.6.
 
-Neither the form nor the task builder has an `example.com` or
-`fixture:local-only` default.
+### P5.6 API scope protection
 
-### Real-target fixture protection
+Real-target submission is blocked twice:
 
-Fixture misuse is blocked twice:
-
-- Frontend task generation rejects `example.com`, fixture authorization scopes,
-  fixture sources, fixture files, passive fixture markers, and mock/fixture DNS
-  resolvers for real targets.
-- `parse_task_request()` applies the same real-target boundary to API
-  submissions after protocol validation. Direct API callers therefore cannot
-  bypass the browser check.
+- Frontend task generation accepts only `example.com` / `example.test` fixture
+  targets and asserts the serialized TaskSpec has no P7 active-discovery
+  markers.
+- `parse_task_request()` rejects `real:` authorization scopes after protocol
+  validation. Direct API callers therefore cannot bypass the browser check.
 
 The user-facing error is:
 
 ```text
-当前目标是真实域名，不能使用本地示例数据。请切换为快速检查或标准检查。
+P5.6 API/Web 入口不接受 real: 授权范围。请使用 fixture-only Quick Run。
 ```
 
 ### Result and report semantics

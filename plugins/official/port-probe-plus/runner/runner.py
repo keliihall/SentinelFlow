@@ -115,15 +115,15 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if len(ports) > max_ports:
         errors.append(standard_error("InputLimitExceeded", "port count exceeds active.max_ports", "$.options.active.max_ports", {"port_count": len(ports), "max_ports": max_ports}))
         ports = ports[:max_ports]
-    if active_requested and not bool(policy.get("allow_active_verify")):
-        errors.append(standard_error("PolicyDenied", "tcp_connect port verification requires policy.allow_active_verify=true", "$.policy.allow_active_verify", {"mode": mode, "activeEnabled": True}))
-    if active_options.get("probe_engine") not in {"tcp_connect", None}:
+    if active_requested:
+        errors.append(standard_error("P7_SCOPE_DISABLED", "TCP connect port probing is disabled in P5.6", "$.options.active.enabled", {"mode": mode, "activeEnabled": True}))
+    if active_options.get("probe_engine") not in {"tcp_connect", "disabled_p7_placeholder", None}:
         errors.append(standard_error("PolicyDenied", "only tcp_connect probe_engine is allowed", "$.options.active.probe_engine", {"probe_engine": active_options.get("probe_engine")}))
 
     if mode == "dry_run":
         return build_output(root_domain, mode, authorization_scope, [], source_status, errors, addresses, ports, active_requested, 0)
 
-    if active_requested and not addresses and mode != "fixture":
+    if active_requested and not errors and not addresses and mode != "fixture":
         source_status.append({
             "source": "tcp_connect",
             "status": "skipped",
@@ -149,10 +149,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
 
     if mode in {"fixture", "passive_intel", "hybrid"}:
         observations.extend(run_passive_sources(passive_options, addresses, ports, source_status))
-    if active_requested and not errors:
-        observations.extend(run_tcp_connect(addresses, ports, active_options, source_status))
-    elif active_requested:
-        source_status.append({"source": "tcp_connect", "status": "skipped_policy_denied", "message": "TCP connect verification was not executed.", "probe_count": 0})
+    if active_requested:
+        source_status.append({"source": "tcp_connect", "status": "skipped_p7_disabled", "message": "TCP connect verification was not executed in P5.6.", "probe_count": 0})
 
     results = merge_observations(observations, merge_options, include_closed=bool(output_options.get("include_closed")))
     if not bool(output_options.get("include_source_details")):
@@ -175,11 +173,9 @@ def run_passive_sources(options: dict[str, Any], addresses: list[dict[str, Any]]
         path = string_or(options.get("local_cache_file"), "examples/fixture.ports.example.com.json")
         observations.extend(load_file_source("local_cache", path, addresses, ports, source_status))
     if "fofa" in sources:
-        status = "skipped_missing_secret" if not os.environ.get("FOFA_API_KEY") else "skipped_not_implemented"
-        source_status.append({"source": "fofa", "status": status, "message": "FOFA enrichment requires configured secret/provider.", "query_count": 0, "probe_count": 0})
+        source_status.append({"source": "fofa", "status": "skipped_p7_disabled", "message": "FOFA live provider calls are disabled in P5.6.", "query_count": 0, "probe_count": 0})
     if "shodan" in sources:
-        status = "skipped_missing_secret" if not os.environ.get("SHODAN_API_KEY") else "skipped_not_implemented"
-        source_status.append({"source": "shodan", "status": status, "message": "Shodan enrichment requires configured secret/provider.", "query_count": 0, "probe_count": 0})
+        source_status.append({"source": "shodan", "status": "skipped_p7_disabled", "message": "Shodan live provider calls are disabled in P5.6.", "query_count": 0, "probe_count": 0})
     return observations
 
 

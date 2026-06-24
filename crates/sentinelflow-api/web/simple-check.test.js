@@ -30,50 +30,61 @@ test("Web 边界声明固定为 API-only 核心工作流", () => {
   ]);
 });
 
-test("快速检查为真实目标生成安全 TaskSpec", () => {
+test("Quick Run 只生成 P5.6 fixture-only TaskSpec", () => {
   const task = buildSimpleCheckTaskSpec(
-    {domain: "weikan.net.cn", mode: "quick", authorizationConfirmed: true},
+    {domain: "example.com", mode: "quick", authorizationConfirmed: true},
     {timestamp: "20260618090000", operator: "operator"}
   );
   const text = serialized(task);
-  assert.equal(task.spec.authorizationScope, "real:weikan-net-cn");
-  assert.equal(task.spec.policy.allowedTargets[0], "weikan.net.cn");
-  assert.deepEqual(task.spec.policy.targetPatterns, ["domain:weikan.net.cn", "domain:*.weikan.net.cn"]);
+  assert.equal(task.spec.authorizationScope, "fixture:local-only");
+  assert.equal(task.spec.policy.allowedTargets[0], "example.com");
+  assert.deepEqual(task.spec.policy.targetPatterns, ["domain:example.com", "domain:*.example.com"]);
+  assert.equal(task.spec.steps.length, 1);
+  assert.equal(task.spec.steps[0].toolRef, "subdomain-discovery-plus");
+  assert.equal(task.spec.steps[0].capability, "passive.subdomain.discovery");
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowActiveVerify, false);
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowHighRisk, false);
-  assert.doesNotMatch(text, /fixture:local-only/i);
-  assert.doesNotMatch(text, /example\.com/i);
-  assert.doesNotMatch(text, /fixture\.passive\.example\.com\.json/i);
-  assert.doesNotMatch(text, /"sources":\["fixture"\]/i);
-  assert.match(text, /"mode":"passive_intel"/);
+  assert.equal(task.extensions["sentinelflow.io/web-console"].p5_6_status, "fixture-only");
+  assert.match(text, /fixture\.passive\.example\.com\.json/i);
+  assert.match(text, /"sources":\["fixture"\]/i);
+  assert.match(text, /"mode":"fixture"/);
 });
 
-test("标准检查仅启用低影响主动能力", () => {
+test("Quick Run 不生成 P7 真实发现和主动探测字段", () => {
   const task = buildSimpleCheckTaskSpec(
-    {domain: "weikan.net.cn", mode: "standard", authorizationConfirmed: true},
+    {domain: "example.test", mode: "quick", authorizationConfirmed: true},
     {timestamp: "20260618090000"}
   );
   const text = serialized(task);
-  assert.equal(task.extensions["sentinelflow.io/web-console"].allowActiveVerify, true);
-  assert.equal(task.extensions["sentinelflow.io/web-console"].allowHighRisk, false);
-  assert.match(text, /"probe_engine":"tcp_connect"/);
-  assert.doesNotMatch(text, /syn_probe/i);
-  assert.doesNotMatch(text, /deep fingerprint/i);
-  assert.doesNotMatch(text, /deep_fingerprint/i);
+  assert.doesNotMatch(text, /real:/i);
+  assert.doesNotMatch(text, /tcp_connect/i);
+  assert.doesNotMatch(text, /public_resolver/i);
+  assert.doesNotMatch(text, /shodan/i);
+  assert.doesNotMatch(text, /fofa/i);
+  assert.doesNotMatch(text, /censys/i);
+  assert.doesNotMatch(text, /crtsh/i);
+  assert.doesNotMatch(text, /authorized_assessment/i);
+  assert.doesNotMatch(text, /"allow_active_verify":true/i);
+  assert.doesNotMatch(text, /"allowActiveVerify":true/i);
+  assert.doesNotMatch(text, /"active":\{[^}]*"enabled":true/i);
 });
 
 test("表单校验提供普通用户可读提示", () => {
   assert.equal(validateDomain("").valid, false);
   assert.match(validateDomain("").message, /请输入/);
-  assert.equal(validateDomain("https://weikan.net.cn/path").valid, false);
-  assert.match(validateDomain("https://weikan.net.cn/path").message, /不需要填写/);
+  assert.equal(validateDomain("https://example.com/path").valid, false);
+  assert.match(validateDomain("https://example.com/path").message, /不需要填写/);
+  assert.equal(validateDomain("customer.invalid").valid, false);
+  assert.match(validateDomain("customer.invalid").message, /P5\.6/);
+  assert.equal(validateDomain("example.com").valid, true);
+  assert.equal(validateDomain("example.test").valid, true);
   assert.throws(
-    () => buildSimpleCheckTaskSpec({domain: "weikan.net.cn", mode: "quick", authorizationConfirmed: false}),
+    () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "quick", authorizationConfirmed: false}),
     /确认/
   );
   assert.throws(
-    () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "quick", authorizationConfirmed: true}),
-    /示例域名/
+    () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "standard", authorizationConfirmed: true}),
+    /P5\.6/
   );
 });
 
@@ -93,7 +104,7 @@ test("特殊地址会被识别", () => {
   for (const address of ["198.18.0.1", "10.1.2.3", "172.16.5.1", "192.168.1.2", "127.0.0.1", "169.254.2.3"]) {
     assert.equal(isSpecialAddress(address), true, address);
   }
-  assert.equal(isSpecialAddress("8.8.8.8"), false);
+  assert.equal(isSpecialAddress("93.184.216.34"), false);
 });
 
 test("角色只看到与职责匹配的入口", () => {

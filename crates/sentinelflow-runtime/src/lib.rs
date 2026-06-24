@@ -707,13 +707,22 @@ impl Parser for SubdomainDiscoveryPlusParser {
             .ok_or_else(|| parser_field_error("$.raw.findings", "findings must be an array"))?;
         let mut findings = Vec::with_capacity(raw_findings.len());
         for (index, raw_finding) in raw_findings.iter().enumerate() {
-            if raw_finding.get("type").and_then(Value::as_str) == Some("subdomain_candidate") {
+            let finding_type = raw_finding.get("type").and_then(Value::as_str);
+            let confirmed = raw_finding
+                .get("confirmed")
+                .and_then(Value::as_bool)
+                .unwrap_or(finding_type == Some("subdomain_finding"));
+            let status = raw_finding
+                .get("status")
+                .and_then(Value::as_str)
+                .unwrap_or("confirmed");
+            if finding_type == Some("subdomain_candidate") || !confirmed || status != "confirmed" {
                 continue;
             }
-            if raw_finding.get("type").and_then(Value::as_str) != Some("subdomain_finding") {
+            if !matches!(finding_type, Some("subdomain_result" | "subdomain_finding")) {
                 return Err(parser_field_error(
                     format!("$.raw.findings[{index}].type"),
-                    "finding type must be subdomain_finding",
+                    "finding type must be confirmed subdomain_result",
                 ));
             }
             let domain = required_string(raw_finding, "domain")?;
@@ -750,17 +759,18 @@ impl Parser for SubdomainDiscoveryPlusParser {
                 .get("source_details")
                 .cloned()
                 .unwrap_or_else(|| serde_json::json!([]));
-            let confirmed = raw_finding
-                .get("confirmed")
-                .and_then(Value::as_bool)
-                .unwrap_or(true);
-            let status = raw_finding
+            let status_value = raw_finding
                 .get("status")
                 .cloned()
                 .unwrap_or_else(|| Value::String("confirmed".to_owned()));
             let synthetic_fixture = raw_finding
-                .get("synthetic_fixture")
+                .get("synthetic")
                 .and_then(Value::as_bool)
+                .or_else(|| {
+                    raw_finding
+                        .get("synthetic_fixture")
+                        .and_then(Value::as_bool)
+                })
                 .unwrap_or(false);
             let real_scan = raw_finding
                 .get("real_scan")
@@ -779,11 +789,11 @@ impl Parser for SubdomainDiscoveryPlusParser {
                 .and_then(|evidence| evidence.get("summary"))
                 .and_then(Value::as_str)
                 .map_or_else(
-                    || format!("Discovered subdomain {subdomain} for {domain}."),
+                    || format!("Confirmed subdomain {subdomain} for {domain}."),
                     ToOwned::to_owned,
                 );
             findings.push(serde_json::json!({
-                "title": "Discovered subdomain",
+                "title": "Confirmed subdomain",
                 "severity": FindingSeverity::Info,
                 "summary": summary,
                 "evidence": [{
@@ -798,7 +808,8 @@ impl Parser for SubdomainDiscoveryPlusParser {
                         "x-sentinelflow-subdomain.sources": sources,
                         "x-sentinelflow-subdomain.resolved": resolved,
                         "x-sentinelflow-subdomain.confirmed": confirmed,
-                        "x-sentinelflow-subdomain.status": status,
+                        "x-sentinelflow-subdomain.status": status_value,
+                        "x-sentinelflow-subdomain.public_routable": raw_finding.get("public_routable").cloned().unwrap_or(Value::Bool(false)),
                         "x-sentinelflow-subdomain.recordType": record_type,
                         "x-sentinelflow-subdomain.addresses": addresses,
                         "x-sentinelflow-subdomain.records": records,
@@ -2550,7 +2561,10 @@ mod parser_tests {
             "domain": "example.com",
             "mode": "hybrid",
             "findings": [{
-                "type": "subdomain_finding",
+                "type": "subdomain_result",
+                "status": "confirmed",
+                "confirmed": true,
+                "public_routable": true,
                 "domain": "example.com",
                 "subdomain": "www.example.com",
                 "source": "merged",
@@ -2565,6 +2579,19 @@ mod parser_tests {
                     "items": []
                 },
                 "raw": {"retained": true}
+            }],
+            "candidates": [{
+                "type": "subdomain_candidate",
+                "status": "candidate_unresolved",
+                "confirmed": false,
+                "domain": "example.com",
+                "subdomain": "admin.example.com"
+            }],
+            "invalid_observations": [{
+                "type": "invalid_observation",
+                "status": "invalid_special_address",
+                "domain": "example.com",
+                "subdomain": "test.example.com"
             }],
             "errors": [{
                 "code": "PolicyDenied",
@@ -2597,6 +2624,7 @@ mod parser_tests {
             evidence["x-sentinelflow-subdomain.subdomain"],
             "www.example.com"
         );
+        assert_eq!(evidence["x-sentinelflow-subdomain.public_routable"], true);
         assert_eq!(output.spec.errors[0].code, "PolicyDenied");
     }
 

@@ -162,15 +162,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     active_enabled = bool(active_options.get("enabled"))
     active_requested = mode == "active" or (mode == "hybrid" and active_enabled)
     high_risk_requested = detection_depth in {"deep", "external_fingerprint"}
-    if active_requested and not bool(policy.get("allow_active_verify")):
-        errors.append(standard_error("PolicyDenied", "active service detection requires policy.allow_active_verify=true", "$.policy.allow_active_verify", {"mode": mode, "activeEnabled": active_enabled}))
-    if active_requested and high_risk_requested:
-        if not bool(policy.get("allow_high_risk")):
-            errors.append(standard_error("PolicyDenied", "deep or external fingerprint detection requires policy.allow_high_risk=true", "$.policy.allow_high_risk", {"detection_depth": detection_depth}))
-        if not bool(options.get("risk_acknowledged")):
-            errors.append(standard_error("PolicyDenied", "deep or external fingerprint detection requires options.risk_acknowledged=true", "$.options.risk_acknowledged", {"detection_depth": detection_depth}))
-        if options.get("execution_profile") not in {"authorized_assessment", "lab"}:
-            errors.append(standard_error("ApprovalRequired", "high-risk detection requires authorized_assessment or lab execution_profile", "$.options.execution_profile", {"detection_depth": detection_depth}))
+    if active_requested:
+        errors.append(standard_error("P7_SCOPE_DISABLED", "active service detection is disabled in P5.6", "$.options.active.enabled", {"mode": mode, "activeEnabled": active_enabled}))
     if not external_fingerprint.validate_external_tool_config(active_options.get("external_fingerprint")):
         errors.append(standard_error("InputRejected", "external_fingerprint accepts only allowlisted tool/profile configuration", "$.options.active.external_fingerprint", {}))
 
@@ -179,7 +172,7 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if len(services) > max_services:
         errors.append(standard_error("InputLimitExceeded", "service count exceeds active.max_services", "$.inputs.services", {"service_count": len(services), "max_services": max_services}))
 
-    if active_requested and upstream_driven and not services:
+    if active_requested and not errors and upstream_driven and not services:
         source_status.append({
             "source": "active_service",
             "status": "skipped",
@@ -231,10 +224,8 @@ def run(payload: dict[str, Any]) -> dict[str, Any]:
     if mode in {"fixture", "passive_intel", "hybrid"}:
         observations.extend(run_passive_sources(payload, services, passive_options, mode, source_status, output_options))
 
-    if active_requested and not errors:
-        observations.extend(run_active_sources(services, active_options, detection_depth, source_status, output_options))
-    elif active_requested:
-        source_status.append({"source": "active_service", "status": "skipped_policy_denied", "message": "Active service detection was not executed.", "query_count": 0, "probe_count": 0})
+    if active_requested:
+        source_status.append({"source": "active_service", "status": "skipped_p7_disabled", "message": "Active service detection was not executed in P5.6.", "query_count": 0, "probe_count": 0})
 
     results = merge_observations(
         observations,
@@ -321,10 +312,13 @@ def run_passive_sources(
     if "upstream_dns_result" in sources:
         source_status.append({"source": "upstream_dns_result", "status": "ok", "message": "Upstream DNS findings are used as auxiliary host evidence only.", "query_count": 0, "probe_count": 0})
     if "external_fingerprint_intel" in sources:
-        records, status = external_fingerprint.query(services, options)
-        observations.extend(normalize_services(records, "external_fingerprint_intel", services, output_options))
-        status.setdefault("probe_count", 0)
-        source_status.append(status)
+        source_status.append({
+            "source": "external_fingerprint_intel",
+            "status": "skipped_p7_disabled",
+            "message": "Live external fingerprint intelligence provider calls are disabled in P5.6.",
+            "query_count": 0,
+            "probe_count": 0,
+        })
     return observations
 
 

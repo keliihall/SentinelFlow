@@ -7,134 +7,51 @@
     "source",
     "domain",
     "mode",
+    "run_context",
     "findings",
+    "candidates",
+    "invalid_observations",
+    "source_status",
     "summary",
     "errors",
     "safety"
   ],
   "properties": {
     "source": {"const": "subdomain-discovery-plus"},
-    "domain": {"type": "string", "minLength": 3, "maxLength": 253},
-    "mode": {
-      "type": "string",
-      "enum": ["fixture", "dry_run", "passive_intel", "active_dictionary", "hybrid"]
-    },
+    "domain": {"$ref": "#/definitions/Domain"},
+    "mode": {"$ref": "#/definitions/Mode"},
     "run_context": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": ["mode", "input_target", "authorization_scope", "synthetic_fixture", "real_scan", "planned_sources"],
       "properties": {
-        "mode": {"type": "string"},
-        "input_target": {"type": "string"},
-        "authorization_scope": {"type": "string"},
+        "mode": {"$ref": "#/definitions/Mode"},
+        "input_target": {"$ref": "#/definitions/Domain"},
+        "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256},
         "synthetic_fixture": {"type": "boolean"},
         "real_scan": {"type": "boolean"},
-        "planned_sources": {"type": "array", "items": {"type": "string"}}
+        "planned_sources": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"type": "string"}}
       }
     },
     "findings": {
       "type": "array",
       "maxItems": 10000,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "domain",
-          "subdomain",
-          "source",
-          "sources",
-          "resolved",
-          "confirmed",
-          "status",
-          "record_type",
-          "addresses",
-          "records",
-          "confidence",
-          "evidence",
-          "raw"
-        ],
-        "properties": {
-          "type": {"enum": ["subdomain_finding", "subdomain_candidate"]},
-          "domain": {"type": "string", "minLength": 3, "maxLength": 253},
-          "subdomain": {"type": "string", "minLength": 3, "maxLength": 253},
-          "source": {
-            "type": "string",
-            "enum": [
-              "passive_fixture",
-              "passive_crtsh",
-              "passive_local_cache",
-              "passive_dns_cache",
-              "passive_fofa",
-              "passive_shodan",
-              "active_dictionary",
-              "merged"
-            ]
-          },
-          "sources": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 3,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "enum": [
-                "passive_fixture",
-                "passive_crtsh",
-                "passive_local_cache",
-                "passive_dns_cache",
-                "passive_fofa",
-                "passive_shodan",
-                "active_dictionary"
-              ]
-            }
-          },
-          "resolved": {"type": "boolean"},
-          "confirmed": {"type": "boolean"},
-          "status": {"type": "string", "enum": ["confirmed", "candidate", "invalid_special_address"]},
-          "record_type": {"type": "string", "enum": ["A", "AAAA", "unknown"]},
-          "addresses": {
-            "type": "array",
-            "maxItems": 64,
-            "uniqueItems": true,
-            "items": {"type": "string", "minLength": 1, "maxLength": 64}
-          },
-          "records": {
-            "type": "array",
-            "maxItems": 64,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["record_type", "value"],
-              "properties": {
-                "record_type": {"type": "string", "enum": ["A", "AAAA"]},
-                "value": {"type": "string", "minLength": 1, "maxLength": 64}
-              }
-            }
-          },
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "evidence": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["summary", "items"],
-            "properties": {
-              "summary": {"type": "string", "minLength": 1, "maxLength": 512},
-              "items": {
-                "type": "array",
-                "maxItems": 32,
-                "items": {"type": "object", "additionalProperties": true}
-              }
-            }
-          },
-          "raw": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "source_details": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
-          "synthetic_fixture": {"type": "boolean"},
-          "real_scan": {"type": "boolean"}
-        }
-      }
+      "items": {"$ref": "#/definitions/ConfirmedSubdomain"}
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {"$ref": "#/definitions/CandidateSubdomain"}
+    },
+    "invalid_observations": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {"$ref": "#/definitions/InvalidObservation"}
+    },
+    "source_status": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {"$ref": "#/definitions/SourceStatus"}
     },
     "summary": {
       "type": "object",
@@ -142,35 +59,37 @@
       "required": [
         "domain",
         "mode",
+        "confirmed_count",
         "candidate_count",
+        "invalid_count",
+        "source_count",
+        "generated_candidate_count",
         "finding_count",
         "active_queries",
         "wildcard_detected",
+        "wildcard_filtered_count",
         "errors"
       ],
       "properties": {
-        "domain": {"type": "string", "minLength": 3, "maxLength": 253},
-        "mode": {
-          "type": "string",
-          "enum": ["fixture", "dry_run", "passive_intel", "active_dictionary", "hybrid"]
-        },
-        "target": {"type": "string", "minLength": 3, "maxLength": 253},
+        "domain": {"$ref": "#/definitions/Domain"},
+        "mode": {"$ref": "#/definitions/Mode"},
+        "target": {"$ref": "#/definitions/Domain"},
         "authorization_scope": {"type": "string", "minLength": 3, "maxLength": 256},
         "synthetic_fixture": {"type": "boolean"},
         "real_scan": {"type": "boolean"},
         "planned_sources": {"type": "array", "items": {"type": "string"}},
         "confirmed_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "invalid_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "source_count": {"type": "integer", "minimum": 0, "maximum": 32},
         "candidate_observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
         "invalid_observation_count": {"type": "integer", "minimum": 0, "maximum": 10000},
-        "candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "generated_candidate_count": {"type": "integer", "minimum": 0, "maximum": 10000},
         "finding_count": {"type": "integer", "minimum": 0, "maximum": 10000},
         "active_queries": {"type": "integer", "minimum": 0, "maximum": 100000},
         "wildcard_detected": {"type": "boolean"},
-        "errors": {
-          "type": "array",
-          "maxItems": 50,
-          "items": {"type": "string", "minLength": 1, "maxLength": 512}
-        }
+        "wildcard_filtered_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "errors": {"type": "array", "maxItems": 50, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
       }
     },
     "errors": {
@@ -210,6 +129,117 @@
         "brute_force_attempts": {"const": 0},
         "port_scan_attempts": {"const": 0},
         "exploit_attempts": {"const": 0}
+      }
+    }
+  },
+  "definitions": {
+    "Domain": {"type": "string", "minLength": 3, "maxLength": 253},
+    "Mode": {"type": "string", "enum": ["fixture", "dry_run", "passive_intel", "active_dictionary", "hybrid"]},
+    "Record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "value", "address_class", "public_routable"],
+      "properties": {
+        "record_type": {"type": "string", "enum": ["A", "AAAA", "CNAME"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 253},
+        "address_class": {"type": "string", "minLength": 1, "maxLength": 64},
+        "public_routable": {"type": "boolean"}
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 512},
+        "items": {"type": "array", "maxItems": 32, "items": {"type": "object", "additionalProperties": true}}
+      }
+    },
+    "SourceDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "source_type", "resolved", "records", "confidence"],
+      "properties": {
+        "source": {"type": "string"},
+        "source_type": {"type": "string", "enum": ["fixture", "passive_intel", "active_verify"]},
+        "resolved": {"type": "boolean"},
+        "records": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "ConfirmedSubdomain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "status", "domain", "subdomain", "source", "sources", "source_details",
+        "resolved", "confirmed", "public_routable", "record_type", "addresses", "records",
+        "confidence", "synthetic", "synthetic_fixture", "real_scan", "evidence", "raw"
+      ],
+      "properties": {
+        "type": {"const": "subdomain_result"},
+        "status": {"const": "confirmed"},
+        "domain": {"$ref": "#/definitions/Domain"},
+        "subdomain": {"$ref": "#/definitions/Domain"},
+        "source": {"type": "string"},
+        "sources": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string"}},
+        "source_details": {"type": "array", "items": {"$ref": "#/definitions/SourceDetail"}},
+        "resolved": {"type": "boolean"},
+        "confirmed": {"const": true},
+        "public_routable": {"type": "boolean"},
+        "record_type": {"type": "string", "enum": ["A", "AAAA", "CNAME", "unknown"]},
+        "addresses": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string"}},
+        "records": {"type": "array", "maxItems": 64, "items": {"$ref": "#/definitions/Record"}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "synthetic": {"type": "boolean"},
+        "synthetic_fixture": {"type": "boolean"},
+        "real_scan": {"type": "boolean"},
+        "evidence": {"$ref": "#/definitions/Evidence"},
+        "raw": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "CandidateSubdomain": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "status", "domain", "subdomain", "sources", "resolved", "confirmed", "confidence", "evidence"],
+      "properties": {
+        "type": {"const": "subdomain_candidate"},
+        "status": {"type": "string", "enum": ["candidate_unresolved", "candidate_unconfirmed", "nxdomain", "timeout", "servfail", "query_error", "wildcard_filtered"]},
+        "domain": {"$ref": "#/definitions/Domain"},
+        "subdomain": {"$ref": "#/definitions/Domain"},
+        "sources": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "resolved": {"type": "boolean"},
+        "confirmed": {"const": false},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "evidence": {"$ref": "#/definitions/Evidence"}
+      }
+    },
+    "InvalidObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "status", "domain", "subdomain", "records", "confidence", "synthetic", "real_scan", "evidence"],
+      "properties": {
+        "type": {"const": "invalid_observation"},
+        "status": {"enum": ["invalid_special_address", "wildcard_filtered", "invalid_domain"]},
+        "domain": {"$ref": "#/definitions/Domain"},
+        "subdomain": {"$ref": "#/definitions/Domain"},
+        "records": {"type": "array", "items": {"$ref": "#/definitions/Record"}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "synthetic": {"type": "boolean"},
+        "real_scan": {"type": "boolean"},
+        "evidence": {"$ref": "#/definitions/Evidence"}
+      }
+    },
+    "SourceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "source", "enabled", "status", "result_count", "error"],
+      "properties": {
+        "type": {"const": "source_status"},
+        "source": {"type": "string", "minLength": 1, "maxLength": 64},
+        "enabled": {"type": "boolean"},
+        "status": {"type": "string", "enum": ["ok", "empty", "dry_run", "error", "skipped_disabled", "skipped_missing_secret", "skipped_not_configured", "skipped_not_implemented"]},
+        "result_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "error": {"type": ["string", "null"], "maxLength": 512}
       }
     }
   }

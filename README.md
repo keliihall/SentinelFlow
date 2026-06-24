@@ -168,7 +168,8 @@ SentinelFlow defaults to deny:
 - Key actions and decisions write Audit Events.
 - Untrusted plugins are not loaded as in-process dynamic libraries.
 - Examples use local synthetic fixtures only.
-- Official plugins must stay within their declared passive or validation boundary.
+- Official plugins must declare `sentinelflow.io/p5_6_status` as either
+  `fixture-only` or `disabled-p7-placeholder`.
 
 Do not put real targets, real credentials, production secrets, or offensive
 payloads in plugins, fixtures, docs, or tests.
@@ -188,19 +189,23 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 
 ## Official Plugins
 
-- `plugins/official/subdomain-discovery`: passive subdomain discovery from public
-  data providers. The checked-in example uses `example.com` and embedded fixture
-  data for deterministic local validation.
-- `plugins/official/subdomain-discovery-plus`: authorized subdomain asset
-  discovery with passive fixture input and optional bounded active DNS dictionary
-  verification. The Web Console Quick Run template keeps active verification off
-  by default.
-- `plugins/official/dns-resolve-plus`: DNS resolution and passive DNS
-  intelligence with fixture/cache defaults and policy-gated active resolver
-  verification.
-- `plugins/official/service-detect-plus`: service identification from upstream
-  port/DNS context, fixtures, and passive cache with policy-gated active or
-  high-risk detection frameworks.
+P5.6 official plugins are explicitly scoped as either `fixture-only` or
+`disabled-p7-placeholder`. They are not default real-target discovery, active
+DNS verification, port probing, service probing, scanner, or external
+intelligence provider entry points.
+
+- `plugins/official/subdomain-discovery-plus`: fixture-only Quick Run support
+  for `example.com` / `example.test`; active DNS dictionary verification and
+  live public intelligence are disabled P7 placeholders.
+- Import/report plugins such as `nessus-import-plus`, `openvas-import-plus`,
+  `nuclei-adapter-plus`, `zap-baseline-plus`, `cloud-asset-import-plus`,
+  `cmdb-sync-plus`, and `markdown-report-plus`: fixture/import/report-only
+  processing of local or already-normalized data.
+- Discovery/probing/intelligence placeholders such as `subdomain-discovery`,
+  `dns-resolve-plus`, `port-probe-plus`, `service-detect-plus`,
+  `http-probe-plus`, `tls-certificate-check-plus`, `crtsh-subdomain-plus`,
+  `fofa-import-plus`, `shodan-import-plus`, and `censys-import-plus`: manifest
+  compatibility only in P5.6; real provider calls and active probes are P7 work.
 
 ## Documentation
 

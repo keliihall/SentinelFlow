@@ -19,7 +19,10 @@ class ParserTests(unittest.TestCase):
             "mode": "hybrid",
             "findings": [
                 {
-                    "type": "subdomain_finding",
+                    "type": "subdomain_result",
+                    "status": "confirmed",
+                    "confirmed": True,
+                    "public_routable": True,
                     "domain": "example.com",
                     "subdomain": "www.example.com",
                     "source": "merged",
@@ -63,13 +66,40 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(envelope["errors"], [])
         self.assertEqual(len(envelope["findings"]), 1)
         finding = envelope["findings"][0]
-        self.assertEqual(finding["title"], "Discovered subdomain")
+        self.assertEqual(finding["title"], "Confirmed subdomain")
         evidence = finding["evidence"][0]["data"]
         self.assertEqual(evidence["findingType"], "asset.subdomain")
         self.assertEqual(
             evidence["x-sentinelflow-subdomain.subdomain"], "www.example.com"
         )
         self.assertTrue(evidence["x-sentinelflow-subdomain.resolved"])
+        self.assertTrue(evidence["x-sentinelflow-subdomain.public_routable"])
+
+    def test_parser_never_turns_candidates_or_invalid_items_into_findings(self) -> None:
+        envelope = parser.parse(
+            {
+                "findings": [],
+                "candidates": [
+                    {
+                        "type": "subdomain_candidate",
+                        "status": "candidate_unresolved",
+                        "subdomain": "admin.example.test",
+                    }
+                ],
+                "invalid_observations": [
+                    {
+                        "type": "invalid_observation",
+                        "status": "invalid_special_address",
+                        "subdomain": "test.example.test",
+                    }
+                ],
+                "errors": [],
+            }
+        )
+
+        self.assertEqual(envelope["findings"], [])
+        self.assertEqual(len(envelope["values"]["candidates"]), 1)
+        self.assertEqual(len(envelope["values"]["invalid_observations"]), 1)
 
     def test_parser_preserves_standard_errors(self) -> None:
         envelope = parser.parse(

@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-import socket
 import sys
-import threading
 import unittest
 from pathlib import Path
 
@@ -26,48 +24,37 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(output["results"][0]["port"], 443)
         self.assertEqual(output["results"][0]["source_agreement"], "passive_only")
 
-    def test_active_policy_denial_skips_tcp_connect(self) -> None:
+    def test_active_tcp_connect_is_p7_disabled(self) -> None:
         payload = load_input("input.fixture.json")
         payload["options"]["mode"] = "active_tcp_connect"
         payload["options"]["active"]["enabled"] = True
-        payload["policy"]["allow_active_verify"] = False
         output = runner.run(payload)
         self.assertEqual(output["results"], [])
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["source_status"][0]["status"], "skipped_p7_disabled")
 
-    def test_tcp_connect_detects_local_open_port(self) -> None:
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(("127.0.0.1", 0))
-        server.listen(1)
-        port = server.getsockname()[1]
-        stop = threading.Event()
-
-        def accept_once() -> None:
-            try:
-                conn, _ = server.accept()
-                conn.close()
-            finally:
-                stop.set()
-                server.close()
-
-        thread = threading.Thread(target=accept_once, daemon=True)
-        thread.start()
-
+    def test_tcp_connect_runner_is_not_called_in_p5_6(self) -> None:
         payload = load_input("input.fixture.json")
         payload["options"]["mode"] = "active_tcp_connect"
         payload["options"]["active"]["enabled"] = True
-        payload["options"]["active"]["ports"] = [port]
-        payload["options"]["active"]["execution_profile"] = "lab"
-        payload["inputs"]["addresses"] = ["127.0.0.1"]
+        payload["options"]["active"]["ports"] = [443]
         payload["policy"]["allow_active_verify"] = True
 
-        output = runner.run(payload)
-        stop.wait(2)
-        self.assertEqual(output["errors"], [])
-        self.assertEqual(output["results"][0]["port"], port)
-        self.assertTrue(output["results"][0]["active_verified"])
+        original = runner.run_tcp_connect
 
-    def test_no_public_ip_skips_port_probe(self) -> None:
+        def fail_connect(*args, **kwargs):
+            raise AssertionError("TCP connect must not run in P5.6")
+
+        runner.run_tcp_connect = fail_connect
+        try:
+            output = runner.run(payload)
+        finally:
+            runner.run_tcp_connect = original
+
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["safety"]["tcp_connect_probes"], 0)
+
+    def test_no_public_ip_active_request_is_still_p7_disabled(self) -> None:
         payload = load_input("input.fixture.json")
         payload["options"]["mode"] = "active_tcp_connect"
         payload["options"]["active"]["enabled"] = True
@@ -77,9 +64,8 @@ class RunnerTests(unittest.TestCase):
         output = runner.run(payload)
 
         self.assertEqual(output["results"], [])
-        self.assertEqual(output["summary"]["status"], "skipped")
-        self.assertEqual(output["summary"]["reason"], "no_public_routable_targets")
-        self.assertEqual(output["source_status"][0]["status"], "skipped")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["source_status"][0]["status"], "skipped_p7_disabled")
 
 
 if __name__ == "__main__":

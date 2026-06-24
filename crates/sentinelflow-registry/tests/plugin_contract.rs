@@ -228,6 +228,43 @@ fn official_markdown_report_plus_plugin_is_valid() {
 }
 
 #[test]
+fn official_plugins_declare_p5_6_fixture_or_disabled_status() {
+    let expected = [
+        ("censys-import-plus", "disabled-p7-placeholder"),
+        ("cloud-asset-import-plus", "fixture-only"),
+        ("cmdb-sync-plus", "fixture-only"),
+        ("crtsh-subdomain-plus", "disabled-p7-placeholder"),
+        ("dns-resolve-plus", "disabled-p7-placeholder"),
+        ("fofa-import-plus", "disabled-p7-placeholder"),
+        ("http-probe-plus", "disabled-p7-placeholder"),
+        ("ip-enrichment-plus", "disabled-p7-placeholder"),
+        ("markdown-report-plus", "fixture-only"),
+        ("nessus-import-plus", "fixture-only"),
+        ("nuclei-adapter-plus", "fixture-only"),
+        ("openvas-import-plus", "fixture-only"),
+        ("port-probe-plus", "disabled-p7-placeholder"),
+        ("service-detect-plus", "disabled-p7-placeholder"),
+        ("shodan-import-plus", "disabled-p7-placeholder"),
+        ("subdomain-discovery", "disabled-p7-placeholder"),
+        ("subdomain-discovery-plus", "fixture-only"),
+        ("tls-certificate-check-plus", "disabled-p7-placeholder"),
+        ("web-fingerprint-plus", "disabled-p7-placeholder"),
+        ("zap-baseline-plus", "fixture-only"),
+    ];
+
+    for (name, status) in expected {
+        let report = validate_plugin(official(name)).expect("validation must run");
+        assert!(report.is_valid(), "{name}: {:?}", report.checks);
+        let manifest = report.manifest.expect("manifest");
+        let actual = manifest
+            .extensions
+            .get("sentinelflow.io/p5_6_status")
+            .and_then(|value| value.as_str());
+        assert_eq!(actual, Some(status), "{name}");
+    }
+}
+
+#[test]
 fn examples_root_is_supported_by_discovery() {
     let root = workspace_root().join("plugins/examples");
     let discovery = discover_plugins([root]).expect("discovery must succeed");

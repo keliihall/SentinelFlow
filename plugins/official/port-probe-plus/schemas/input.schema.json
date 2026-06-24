@@ -80,7 +80,7 @@
           "required": ["enabled", "probe_engine", "port_profile", "ports", "timeout_seconds", "concurrency", "rate_limit_per_second", "max_targets", "max_ports"],
           "properties": {
             "enabled": {"type": "boolean"},
-            "probe_engine": {"type": "string", "enum": ["tcp_connect"]},
+            "probe_engine": {"type": "string", "enum": ["disabled_p7_placeholder", "tcp_connect"]},
             "port_profile": {"type": "string", "enum": ["web", "minimal", "custom"]},
             "ports": {"type": "array", "maxItems": 100, "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 65535}},
             "timeout_seconds": {"type": "number", "minimum": 0.2, "maximum": 10},

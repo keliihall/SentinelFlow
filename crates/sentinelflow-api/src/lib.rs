@@ -35,6 +35,7 @@ use tower_http::trace::TraceLayer;
 
 const CONSOLE_HTML: &str = include_str!("../web/console.html");
 const SIMPLE_CHECK_JS: &str = include_str!("../web/simple-check.js");
+const PLUGIN_PLATFORM_JS: &str = include_str!("../web/plugin-platform.js");
 const DEFAULT_PAGE_LIMIT: usize = 100;
 const MAX_PAGE_LIMIT: usize = 500;
 const DEFAULT_LOG_LIMIT: usize = 200;
@@ -180,6 +181,10 @@ pub fn router(config: ApiConfig, identity_provider: Arc<dyn IdentityProvider>) -
         .route("/", get(console))
         .route("/console", get(console))
         .route("/console/simple-check.js", get(simple_check_javascript))
+        .route(
+            "/console/plugin-platform.js",
+            get(plugin_platform_javascript),
+        )
         .route("/health", get(health))
         .route("/openapi.json", get(openapi))
         .route("/api/session/login", post(login))
@@ -233,6 +238,13 @@ async fn simple_check_javascript() -> ([(header::HeaderName, &'static str); 1], 
     (
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         SIMPLE_CHECK_JS,
+    )
+}
+
+async fn plugin_platform_javascript() -> ([(header::HeaderName, &'static str); 1], &'static str) {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        PLUGIN_PLATFORM_JS,
     )
 }
 
@@ -1330,34 +1342,20 @@ fn parse_task_request(
     };
     task.validate(&ValidationContext::new(schema_root))
         .map_err(|errors| ApiError::bad_request(errors.to_string()))?;
-    validate_real_target_sources(&task)?;
+    validate_p5_6_scope(&task)?;
     Ok(task)
 }
 
-fn validate_real_target_sources(task: &TaskSpec) -> Result<(), ApiError> {
-    const FORBIDDEN: [&str; 9] = [
-        "fixture:local-only",
-        "example.com",
-        "fixture.passive.example.com.json",
-        "fixture.ports.example.com.json",
-        "fixture.web.example.com.json",
-        "passive_fixture",
-        "fixture_resolver",
-        "mock_resolver",
-        "\"sources\":[\"fixture\"]",
-    ];
-    if !task.spec.authorization_scope.starts_with("real:") {
-        return Ok(());
-    }
-    let serialized = serde_json::to_string(task)
-        .map_err(|error| ApiError::system(format!("failed to inspect Task Spec: {error}")))?
-        .to_ascii_lowercase();
-    if let Some(marker) = FORBIDDEN
-        .iter()
-        .find(|marker| serialized.contains(**marker))
+fn validate_p5_6_scope(task: &TaskSpec) -> Result<(), ApiError> {
+    if task
+        .spec
+        .authorization_scope
+        .to_ascii_lowercase()
+        .starts_with("real:")
     {
         return Err(ApiError::bad_request(format!(
-            "real target cannot use local example or fixture data: {marker}"
+            "P5.6 API/Web submissions must use fixture/mock/import scopes; real target discovery is a P7 capability: {}",
+            task.spec.authorization_scope
         )));
     }
     Ok(())
@@ -2165,28 +2163,26 @@ spec:
         assert!(CONSOLE_HTML.contains("任务状态与报告可信度分别展示"));
         assert!(SIMPLE_CHECK_JS.contains("subdomain-discovery-plus"));
         assert!(SIMPLE_CHECK_JS.contains("buildSimpleCheckTaskSpec"));
-        assert!(SIMPLE_CHECK_JS.contains("不能使用本地示例数据"));
-        assert!(SIMPLE_CHECK_JS.contains("端口检查已跳过"));
+        assert!(SIMPLE_CHECK_JS.contains("fixture:local-only"));
+        assert!(SIMPLE_CHECK_JS.contains("P5.6 Quick Run"));
+        assert!(PLUGIN_PLATFORM_JS.contains("buildStandalonePluginTaskSpec"));
+        assert!(PLUGIN_PLATFORM_JS.contains("disabled-p7-placeholder"));
     }
 
     #[test]
-    fn real_targets_reject_fixture_sources_at_api_boundary() {
+    fn p5_6_api_rejects_real_target_scope() {
         let root = workspace_root();
-        let content = fs::read_to_string(
-            root.join("docs/examples/task.weikan-full-asset-discovery.authorized.yaml"),
-        )
-        .expect("authorized real-target example");
-        let task: TaskSpec = serde_yaml::from_str(&content).expect("valid real-target task");
-        validate_real_target_sources(&task).expect("real task without fixtures is accepted");
+        let fixture_content =
+            fs::read_to_string(root.join("tests/fixtures/subdomain-discovery-plus.task.yaml"))
+                .expect("fixture-only task");
+        let mut real_scoped_task: TaskSpec =
+            serde_yaml::from_str(&fixture_content).expect("fixture-only task parses");
+        real_scoped_task.spec.authorization_scope = "real:example-com".to_owned();
+        let error = validate_p5_6_scope(&real_scoped_task).expect_err("real target scope is P7");
+        assert!(error.message.contains("P5.6 API/Web submissions"));
 
-        let fixture_content = content.replace(
-            "sources: [crtsh, local_cache, passive_dns_cache]",
-            "sources: [fixture]",
-        );
         let fixture_task: TaskSpec =
-            serde_yaml::from_str(&fixture_content).expect("fixture-injected task parses");
-        let error = validate_real_target_sources(&fixture_task)
-            .expect_err("real targets must reject fixture sources");
-        assert!(error.message.contains("real target cannot use"));
+            serde_yaml::from_str(&fixture_content).expect("fixture-only task parses");
+        validate_p5_6_scope(&fixture_task).expect("fixture-only scope is accepted");
     }
 }

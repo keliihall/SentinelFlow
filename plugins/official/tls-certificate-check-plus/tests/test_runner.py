@@ -26,13 +26,28 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(statuses["www.example.com"], "valid")
         self.assertEqual(statuses["soon-expire.example.com"], "expires_soon")
 
-    def test_active_policy_denial_skips_handshake(self) -> None:
+    def test_active_tls_is_p7_disabled(self) -> None:
         payload = load_input("input.active-local.json")
-        payload["policy"]["allow_active_verify"] = False
         output = runner.run(payload)
         self.assertEqual(output["results"], [])
-        self.assertEqual(output["errors"][0]["code"], "PolicyDenied")
-        self.assertEqual(output["source_status"][0]["status"], "skipped_policy_denied")
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["source_status"][0]["status"], "skipped_p7_disabled")
+
+    def test_active_tls_runner_is_not_called_in_p5_6(self) -> None:
+        payload = load_input("input.active-local.json")
+        original = runner.run_active_tls
+
+        def fail_active(*args, **kwargs):
+            raise AssertionError("TLS handshake must not run in P5.6")
+
+        runner.run_active_tls = fail_active
+        try:
+            output = runner.run(payload)
+        finally:
+            runner.run_active_tls = original
+
+        self.assertEqual(output["errors"][0]["code"], "P7_SCOPE_DISABLED")
+        self.assertEqual(output["safety"]["active_tls_handshakes"], 0)
 
     def test_dry_run_has_no_results(self) -> None:
         payload = load_input("input.fixture.json")

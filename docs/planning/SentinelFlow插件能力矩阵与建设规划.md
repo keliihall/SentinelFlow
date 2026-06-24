@@ -1312,7 +1312,7 @@ spec:
     "run_id": "run_xxx",
     "operator": "admin",
     "workspace": "default",
-    "authorization_scope": "real:example"
+    "authorization_scope": "fixture:local-only"
   },
   "target": {
     "type": "domain",

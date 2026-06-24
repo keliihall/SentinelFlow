@@ -149,10 +149,10 @@
           "required": ["enabled", "resolver_mode", "resolvers", "authoritative_trace", "timeout_seconds", "concurrency", "rate_limit_per_second", "max_domains", "max_queries"],
           "properties": {
             "enabled": {"type": "boolean"},
-            "resolver_mode": {"type": "string", "enum": ["system_resolver", "public_resolver"]},
+            "resolver_mode": {"type": "string", "enum": ["disabled_p7_placeholder", "system_resolver", "public_resolver"]},
             "resolvers": {
               "type": "array",
-              "minItems": 1,
+              "minItems": 0,
               "maxItems": 5,
               "uniqueItems": true,
               "items": {

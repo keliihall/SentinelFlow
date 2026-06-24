@@ -10,17 +10,17 @@ spec:
   version: 0.1.0
   capabilities:
     - name: asset.subdomain.discovery
-      description: Discovers authorized subdomains through bounded passive sources and optional active DNS dictionary verification
+      description: P5.6 fixture-only subdomain discovery from local synthetic examples; real discovery is reserved for P7
       risk: low
       requiresApproval: false
     - name: passive.subdomain.discovery
-      description: Reads low-frequency passive subdomain sources, including local fixtures and optional Certificate Transparency data
+      description: Reads local fixture/cache subdomain observations; live public intelligence providers are disabled in P5.6
       risk: low
       requiresApproval: false
     - name: active.subdomain.dictionary
-      description: Performs bounded dictionary-based DNS A and AAAA verification when policy.allow_active_verify is true
-      risk: low
-      requiresApproval: false
+      description: Disabled P7 placeholder for bounded dictionary-based DNS verification; not executable in P5.6
+      risk: medium
+      requiresApproval: true
   runtime:
     adapter: command
     mode: process
@@ -36,22 +36,26 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
+  sentinelflow.io/p5_6_status: fixture-only
   sentinelflow.io/category: asset.subdomain
   sentinelflow.io/riskLevel: low
-  sentinelflow.io/safetyProfile: authorized-passive-and-bounded-dns-only
-  sentinelflow.io/networkBoundary: passive-http-optional-active-dns-only
+  sentinelflow.io/safetyProfile: p5-6-fixture-only-active-dns-disabled
+  sentinelflow.io/networkBoundary: local-fixture-no-public-resolver-no-provider-calls
   sentinelflow.io/capabilities:
     - name: passive subdomain discovery
       impact: read_only
+      p5_6_status: fixture-only
     - name: active dictionary DNS enumeration
       impact: low_impact
+      p5_6_status: disabled-p7-placeholder
       requiresPolicyFlag: allow_active_verify
   sentinelflow.io/controls:
     requiresAuthorization: true
     requiresApproval: false
     supportsRateLimit: true
     supportsConcurrencyLimit: true
-    maxConcurrency: 5
+    maxConcurrency: 1
+    defaultMode: fixture
   sentinelflow.io/audit:
     recordInput: true
     recordOutputSummary: true

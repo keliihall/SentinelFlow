@@ -16,7 +16,12 @@ from typing import Any
 def parse(raw: dict[str, Any]) -> dict[str, Any]:
     findings = []
     for item in raw.get("findings", []):
-        if not isinstance(item, dict) or item.get("type") != "subdomain_finding":
+        if (
+            not isinstance(item, dict)
+            or item.get("type") not in {"subdomain_result", "subdomain_finding"}
+            or item.get("status", "confirmed") != "confirmed"
+            or item.get("confirmed", True) is not True
+        ):
             continue
         domain = str(item.get("domain", ""))
         subdomain = str(item.get("subdomain", ""))
@@ -28,16 +33,19 @@ def parse(raw: dict[str, Any]) -> dict[str, Any]:
         source_details = item.get("source_details", [])
         confirmed = bool(item.get("confirmed", True))
         status = str(item.get("status", "confirmed"))
-        synthetic_fixture = bool(item.get("synthetic_fixture", False))
+        public_routable = bool(item.get("public_routable", False))
+        synthetic_fixture = bool(
+            item.get("synthetic", item.get("synthetic_fixture", False))
+        )
         real_scan = bool(item.get("real_scan", not synthetic_fixture))
         summary = (
             item.get("evidence", {}).get("summary")
             if isinstance(item.get("evidence"), dict)
             else None
-        ) or f"Discovered subdomain {subdomain} for {domain}."
+        ) or f"Confirmed subdomain {subdomain} for {domain}."
         findings.append(
             {
-                "title": "Discovered subdomain",
+                "title": "Confirmed subdomain",
                 "severity": "info",
                 "summary": summary,
                 "evidence": [
@@ -54,6 +62,7 @@ def parse(raw: dict[str, Any]) -> dict[str, Any]:
                             "x-sentinelflow-subdomain.resolved": resolved,
                             "x-sentinelflow-subdomain.confirmed": confirmed,
                             "x-sentinelflow-subdomain.status": status,
+                            "x-sentinelflow-subdomain.public_routable": public_routable,
                             "x-sentinelflow-subdomain.recordType": item.get(
                                 "record_type", "unknown"
                             ),

@@ -138,17 +138,21 @@
 <body>
   <div id="app"></div>
   <script src="/console/simple-check.js"></script>
+  <script src="/console/plugin-platform.js"></script>
   <script>
     const Simple = window.SentinelFlowSimpleCheck;
+    const Platform = window.SentinelFlowPluginPlatform;
     const state = {
       route: "home", apiBase: localStorage.getItem("sentinelflow.apiBase") || window.location.origin,
       token: localStorage.getItem("sentinelflow.token") || "", identity: null, health: null, system: null,
       tasks: [], reports: [], tools: [], audit: [], approvals: [], selectedTask: null, reportId: "",
       reportMarkdown: "", reportCache: {}, technicalOpen: false, technicalLogs: [], advancedTab: "plugins", busy: false,
       advancedTaskText: "", advancedOutput: null,
+      selectedPlugin: null, selectedWorkflow: null, customWorkflow: null,
+      pluginForm: {domain:"",mode:"quick",authorizationConfirmed:false,advanced:false,rawInput:"{}",capability:""},
       logCursor: 0, logSource: null,
       progressStage: "", progressError: "", toast: "",
-      form: {domain: "", authorizationNote: "", mode: "standard", authorizationConfirmed: false, step: 1, error: ""}
+      form: {domain: "", authorizationNote: "", mode: "quick", authorizationConfirmed: false, step: 1, error: ""}
     };
 
     class ApiClient {
@@ -181,10 +185,12 @@
     function isAdmin() { return role() === "admin"; }
     function navItems() {
       const definitions = {
-        home: ["首页", "⌂"], "new-check": ["开始检查", "＋"], records: ["检查记录", "◷"],
+        home: ["首页", "⌂"], plugins: ["插件中心", "◇"], workflows: ["工作流", "⇢"], records: ["检查记录", "◷"],
         reports: ["报告中心", "▤"], help: ["帮助", "?"], advanced: ["高级功能", "⚙"]
       };
-      return Simple.navigationForRole(role()).map((id) => [id, ...definitions[id]]);
+      const items = ["home","plugins","workflows","records","reports","help"];
+      if (isAdmin()) items.push("advanced");
+      return items.map((id) => [id, ...definitions[id]]);
     }
 
     function render() {
@@ -213,7 +219,7 @@
       return `<div class="login"><div class="login-card">
         <div class="brand-mark">SF</div>
         <h1>SentinelFlow 安全验证工作台</h1>
-        <p class="muted">登录后即可检查已授权资产、查看进度并生成可读报告。</p>
+        <p class="muted">登录后可运行 P5.6 fixture-only Quick Run、查看进度并生成可读报告。</p>
         <div class="form-group"><label>账号</label><select id="loginUser"><option>operator</option><option>viewer</option><option>admin</option><option>approver</option></select></div>
         <div class="form-group"><label>密码</label><input id="loginPassword" type="password" value="sentinelflow"></div>
         <button class="primary" style="width:100%" data-action="login">${state.busy ? "正在登录..." : "登录"}</button>
@@ -225,6 +231,10 @@
     function renderPage() {
       switch (state.route) {
         case "home": return renderHome();
+        case "plugins": return renderPluginCenter();
+        case "plugin-detail": return renderPluginDetail();
+        case "workflows": return renderWorkflowCenter();
+        case "workflow-builder": return renderWorkflowBuilder();
         case "new-check": return canOperate() ? renderNewCheck() : renderDenied();
         case "progress": return renderProgress();
         case "result": return renderResult();
@@ -245,16 +255,17 @@
       const recent = state.tasks.slice(0, 5);
       return `<div class="stack">
         <section class="hero"><h1>欢迎使用 SentinelFlow 安全验证工作台</h1>
-          <p>输入一个已授权的域名，即可完成资产发现、端口检查、服务识别并生成报告。复杂配置由系统安全处理。</p>
-          <div class="actions">${canOperate() ? `<button class="primary" data-route="new-check">开始一次新检查</button>` : ""}<button data-route="reports">查看最近报告</button><button data-route="records">查看历史任务</button></div>
+          <p>P5.6 Console 只运行 example.com / example.test 本地 fixture。真实资产发现、主动 DNS、端口探测、服务识别和外部情报调用均为 P7 placeholder。</p>
+          <div class="actions">${canOperate() ? `<button class="primary" data-route="new-check">开始一次新检查</button>` : ""}<button data-route="plugins">查看插件能力</button><button data-route="reports">查看最近报告</button><button data-route="records">查看历史任务</button></div>
         </section>
         <section class="grid-3">
-          ${homeAction("◎","开始一次新检查","输入域名并选择检查方式，三步即可发起。","new-check", canOperate())}
+          ${homeAction("◎","开始一次新检查","使用 example.com / example.test fixture，三步发起。","new-check", canOperate())}
+          ${homeAction("◇","查看插件能力","P5.6 插件为 fixture-only 或 disabled P7 placeholder。","plugins", true)}
           ${homeAction("▤","查看最近报告","阅读适合管理和交付场景的中文报告。","reports", true)}
           ${homeAction("◷","查看历史任务","查看目标、时间、任务状态与结果状态。","records", true)}
         </section>
-        <section class="panel"><h2>最近检查</h2>${recent.length ? taskTable(recent) : empty("暂无检查记录", canOperate() ? "开始第一次已授权资产检查。" : "当前还没有可查看的检查记录。")}</section>
-        <div class="notice warning"><strong>安全提示：</strong>请仅检查已获得授权的域名或资产。系统会执行安全确认，并记录完整审计日志。</div>
+        <section class="panel"><h2>最近检查</h2>${recent.length ? taskTable(recent) : empty("暂无检查记录", canOperate() ? "开始第一次 fixture-only Quick Run。" : "当前还没有可查看的检查记录。")}</section>
+        <div class="notice warning"><strong>P5.6 边界：</strong>当前 Web Quick Run 不接受真实目标，不生成 real: scope，不启用主动验证，并记录完整审计日志。</div>
       </div>`;
     }
 
@@ -263,28 +274,64 @@
       return `<div class="card action-card"><div><div class="icon">${icon}</div><h3>${title}</h3><div class="muted">${text}</div></div><button data-route="${route}">进入</button></div>`;
     }
 
+    function renderPluginCenter() {
+      const official = state.tools.length ? state.tools : Object.keys(Platform.PLUGIN_COPY).map((name) => ({
+        name,
+        manifest: {
+          spec: {capabilities: []},
+          extensions: {"sentinelflow.io/p5_6_status": Platform.PLUGIN_COPY[name].p5_6_status || "disabled-p7-placeholder"}
+        }
+      }));
+      const plugins = official.map((tool) => Platform.pluginPresentation(tool));
+      return `${head("插件中心", "P5.6 official plugins 仅为 fixture-only 或 disabled P7 placeholder。", `<button data-action="load-tools">刷新插件</button>`)}
+        <div class="grid-3">${plugins.map((plugin) => `<section class="card action-card">
+          <div><div class="actions" style="justify-content:space-between"><h3>${escapeHtml(plugin.name)}</h3>${badge(plugin.p5_6_status, plugin.disabled ? "warning" : "success")}</div>
+          <p class="muted">${escapeHtml(plugin.purpose)}</p><div class="small muted">${escapeHtml(plugin.id)} · ${escapeHtml(plugin.audience)}</div></div>
+          <button ${plugin.disabled || !plugin.standalone ? "disabled" : ""} data-plugin="${attr(plugin.id)}">${plugin.disabled ? "P7 placeholder" : "fixture-only"}</button>
+        </section>`).join("")}</div>`;
+    }
+
+    function renderPluginDetail() {
+      return `${head("插件详情", "P5.6 插件详情仅展示 Manifest 边界；真实运行入口默认关闭。", `<button data-route="plugins">返回插件中心</button>`)}
+        <section class="panel">${state.selectedPlugin ? `<pre>${escapeHtml(JSON.stringify(state.selectedPlugin, null, 2))}</pre>` : empty("未选择插件","请从插件中心打开一个插件。")}</section>`;
+    }
+
+    function renderWorkflowCenter() {
+      return `${head("工作流", "P5.6 不开放真实公网资产发现工作流；以下条目用于标注未来 P7 边界。", "")}
+        <div class="grid-3">${Platform.WORKFLOW_TEMPLATES.map((workflow) => `<section class="card action-card">
+          <div><div class="actions" style="justify-content:space-between"><h3>${escapeHtml(workflow.name)}</h3>${badge(workflow.p5_6_status || "fixture-only", workflow.disabled ? "warning" : "success")}</div>
+          <p class="muted">${escapeHtml(workflow.description)}</p><div class="small muted">${escapeHtml(workflow.risk)} · ${escapeHtml(workflow.duration)}</div></div>
+          <button ${workflow.disabled ? "disabled" : ""} data-workflow="${attr(workflow.id)}">${workflow.disabled ? "P7 placeholder" : "查看"}</button>
+        </section>`).join("")}</div>`;
+    }
+
+    function renderWorkflowBuilder() {
+      return `${head("工作流编排", "P5.6 自定义编排不会加入真实发现、主动探测或外部情报插件。", `<button data-route="workflows">返回工作流</button>`)}
+        <section class="panel">${state.customWorkflow ? `<pre>${escapeHtml(JSON.stringify(state.customWorkflow, null, 2))}</pre>` : empty("P5.6 未启用自定义公网资产发现工作流","请使用 fixture-only Quick Run 或导入型本地 fixture。")}</section>`;
+    }
+
     function renderNewCheck() {
       const form = state.form;
-      return `${head("开始检查", "输入目标、选择方式、确认授权，系统会自动完成后续安全流程。", `<button data-action="reset-check">重新填写</button>`)}
-        <div class="wizard">${[1,2,3].map((step) => `<div class="wizard-step ${form.step === step ? "active" : form.step > step ? "done" : ""}"><span>${step}</span>${["填写检查目标","选择检查方式","检查前确认"][step-1]}</div>`).join("")}</div>
+      return `${head("开始检查", "P5.6 Quick Run 仅生成 fixture-only TaskSpec，并通过 API/Core 执行。", `<button data-action="reset-check">重新填写</button>`)}
+        <div class="wizard">${[1,2,3].map((step) => `<div class="wizard-step ${form.step === step ? "active" : form.step > step ? "done" : ""}"><span>${step}</span>${["填写 fixture 目标","选择检查方式","检查前确认"][step-1]}</div>`).join("")}</div>
         ${form.error ? `<div class="notice danger" style="margin-bottom:16px">${escapeHtml(form.error)}</div>` : ""}
         ${form.step === 1 ? renderTargetStep() : form.step === 2 ? renderModeStep() : renderConfirmStep()}`;
     }
 
     function renderTargetStep() {
       return `<section class="panel"><h2>填写检查目标</h2>
-        <div class="form-group"><label>要检查的域名</label><input data-form="domain" value="${attr(state.form.domain)}" placeholder="例如：weikan.net.cn" autocomplete="off"><div class="small muted">只填写域名，不需要 http://、https:// 或页面路径。</div></div>
-        <div class="form-group"><label>授权说明</label><textarea data-form="authorizationNote" placeholder="例如：本域名为公司自有资产，已授权进行安全检查。">${escapeHtml(state.form.authorizationNote)}</textarea><div class="small muted">用于帮助团队理解本次检查依据；系统仍会执行授权范围校验。</div></div>
+        <div class="form-group"><label>要检查的域名</label><input data-form="domain" value="${attr(state.form.domain)}" placeholder="example.com" autocomplete="off"><div class="small muted">P5.6 仅支持 example.com / example.test 本地合成 fixture；真实域名能力在 P7 前不可用。</div></div>
+        <div class="form-group"><label>说明</label><textarea data-form="authorizationNote" placeholder="例如：P5.6 fixture-only 本地演示。">${escapeHtml(state.form.authorizationNote)}</textarea><div class="small muted">该说明只用于审计上下文；本入口不会生成真实目标授权范围。</div></div>
         <div class="actions"><button class="primary" data-action="next-target">下一步：选择检查方式</button></div>
       </section>`;
     }
 
     function renderModeStep() {
-      return `<section class="panel"><h2>选择检查方式</h2><p class="muted">标准检查是大多数已授权场景的推荐选择。</p>
+      return `<section class="panel"><h2>选择检查方式</h2><p class="muted">P5.6 仅开放 fixture-only Quick Run；标准和深度检查是 P7 placeholder。</p>
         <div class="grid-3">
-          ${modeCard("quick","快速检查","最快，主要使用公开情报和历史缓存，不主动访问目标。","适合：领导查看、售前演示、初步摸底。")}
-          ${modeCard("standard","标准检查","推荐。会进行低影响的 DNS、端口和服务识别。","适合：交付人员、项目经理和安全工程师。", true)}
-          ${modeCard("deep","深度检查","专业模式，可能需要审批，仅适合明确授权窗口。","适合：高级安全工程师。")}
+          ${modeCard("quick","快速检查","读取本地合成 fixture，不主动访问目标。","适合：P5.6 验收、演示、治理链路验证。", true)}
+          ${modeCard("standard","标准检查","P7 placeholder：P5.6 不启用主动 DNS、端口或服务识别。","当前不可用。")}
+          ${modeCard("deep","深度检查","P7 placeholder：P5.6 不提供真实扫描或高风险能力。","当前不可用。")}
         </div>
         <div class="actions" style="margin-top:18px"><button data-action="back-target">上一步</button>${state.form.mode === "deep" ? `<button data-action="open-advanced">进入高级模式</button>` : `<button class="primary" data-action="next-mode">下一步：检查前确认</button>`}</div>
       </section>`;
@@ -297,7 +344,7 @@
     }
 
     function renderConfirmStep() {
-      const active = state.form.mode === "standard";
+      const active = false;
       return `<section class="panel"><h2>检查前确认</h2>
         <div class="confirm-list">
           ${confirmRow("检查目标", state.form.domain)}${confirmRow("检查方式", modeLabel(state.form.mode))}
@@ -306,8 +353,8 @@
           ${confirmRow("是否进行弱口令尝试", "否")}${confirmRow("是否进行目录爆破", "否")}
           ${confirmRow("是否记录审计日志", "是")}
         </div>
-        <div class="notice" style="margin-top:16px"><strong>授权说明</strong><div>${escapeHtml(state.form.authorizationNote || "未填写补充说明")}</div><div class="small muted">授权范围：${escapeHtml(state.form.domain)}（系统自动生成）</div></div>
-        <label class="checkline" style="margin-top:16px"><input type="checkbox" data-form-check="authorizationConfirmed" ${state.form.authorizationConfirmed ? "checked" : ""}><span><strong>我确认已获得授权</strong><br><span class="small">我确认有权对上述目标进行所选方式的安全检查。</span></span></label>
+        <div class="notice" style="margin-top:16px"><strong>说明</strong><div>${escapeHtml(state.form.authorizationNote || "P5.6 fixture-only Quick Run")}</div><div class="small muted">授权范围：fixture:local-only（系统自动生成）</div></div>
+        <label class="checkline" style="margin-top:16px"><input type="checkbox" data-form-check="authorizationConfirmed" ${state.form.authorizationConfirmed ? "checked" : ""}><span><strong>我确认运行本地 fixture</strong><br><span class="small">我确认本次仅运行 P5.6 fixture-only 检查，不提交真实目标。</span></span></label>
         <div class="actions" style="margin-top:18px"><button data-action="back-mode">上一步</button><button class="primary" data-action="start-check" ${state.form.authorizationConfirmed ? "" : "disabled"}>${state.busy ? "正在安全确认..." : "开始检查"}</button></div>
       </section>`;
     }
@@ -316,10 +363,10 @@
 
     function renderProgress() {
       const steps = [
-        ["subdomain","子域名发现","正在查找该域名下可能存在的网站入口。"],
-        ["dns","DNS 解析","正在确认这些入口是否能解析到有效 IP。"],
-        ["ports","端口检查","正在检查常见 Web 服务端口是否开放。"],
-        ["services","服务识别","正在识别开放端口上运行的服务类型。"],
+        ["fixture","加载 fixture","正在读取本地合成 example fixture。"],
+        ["policy","策略确认","正在确认默认拒绝和 fixture-only 边界。"],
+        ["plugin","运行插件","正在通过 SentinelFlow Core 运行 subdomain fixture 插件。"],
+        ["normalize","结果归一","正在校验并归一化插件输出。"],
         ["report","生成报告","正在整理结果、可信度和审计摘要。"]
       ];
       return `${head("检查进度", `目标：${state.form.domain}`, "")}
@@ -337,7 +384,7 @@
     }
 
     function progressItem([id,title,text], index) {
-      const order = {validate:0,plan:0,policy:0,run:2,report:4,complete:5};
+      const order = {validate:0,plan:1,policy:1,run:2,report:4,complete:5};
       const current = order[state.progressStage] || 0;
       const status = state.progressError ? (index < current ? "done" : "warning") : index < current ? "done" : index === current || (state.progressStage === "run" && index < 4) ? "running" : "";
       const label = status === "done" ? "已完成" : status === "running" ? "进行中" : status === "warning" ? "有警告" : "等待中";
@@ -385,7 +432,7 @@
       return `${head("报告中心","面向管理、售前和交付场景的中文可读报告。",`<button data-action="refresh-reports">刷新</button>`)}
         <section class="panel">${state.reports.length ? `<div style="overflow:auto"><table><thead><tr><th>报告名称</th><th>目标</th><th>生成时间</th><th>检查方式</th><th>可信度</th><th>操作</th></tr></thead><tbody>
         ${state.reports.map((report) => { const id = reportId(report); const task = state.tasks.find((item) => item.taskId === id); return `<tr>
-          <td><strong>SentinelFlow 授权资产发现报告</strong><div class="small muted">${escapeHtml(id)}</div></td>
+          <td><strong>SentinelFlow P5.6 Fixture 验证报告</strong><div class="small muted">${escapeHtml(id)}</div></td>
           <td>${escapeHtml(task ? taskDomain(task) : "打开后查看")}</td><td>${formatTime(report.createdAt || report.updatedAt)}</td>
           <td>${escapeHtml(task ? taskMode(task) : "-")}</td><td>${reportStatusForTask(id)}</td>
           <td><button data-action="read-report" data-report="${attr(id)}">查看</button> <button data-action="download-report-id" data-report="${attr(id)}">下载 Markdown</button></td>
@@ -395,7 +442,7 @@
     function renderReportDetail() {
       const summary = reportSummary(state.reportMarkdown);
       const quality = Simple.qualityPresentation(summary.reportStatus, summary.qualityGate);
-      return `${head("SentinelFlow 授权资产发现报告", `目标：${summary.target || "-"}`, `<button data-action="download-current-report">下载 Markdown</button><button data-action="copy-report">复制报告</button><button data-action="copy-management-summary">复制管理摘要</button>`)}
+      return `${head("SentinelFlow P5.6 Fixture 验证报告", `目标：${summary.target || "-"}`, `<button data-action="download-current-report">下载 Markdown</button><button data-action="copy-report">复制报告</button><button data-action="copy-management-summary">复制管理摘要</button>`)}
         <div class="notice ${quality.tone}"><strong>报告状态：${quality.label}</strong><div>${quality.message}</div></div>
         <div class="grid-5" style="margin-top:16px">${metric("已确认子域名", summary.confirmed || "0")}${metric("候选资产", summary.candidates || "0")}${metric("公网 IP", summary.publicIps || "0")}${metric("开放端口", summary.ports || "0")}${metric("识别服务", summary.services || "0")}</div>
         <section class="panel report-content" style="margin-top:16px">
@@ -407,20 +454,19 @@
           <h2>未执行或已跳过</h2>${skippedMessages(state.reportMarkdown).map((item) => `<div class="notice warning" style="margin-top:8px">${escapeHtml(item)}</div>`).join("") || `<p class="muted">未记录跳过阶段。</p>`}
           <h2>数据源状态</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 11. 错误与跳过项"), "未记录数据源异常。")}
           <h2>审计摘要</h2>${tableOrEmpty(markdownRows(state.reportMarkdown, "## 12. 审计摘要"), "未读取到审计摘要。")}
-          <h2>建议</h2>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("") ? `<ul>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>建议人工确认关键公网服务归属，并将确认资产纳入资产台账。</p>`}
+          <h2>建议</h2>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("") ? `<ul>${markdownBullets(state.reportMarkdown, "## 13. 结论与建议").map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p>P5.6 结果仅用于验证本地 fixture、策略、审计和报告链路。</p>`}
           <details class="technical"><summary>查看技术详情</summary><pre>${escapeHtml(state.reportMarkdown)}</pre></details>
         </section>`;
     }
 
     function renderHelp() {
       const faqs = [
-        ["什么是授权检查？","指你已获得资产所有者或组织负责人的明确许可，可以在约定范围内进行检查。请勿检查未经授权的目标。"],
-        ["快速检查和标准检查有什么区别？","快速检查主要使用公开情报和缓存数据，不主动连接目标；标准检查会执行低影响的 DNS、端口连通性和服务识别。"],
-        ["为什么有些结果是候选资产？","候选结果来自公开情报或字典推测，但尚未被 DNS 或服务验证确认，因此不能直接视为真实资产。"],
-        ["为什么报告显示未确认？","任务流程可能已完成，但没有获得足够的可验证资产证据。此时报告会保持克制，不会宣称检查成功。"],
-        ["什么情况下需要高级模式？","需要自定义插件链、限速、并发、原始检查配置或审批高风险能力时，由管理员或高级安全工程师使用。"],
-        ["什么是公开情报？","来自证书透明日志、公开资产信息或已有缓存的数据，通常不需要主动访问目标。"],
-        ["什么是低影响检查？","在严格限速和范围控制下进行 DNS 查询、TCP 连接和安全服务识别，不包含漏洞利用、弱口令、目录爆破或拒绝服务。"]
+        ["什么是 P5.6 Quick Run？","它只读取本地合成 fixture，并通过 API/Core 验证 Manifest、Policy、Audit、Parser、Normalizer 和 Report 链路。"],
+        ["可以输入真实域名吗？","不可以。P5.6 Web Quick Run 仅支持 example.com / example.test。真实资产发现和真实扫描是 P7 能力。"],
+        ["标准检查和深度检查能用吗？","不能。它们在 P5.6 Console 中仅作为 P7 placeholder 展示，不会生成 TaskSpec。"],
+        ["插件中心可以运行端口或服务探测吗？","不可以。DNS 主动解析、端口探测、服务探测、HTTP/TLS 探活和外部情报调用在 P5.6 都是 disabled P7 placeholder。"],
+        ["浏览器会直接运行插件吗？","不会。Web Console 只调用 API Service，API 复用 SentinelFlow Core 的执行、策略、审计和归一化路径。"],
+        ["为什么报告可能没有真实资产结论？","P5.6 只验证框架治理链路，因此报告只能反映 fixture、mock、import 或本地缓存结果。"]
       ];
       return `${head("帮助","用普通语言了解授权检查、结果状态和使用边界。","")}<section class="panel">${faqs.map(([q,a]) => `<details class="faq"><summary>${q}</summary><p class="muted">${a}</p></details>`).join("")}</section>`;
     }
@@ -508,7 +554,7 @@
           {domain:state.form.domain, mode:state.form.mode, authorizationConfirmed:state.form.authorizationConfirmed},
           {operator: state.identity.actorId}
         );
-        Simple.assertNoFixtureForRealTarget(task);
+        Simple.assertP56FixtureOnly(task);
         state.busy = true; state.route = "progress"; state.progressError = ""; state.progressStage = "validate"; render();
         await api.post("/api/tasks/validate", {task});
         state.progressStage = "plan"; render();
@@ -678,7 +724,7 @@
       if (Number(summary.candidates || 0) > 0) items.push("存在候选资产，尚未被 DNS 或服务验证确认。");
       if (text.includes("conflict") || text.includes("结果不一致")) items.push("不同数据源结果不一致，需要人工复核。");
       if (text.includes("特殊用途地址") || text.includes("special")) items.push("发现非公网业务地址，已从端口检查中排除。");
-      if (text.includes("仅被动") || text.includes("passive-only")) items.push("部分资产仅由公开情报发现，主动检查未确认。");
+      if (text.includes("仅被动") || text.includes("passive-only")) items.push("部分结果仅由被动或本地输入产生，未进行主动检查。");
       return items;
     }
 
@@ -694,7 +740,7 @@
       return `<div class="confirm-list">${confirmRow("任务状态", summary.taskStatus || (state.selectedTask || {}).status || "-")}${confirmRow("报告状态", Simple.qualityPresentation(summary.reportStatus, summary.qualityGate).label)}${confirmRow("跳过阶段", summary.skipped || "0")}${confirmRow("审计事件", summary.audit || "0")}</div>`;
     }
     function managementSummary(summary, quality) {
-      return `本次对 ${summary.target || "目标域名"} 的授权资产检查已完成。报告状态为“${quality.label}”。已确认 ${summary.confirmed || 0} 个子域名、${summary.publicIps || 0} 个公网 IP、${summary.ports || 0} 个开放端口和 ${summary.services || 0} 个服务。${quality.message}`;
+      return `本次对 ${summary.target || "fixture 目标"} 的 P5.6 fixture 验证已完成。报告状态为“${quality.label}”。已记录 ${summary.confirmed || 0} 个子域名、${summary.publicIps || 0} 个 IP、${summary.ports || 0} 个端口字段和 ${summary.services || 0} 个服务字段。${quality.message}`;
     }
     function taskDomain(task) { return (((task.specSnapshot || {}).spec || {}).targets || [])[0]?.name || "-"; }
     function taskMode(task) { const labels = ((task.specSnapshot || {}).metadata || {}).labels || {}; return modeLabel(labels.checkMode || "advanced"); }
@@ -705,7 +751,8 @@
     function translateReason(reason) { return humanError(reason).replace("high or critical risk requires an approved request","深度检查需要审批。"); }
     function humanError(message) {
       return String(message || "")
-        .replace(/real target cannot use local example or fixture data:[^;]+/i,"当前目标是真实域名，不能使用本地示例数据。请切换为快速检查或标准检查。")
+        .replace(/P5\.6 API\/Web submissions must use fixture\/mock\/import scopes[^;]*/i,"P5.6 API/Web 入口不接受 real: 授权范围。请使用 fixture-only Quick Run。")
+        .replace(/real target cannot use local example or fixture data:[^;]+/i,"P5.6 API/Web 入口不接受真实目标。请使用 fixture-only Quick Run。")
         .replace("target is outside the authorization boundary","目标不在授权范围内。")
         .replace("missing bearer token","登录已失效，请重新登录。")
         .replace("invalid bearer token","登录已失效，请重新登录。")
@@ -722,17 +769,39 @@
       const route = event.target.closest("[data-route]");
       if (route) { state.route = route.dataset.route; if (state.route === "records" || state.route === "reports") await bootstrap(); render(); return; }
       const mode = event.target.closest("[data-mode]");
-      if (mode) { state.form.mode = mode.dataset.mode; state.form.error = ""; render(); return; }
+      if (mode) {
+        if (mode.dataset.mode !== "quick") {
+          state.form.error = "P5.6 仅开放 fixture-only Quick Run；该模式是 P7 placeholder。";
+        } else {
+          state.form.mode = "quick";
+          state.form.error = "";
+        }
+        render(); return;
+      }
+      const pluginButton = event.target.closest("[data-plugin]");
+      if (pluginButton) {
+        const tool = state.tools.find((item) => (item.name || (item.metadata || {}).name) === pluginButton.dataset.plugin) || {name: pluginButton.dataset.plugin};
+        state.selectedPlugin = Platform.pluginPresentation(tool);
+        state.route = "plugin-detail";
+        render(); return;
+      }
+      const workflowButton = event.target.closest("[data-workflow]");
+      if (workflowButton) {
+        const template = Platform.workflowTemplate(workflowButton.dataset.workflow);
+        if (template && template.disabled) showToast("P5.6 中该工作流是 disabled P7 placeholder。");
+        else { state.selectedWorkflow = template; state.route = "workflow-builder"; }
+        render(); return;
+      }
       const tab = event.target.closest("[data-advanced]");
       if (tab) { state.advancedTab = tab.dataset.advanced; render(); return; }
       const target = event.target.closest("[data-action]"); if (!target) return;
       const action = target.dataset.action; const taskId = target.dataset.task; const id = target.dataset.report;
       if (action === "login") await login();
       if (action === "logout") { state.token=""; state.identity=null; localStorage.removeItem("sentinelflow.token"); render(); }
-      if (action === "reset-check") { state.form={domain:"",authorizationNote:"",mode:"standard",authorizationConfirmed:false,step:1,error:""}; render(); }
-      if (action === "next-target") { const result=Simple.validateDomain(state.form.domain); if (!result.valid) state.form.error=result.message; else if (!state.form.authorizationNote.trim()) state.form.error="请填写简短的授权说明。"; else { state.form.domain=result.domain; state.form.error=""; state.form.step=2; } render(); }
+      if (action === "reset-check") { state.form={domain:"",authorizationNote:"",mode:"quick",authorizationConfirmed:false,step:1,error:""}; render(); }
+      if (action === "next-target") { const result=Simple.validateDomain(state.form.domain); if (!result.valid) state.form.error=result.message; else { state.form.domain=result.domain; state.form.error=""; state.form.step=2; } render(); }
       if (action === "back-target") { state.form.step=1; render(); }
-      if (action === "next-mode") { state.form.step=3; state.form.error=""; render(); }
+      if (action === "next-mode") { if (state.form.mode !== "quick") state.form.error="P5.6 仅开放 fixture-only Quick Run。"; else { state.form.step=3; state.form.error=""; } render(); }
       if (action === "back-mode") { state.form.step=2; render(); }
       if (action === "open-advanced") { if (isAdmin()) {state.route="advanced"; state.advancedTab="tasks";} else state.form.error="深度检查仅对管理员开放，并需要审批。"; render(); }
       if (action === "start-check") await startCheck();
