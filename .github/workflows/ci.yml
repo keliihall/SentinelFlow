@@ -48,4 +48,4 @@ jobs:
         run: cargo build --workspace --all-features
 
       - name: P5.6 aggregate gate
-        run: scripts/p5_6_gates.sh
+        run: bash scripts/p5_6_gates.sh
