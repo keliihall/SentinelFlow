@@ -32,7 +32,7 @@
     "mock_fixture"
   ];
 
-  const P5_6_FORBIDDEN_MARKERS = [
+  const P56_FORBIDDEN_TASKSPEC_TOKENS = [
     "real:",
     "weikan.net.cn",
     "1.1.1.1",
@@ -61,6 +61,7 @@
     "\"allowActiveVerify\":true",
     "\"enabled\":true"
   ];
+  const P5_6_FORBIDDEN_MARKERS = P56_FORBIDDEN_TASKSPEC_TOKENS;
 
   const P5_6_FIXTURE_TARGETS = Object.freeze([
     "example.com",
@@ -179,8 +180,11 @@
     if (!["quick", "standard", "deep"].includes(mode)) {
       throw new Error("请选择快速检查、标准检查或深度检查。");
     }
-    if (mode !== "quick") {
-      throw new Error("P5.6 standard/deep quick run modes are disabled until P7.");
+    if (mode === "standard") {
+      throw new Error("standard mode is disabled until P7");
+    }
+    if (mode === "deep") {
+      throw new Error("deep mode is disabled until P7");
     }
 
     const domain = validation.domain;
@@ -202,6 +206,7 @@
           target: domain,
           authorizationScope: scope,
           purpose: "p5_6_fixture_quick_run",
+          p5_6_status: "fixture-only",
           checkMode: mode
         }
       },
@@ -262,7 +267,7 @@
     if (!allowed || targets.length === 0) {
       throw new Error(P5_6_QUICK_RUN_ERROR);
     }
-    const marker = P5_6_FORBIDDEN_MARKERS.find((value) => serialized.includes(value.toLowerCase()));
+    const marker = P56_FORBIDDEN_TASKSPEC_TOKENS.find((value) => serialized.includes(value.toLowerCase()));
     if (marker) {
       throw new Error(`P5.6 Quick Run 禁止生成 P7 能力字段：${marker}`);
     }
@@ -270,10 +275,6 @@
   }
 
   function assertP56FixtureOnly(task) {
-    return assertP56FixtureOnlyTaskSpec(task);
-  }
-
-  function assertNoFixtureForRealTarget(task) {
     return assertP56FixtureOnlyTaskSpec(task);
   }
 
@@ -349,6 +350,7 @@
     WEB_BOUNDARY,
     FIXTURE_MARKERS,
     P5_6_FORBIDDEN_MARKERS,
+    P56_FORBIDDEN_TASKSPEC_TOKENS,
     P5_6_FIXTURE_TARGETS,
     P5_6_QUICK_RUN_ERROR,
     normalizeDomain,
@@ -359,7 +361,6 @@
     buildSimpleCheckTaskSpec,
     assertP56FixtureOnlyTaskSpec,
     assertP56FixtureOnly,
-    assertNoFixtureForRealTarget,
     isSpecialAddress,
     qualityPresentation,
     taskAndReportMessage,

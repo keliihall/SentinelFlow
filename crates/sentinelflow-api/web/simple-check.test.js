@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
   WEB_BOUNDARY,
-  P5_6_FORBIDDEN_MARKERS,
+  P56_FORBIDDEN_TASKSPEC_TOKENS,
   P5_6_FIXTURE_TARGETS,
   buildSimpleCheckTaskSpec,
   assertP56FixtureOnlyTaskSpec,
@@ -49,6 +49,7 @@ test("Quick Run 只生成 P5.6 fixture-only TaskSpec", () => {
   assert.equal(task.spec.steps[0].toolRef, "example-echo");
   assert.equal(task.spec.steps[0].capability, "echo");
   assert.equal(task.metadata.labels.purpose, "p5_6_fixture_quick_run");
+  assert.equal(task.metadata.labels.p5_6_status, "fixture-only");
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowActiveVerify, false);
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowHighRisk, false);
   assert.equal(task.extensions["sentinelflow.io/web-console"].p5_6_status, "fixture-only");
@@ -65,7 +66,7 @@ test("Quick Run 不生成 P7 真实发现和主动探测字段", () => {
     {timestamp: "20260618090000"}
   );
   const text = serialized(task);
-  for (const token of P5_6_FORBIDDEN_MARKERS) {
+  for (const token of P56_FORBIDDEN_TASKSPEC_TOKENS) {
     assert.doesNotMatch(text.toLowerCase(), new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").toLowerCase()), token);
   }
 });
@@ -80,12 +81,14 @@ test("Quick Run 拒绝真实目标", () => {
 });
 
 test("standard 和 deep 在 P5.6 禁用到 P7", () => {
-  for (const mode of ["standard", "deep"]) {
-    assert.throws(
-      () => buildSimpleCheckTaskSpec({domain: "example.com", mode, authorizationConfirmed: true}),
-      /disabled until P7/
-    );
-  }
+  assert.throws(
+    () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "standard", authorizationConfirmed: true}),
+    /standard mode is disabled until P7/
+  );
+  assert.throws(
+    () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "deep", authorizationConfirmed: true}),
+    /deep mode is disabled until P7/
+  );
 });
 
 test("Quick Run 支持的 target 仅限本地 fixture allowlist", () => {
@@ -117,7 +120,7 @@ test("表单校验提供普通用户可读提示", () => {
   );
   assert.throws(
     () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "standard", authorizationConfirmed: true}),
-    /disabled until P7/
+    /standard mode is disabled until P7/
   );
 });
 
