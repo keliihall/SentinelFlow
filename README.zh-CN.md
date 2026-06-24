@@ -280,7 +280,7 @@ P5.6 官方插件不是默认真实资产发现、主动扫描、public resolver
 
 | 插件 | P5.6 状态 | 用途 |
 | --- | --- | --- |
-| `subdomain-discovery-plus` | `fixture-only` | Web Quick Run 使用 `example.com` / `example.test` 本地 fixture；主动 DNS 和 live provider 为 P7 placeholder |
+| `subdomain-discovery-plus` | `fixture-only` + `disabled-future` | Web Quick Run 只使用 `example.com` / `example.test` 本地 fixture；真实子域名发现、主动 DNS 和 live provider 均为 P7 placeholder |
 | import/report 类插件 | `fixture-only` | 只处理本地 fixture、导入文件或已归一化结果 |
 | DNS/端口/服务/HTTP/TLS/外部情报类插件 | `disabled-p7-placeholder` | 仅保留 Manifest 兼容性，P5.6 不执行真实探测或外部 provider 调用 |
 

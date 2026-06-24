@@ -10,19 +10,19 @@ spec:
   version: 0.1.0
   capabilities:
     - name: asset.dns.resolve.passive
-      description: Resolves DNS observations from local fixtures, cache, and passive DNS intelligence without contacting target infrastructure
+      description: P5.6 disabled-future placeholder except local fixture/cache compatibility; no live DNS provider calls
       risk: low
       requiresApproval: false
     - name: asset.dns.resolve.active_public_resolver
-      description: Performs bounded active DNS resolution through configured resolvers when policy.allow_active_verify is true
+      description: Disabled-future/P7 placeholder; public resolver verification is not executable in P5.6
       risk: medium
       requiresApproval: false
     - name: asset.dns.resolve.authoritative_trace
-      description: Performs bounded authoritative DNS trace for authorized targets when active verification and risk acknowledgement are enabled
+      description: Disabled-future/P7 placeholder; authoritative DNS trace is not executable in P5.6
       risk: medium
       requiresApproval: false
     - name: asset.dns.resolve.external_intel
-      description: Adapts third-party passive DNS intelligence with graceful missing-secret handling
+      description: Disabled-future/P7 placeholder; live external DNS intelligence calls are not executable in P5.6
       risk: low
       requiresApproval: false
   runtime:
@@ -41,28 +41,33 @@ spec:
   outputSchema: schemas/output.schema.json
 extensions:
   sentinelflow.io/p5_6_status: disabled-p7-placeholder
+  sentinelflow.io/disabledFuture: dns-resolve-plus
   sentinelflow.io/category: asset.dns
   sentinelflow.io/riskLevel: low
-  sentinelflow.io/safetyProfile: passive-intel-first-bounded-active-dns
-  sentinelflow.io/networkBoundary: fixture-cache-passive-intel-default-active-dns-policy-gated
+  sentinelflow.io/safetyProfile: p5-6-disabled-future-no-public-resolver-no-provider-calls
+  sentinelflow.io/networkBoundary: local-fixture-cache-only-no-public-resolver-no-provider-calls
   sentinelflow.io/capabilities:
     - name: passive_intel
       riskLevel: low
       impact: read_only
+      p5_6_status: disabled-future-local-fixture-only
       requiresApproval: false
     - name: active_public_resolver
       riskLevel: medium
       impact: active_verify
+      p5_6_status: disabled-future
       requiresApproval: policy_dependent
       requiresPolicyFlag: allow_active_verify
     - name: authoritative_trace
       riskLevel: medium
       impact: active_verify
+      p5_6_status: disabled-future
       requiresApproval: policy_dependent
       requiresPolicyFlag: allow_active_verify
     - name: external_dns_intel
       riskLevel: low
       impact: read_only
+      p5_6_status: disabled-future
       requiresApproval: false
   sentinelflow.io/controls:
     requiresAuthorization: true
@@ -71,7 +76,7 @@ extensions:
     supportsConcurrencyLimit: true
     secretTransport: pending-sentinelflow-secret-config
     maxConcurrency: 10
-    defaultMode: passive_intel
+    defaultMode: fixture
   sentinelflow.io/audit:
     recordInput: true
     recordOutputSummary: true

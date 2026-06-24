@@ -195,8 +195,9 @@ DNS verification, port probing, service probing, scanner, or external
 intelligence provider entry points.
 
 - `plugins/official/subdomain-discovery-plus`: fixture-only Quick Run support
-  for `example.com` / `example.test`; active DNS dictionary verification and
-  live public intelligence are disabled P7 placeholders.
+  for `example.com` / `example.test`; real subdomain discovery, active DNS
+  dictionary verification, and live public intelligence are `disabled-future`
+  P7 placeholders.
 - Import/report plugins such as `nessus-import-plus`, `openvas-import-plus`,
   `nuclei-adapter-plus`, `zap-baseline-plus`, `cloud-asset-import-plus`,
   `cmdb-sync-plus`, and `markdown-report-plus`: fixture/import/report-only

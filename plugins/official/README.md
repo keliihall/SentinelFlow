@@ -15,9 +15,9 @@ No P5.6 official plugin is a default real asset discovery, active scanner,
 public resolver verifier, port prober, service prober, or live external
 intelligence provider.
 
-- `subdomain-discovery-plus` is `fixture-only` in P5.6. Web Quick Run uses
-  `example.com` / `example.test` local fixtures. Live CT/provider discovery and
-  active DNS dictionary verification are disabled P7 placeholders.
+- `subdomain-discovery-plus` is `fixture-only` only for Web Quick Run local
+  fixtures in P5.6. Real subdomain discovery, live CT/provider discovery, and
+  active DNS dictionary verification are `disabled-future` P7 placeholders.
 - `subdomain-discovery`, `crtsh-subdomain-plus`, `dns-resolve-plus`,
   `ip-enrichment-plus`, `http-probe-plus`, `web-fingerprint-plus`,
   `tls-certificate-check-plus`, `fofa-import-plus`, `shodan-import-plus`,

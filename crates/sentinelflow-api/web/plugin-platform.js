@@ -12,7 +12,7 @@
   const PLUGIN_COPY = {
     "subdomain-discovery-plus": {
       name: "子域名发现",
-      purpose: "P5.6 仅使用 example.com / example.test 本地 fixture；真实子域名发现是 P7 placeholder。",
+      purpose: "P5.6 仅使用 example.com / example.test 本地 fixture；真实子域名发现是 disabled-future P7 placeholder。",
       audience: "交付人员、安全工程师",
       standalone: true,
       workflow: false,

@@ -10,23 +10,23 @@ spec:
   version: 0.1.0
   capabilities:
     - name: asset.service.detect.passive
-      description: Identifies services from upstream findings, local cache, fixtures, and passive service intelligence without connecting to targets
+      description: P5.6 disabled-future placeholder except local fixture/cache compatibility; no live service probing
       risk: low
       requiresApproval: false
     - name: asset.service.detect.safe
-      description: Performs bounded low-impact service checks such as banner read, TLS hello, and HTTP HEAD when policy.allow_active_verify is true
+      description: Disabled-future/P7 placeholder; safe active service checks are not executable in P5.6
       risk: medium
       requiresApproval: false
     - name: asset.service.detect.standard
-      description: Performs bounded non-exploit protocol handshakes for service identification when active verification is authorized
+      description: Disabled-future/P7 placeholder; standard active service handshakes are not executable in P5.6
       risk: medium
       requiresApproval: false
     - name: asset.service.detect.deep
-      description: High-risk deep fingerprinting framework for authorized assessment or lab use only
+      description: Disabled-future/P7 placeholder; deep fingerprinting is outside P5.6
       risk: high
       requiresApproval: true
     - name: asset.service.detect.external_fingerprint
-      description: High-risk external fingerprint tool adapter framework with allowlisted arguments only
+      description: Disabled-future/P7 placeholder; external fingerprint tool adapters are outside P5.6
       risk: high
       requiresApproval: true
   runtime:
@@ -45,40 +45,46 @@ spec:
   outputSchema: schemas/output.schema.json
 extensions:
   sentinelflow.io/p5_6_status: disabled-p7-placeholder
+  sentinelflow.io/disabledFuture: service-detect-plus
   sentinelflow.io/category: asset.service
   sentinelflow.io/riskLevel: low
-  sentinelflow.io/safetyProfile: passive-intel-first-policy-gated-service-identification
-  sentinelflow.io/networkBoundary: fixture-cache-upstream-default-active-service-probes-policy-gated
+  sentinelflow.io/safetyProfile: p5-6-disabled-future-no-service-probing-no-provider-calls
+  sentinelflow.io/networkBoundary: local-fixture-cache-upstream-only-no-active-service-probes
   sentinelflow.io/capabilities:
     - name: passive_intel
       riskLevel: low
       impact: read_only
+      p5_6_status: disabled-future-local-fixture-only
       requiresApproval: false
     - name: safe
       riskLevel: medium
       impact: low_impact
+      p5_6_status: disabled-future
       requiresApproval: policy_dependent
       requiresPolicyFlag: allow_active_verify
     - name: standard
       riskLevel: medium
       impact: active_verify
+      p5_6_status: disabled-future
       requiresApproval: policy_dependent
       requiresPolicyFlag: allow_active_verify
     - name: deep
       riskLevel: high
       impact: lab_only
+      p5_6_status: disabled-future
       requiresApproval: true
       requiresPolicyFlag: allow_high_risk
     - name: external_fingerprint
       riskLevel: high
       impact: lab_only
+      p5_6_status: disabled-future
       requiresApproval: true
       requiresPolicyFlag: allow_high_risk
   sentinelflow.io/controls:
     requiresAuthorization: true
     supportsRateLimit: true
     supportsConcurrencyLimit: true
-    defaultMode: passive_intel
+    defaultMode: fixture
     maxConcurrency: 10
     secretTransport: pending-sentinelflow-secret-config
   sentinelflow.io/audit:
