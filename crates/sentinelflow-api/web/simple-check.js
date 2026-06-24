@@ -22,26 +22,54 @@
 
   const FIXTURE_MARKERS = [
     "fixture:local-only",
-    "fixture.passive.example.com.json",
-    "fixture.ports.example.com.json",
-    "fixture.web.example.com.json",
-    "passive_fixture",
-    "fixture_resolver",
-    "mock_resolver"
+    "example.com",
+    "example.test",
+    "fixture.local",
+    "fixture.example",
+    "p5_6_fixture_quick_run",
+    "fixture-only",
+    "local_fixture",
+    "mock_fixture"
   ];
 
   const P5_6_FORBIDDEN_MARKERS = [
     "real:",
+    "weikan.net.cn",
+    "1.1.1.1",
+    "8.8.8.8",
     "tcp_connect",
     "public_resolver",
     "shodan",
     "fofa",
     "censys",
     "crtsh",
+    "virustotal",
+    "active_dns",
+    "active_resolver",
+    "active_verify",
     "authorized_assessment",
+    "authorized-asset-discovery",
+    "port-probe-plus",
+    "service-detect-plus",
+    "dns-resolve-plus",
+    "subdomain-discovery-plus",
+    "tcp_banner",
+    "tls_hello",
+    "http_head",
+    "http_get_root",
     "\"allow_active_verify\":true",
-    "\"allowActiveVerify\":true"
+    "\"allowActiveVerify\":true",
+    "\"enabled\":true"
   ];
+
+  const P5_6_FIXTURE_TARGETS = Object.freeze([
+    "example.com",
+    "example.test",
+    "fixture.local",
+    "fixture.example"
+  ]);
+
+  const P5_6_QUICK_RUN_ERROR = "P5.6 quick run only supports local fixtures. Real target checks are disabled until P7.";
 
   const SPECIAL_IPV4_RANGES = [
     ["10.0.0.0", 8],
@@ -62,13 +90,13 @@
       return {valid: false, message: "请输入要检查的域名。"};
     }
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(domain) || domain.includes("/") || domain.includes("?") || domain.includes("#")) {
-      return {valid: false, message: "请输入 example.com 或 example.test，不需要填写 http://、https:// 或页面路径。"};
+      return {valid: false, message: "请输入 example.com、example.test、fixture.local 或 fixture.example，不需要填写 http://、https:// 或页面路径。"};
     }
     if (/^\d{1,3}(?:\.\d{1,3}){3}(?:\/\d{1,2})?$/.test(domain) || domain.includes("/")) {
       return {valid: false, message: "当前入口仅支持域名，不支持 IP 地址或 IP 网段。"};
     }
     if (domain.length > 253 || !domain.includes(".")) {
-      return {valid: false, message: "P5.6 Quick Run 仅支持本地 fixture 域名，例如 example.com 或 example.test。"};
+      return {valid: false, message: P5_6_QUICK_RUN_ERROR};
     }
     const labels = domain.split(".");
     const valid = labels.every((label) =>
@@ -77,17 +105,17 @@
       && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
     );
     if (!valid || !/^[a-z]{2,63}$/i.test(labels[labels.length - 1])) {
-      return {valid: false, message: "域名格式不正确，请输入 example.com 或 example.test fixture 域名。"};
+      return {valid: false, message: "域名格式不正确，请输入 P5.6 fixture 域名。"};
     }
     if (!isFixtureDomain(domain)) {
-      return {valid: false, message: "P5.6 Quick Run 仅支持 example.com / example.test 本地 fixture。真实资产发现和真实扫描是 P7 能力。"};
+      return {valid: false, message: P5_6_QUICK_RUN_ERROR};
     }
     return {valid: true, domain};
   }
 
   function isFixtureDomain(domain) {
     const value = normalizeDomain(domain);
-    return value === "example.com" || value === "example.test";
+    return P5_6_FIXTURE_TARGETS.includes(value);
   }
 
   function domainSlug(domain) {
@@ -112,43 +140,28 @@
     return {
       type: "domain",
       value: domain,
-      metadata: {fixture: "p5.6-local-only"}
+      metadata: {
+        fixture: true,
+        p5_6_status: "fixture-only"
+      }
     };
   }
 
   function commonPolicy(_active) {
     return {
-      allow_active_verify: false,
       allow_high_risk: false
     };
   }
 
-  function buildSubdomainInput(domain, taskName, scope, mode, operator) {
+  function buildFixtureInput(domain, taskName, scope, operator) {
     return {
-      context: createContext(taskName, "subdomains", domain, scope, operator),
+      context: createContext(taskName, "fixture", domain, scope, operator),
       target: createTarget(domain),
-      options: {
-        mode: "fixture",
-        passive: {
-          enabled: true,
-          sources: ["fixture"],
-          fixture_file: domain === "example.test"
-            ? "examples/fixture.passive.example.test.json"
-            : "examples/fixture.passive.example.com.json"
-        },
-        active: {
-          enabled: false,
-          dry_run: true,
-          wordlist_file: "examples/wordlist.small.txt",
-          resolvers: [],
-          record_types: ["A", "AAAA"],
-          timeout_seconds: 3,
-          concurrency: 1,
-          rate_limit_per_second: 1,
-          max_candidates: 0,
-          detect_wildcard: false
-        },
-        output: {include_unresolved: true, include_sources: true}
+      message: `SentinelFlow P5.6 fixture quick run for ${domain}`,
+      fixture: {
+        provider: "local_fixture",
+        mock: true,
+        p5_6_status: "fixture-only"
       },
       policy: commonPolicy(false)
     };
@@ -167,10 +180,7 @@
       throw new Error("请选择快速检查、标准检查或深度检查。");
     }
     if (mode !== "quick") {
-      throw new Error("P5.6 仅开放 fixture-only Quick Run。标准检查、主动验证和真实资产发现是 P7 placeholder。");
-    }
-    if (mode === "deep") {
-      throw new Error("深度检查需要进入高级模式，并在审批后配置。");
+      throw new Error("P5.6 standard/deep quick run modes are disabled until P7.");
     }
 
     const domain = validation.domain;
@@ -181,7 +191,7 @@
       : new Date().toISOString().replace(/\D/g, "").slice(0, 14);
     const taskName = `web-${mode}-${domainSlug(domain)}-${timestamp}`;
     const operator = options && options.operator ? options.operator : "operator";
-    const subdomainInput = buildSubdomainInput(domain, taskName, scope, mode, operator);
+    const fixtureInput = buildFixtureInput(domain, taskName, scope, operator);
 
     const task = {
       apiVersion: "sentinelflow.io/v1alpha1",
@@ -191,7 +201,7 @@
         labels: {
           target: domain,
           authorizationScope: scope,
-          purpose: "p5.6-fixture-only-validation",
+          purpose: "p5_6_fixture_quick_run",
           checkMode: mode
         }
       },
@@ -199,16 +209,18 @@
         authorizationScope: scope,
         targets: [{
           name: domain,
-          input: subdomainInput
+          input: fixtureInput
         }],
         steps: [
           {
-            name: "discover-subdomains",
-            toolRef: "subdomain-discovery-plus",
-            capability: "passive.subdomain.discovery",
-            outputAs: "subdomains",
+            name: "fixture-smoke",
+            toolRef: "example-echo",
+            capability: "echo",
+            outputAs: "fixture_smoke",
             failurePolicy: "continue",
-            input: subdomainInput
+            input: {
+              message: fixtureInput.message
+            }
           }
         ],
         policy: {
@@ -228,19 +240,27 @@
           authorizationConfirmed: true,
           allowActiveVerify: active,
           allowHighRisk: false,
+          allowedTargets: P5_6_FIXTURE_TARGETS.slice(),
           p5_6_status: "fixture-only"
         }
       }
     };
-    assertP56FixtureOnly(task);
+    assertP56FixtureOnlyTaskSpec(task);
     return task;
   }
 
-  function assertP56FixtureOnly(task) {
+  function assertP56FixtureOnlyTaskSpec(task) {
     const serialized = JSON.stringify(task).toLowerCase();
     const scope = (((task || {}).spec || {}).authorizationScope || "").toLowerCase();
     if (scope !== "fixture:local-only") {
       throw new Error("P5.6 Quick Run 必须使用 fixture:local-only 授权范围。");
+    }
+    const targets = ((((task || {}).spec || {}).targets) || []).map((target) =>
+      normalizeDomain(target && target.name ? target.name : (((target || {}).input || {}).target || {}).value)
+    );
+    const allowed = targets.every((target) => isFixtureDomain(target));
+    if (!allowed || targets.length === 0) {
+      throw new Error(P5_6_QUICK_RUN_ERROR);
     }
     const marker = P5_6_FORBIDDEN_MARKERS.find((value) => serialized.includes(value.toLowerCase()));
     if (marker) {
@@ -249,8 +269,12 @@
     return true;
   }
 
+  function assertP56FixtureOnly(task) {
+    return assertP56FixtureOnlyTaskSpec(task);
+  }
+
   function assertNoFixtureForRealTarget(task) {
-    return assertP56FixtureOnly(task);
+    return assertP56FixtureOnlyTaskSpec(task);
   }
 
   function ipv4ToInt(value) {
@@ -325,12 +349,15 @@
     WEB_BOUNDARY,
     FIXTURE_MARKERS,
     P5_6_FORBIDDEN_MARKERS,
+    P5_6_FIXTURE_TARGETS,
+    P5_6_QUICK_RUN_ERROR,
     normalizeDomain,
     validateDomain,
     isFixtureDomain,
     domainSlug,
     authorizationScopeFor,
     buildSimpleCheckTaskSpec,
+    assertP56FixtureOnlyTaskSpec,
     assertP56FixtureOnly,
     assertNoFixtureForRealTarget,
     isSpecialAddress,

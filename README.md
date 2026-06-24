@@ -152,8 +152,8 @@ Development login:
 
 Use the Console as a security validation workbench: Overview, Quick Run, Tools &
 Plugins, Tasks, Findings, Reports, Approvals, Audit, and Settings. Quick Run
-includes a guided `subdomain-discovery-plus` template for the safe `example.com`
-fixture flow. Full steps are in
+generates a fixture-only `example-echo` framework smoke TaskSpec for
+`example.com`, `example.test`, `fixture.local`, or `fixture.example`. Full steps are in
 [API Service and Web Console](docs/api-service-and-web-console.md).
 
 ## Safety Boundary
@@ -169,7 +169,7 @@ SentinelFlow defaults to deny:
 - Untrusted plugins are not loaded as in-process dynamic libraries.
 - Examples use local synthetic fixtures only.
 - Official plugins must declare `sentinelflow.io/p5_6_status` as either
-  `fixture-only` or `disabled-p7-placeholder`.
+  `fixture-only` or `disabled-future`.
 
 Do not put real targets, real credentials, production secrets, or offensive
 payloads in plugins, fixtures, docs, or tests.
@@ -190,23 +190,21 @@ See [Safe Examples](docs/examples.md) for copyable commands.
 ## Official Plugins
 
 P5.6 official plugins are explicitly scoped as either `fixture-only` or
-`disabled-p7-placeholder`. They are not default real-target discovery, active
+`disabled-future`. They are not default real-target discovery, active
 DNS verification, port probing, service probing, scanner, or external
 intelligence provider entry points.
 
-- `plugins/official/subdomain-discovery-plus`: fixture-only Quick Run support
-  for `example.com` / `example.test`; real subdomain discovery, active DNS
-  dictionary verification, and live public intelligence are `disabled-future`
-  P7 placeholders.
 - Import/report plugins such as `nessus-import-plus`, `openvas-import-plus`,
   `nuclei-adapter-plus`, `zap-baseline-plus`, `cloud-asset-import-plus`,
   `cmdb-sync-plus`, and `markdown-report-plus`: fixture/import/report-only
   processing of local or already-normalized data.
-- Discovery/probing/intelligence placeholders such as `subdomain-discovery`,
+- Future P7 proposals such as `subdomain-discovery-plus`,
+  `subdomain-discovery`,
   `dns-resolve-plus`, `port-probe-plus`, `service-detect-plus`,
   `http-probe-plus`, `tls-certificate-check-plus`, `crtsh-subdomain-plus`,
   `fofa-import-plus`, `shodan-import-plus`, and `censys-import-plus`: manifest
-  compatibility only in P5.6; real provider calls and active probes are P7 work.
+  compatibility only in P5.6; disabled in P5.6, not used by Web Quick Run, not
+  installed by default, and not part of the CI execution path.
 
 ## Documentation
 

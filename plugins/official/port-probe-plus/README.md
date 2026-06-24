@@ -1,7 +1,7 @@
 # Port Probe Plus
 
 `port-probe-plus` keeps the port exposure manifest and fixture/cache import
-shape for compatibility. In P5.6 it is `disabled-p7-placeholder`: TCP connect
+shape for compatibility. In P5.6 it is `disabled-future`: TCP connect
 verification, FOFA, and Shodan live provider calls are not available.
 
 It does not implement SYN probing, external scanners, vulnerability checks,

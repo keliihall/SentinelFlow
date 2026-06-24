@@ -2,7 +2,7 @@
 
 `tls-certificate-check-plus` is an official SentinelFlow command plugin for TLS
 certificate fixture/cache validation. In P5.6 it is
-`disabled-p7-placeholder`: live TLS handshakes are not available.
+`disabled-future`: live TLS handshakes are not available.
 
 It reports subject, issuer, SAN names, validity window, days until expiry,
 signature algorithm, TLS version, certificate-chain summary, expiry status,

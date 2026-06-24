@@ -2161,12 +2161,13 @@ spec:
         assert!(CONSOLE_HTML.contains("setTimeout(connectLogs"));
         assert!(CONSOLE_HTML.contains("SentinelFlow 安全验证工作台"));
         assert!(CONSOLE_HTML.contains("任务状态与报告可信度分别展示"));
-        assert!(SIMPLE_CHECK_JS.contains("subdomain-discovery-plus"));
+        assert!(SIMPLE_CHECK_JS.contains("example-echo"));
+        assert!(SIMPLE_CHECK_JS.contains("assertP56FixtureOnlyTaskSpec"));
         assert!(SIMPLE_CHECK_JS.contains("buildSimpleCheckTaskSpec"));
         assert!(SIMPLE_CHECK_JS.contains("fixture:local-only"));
         assert!(SIMPLE_CHECK_JS.contains("P5.6 Quick Run"));
         assert!(PLUGIN_PLATFORM_JS.contains("buildStandalonePluginTaskSpec"));
-        assert!(PLUGIN_PLATFORM_JS.contains("disabled-p7-placeholder"));
+        assert!(PLUGIN_PLATFORM_JS.contains("disabled-future"));
     }
 
     #[test]

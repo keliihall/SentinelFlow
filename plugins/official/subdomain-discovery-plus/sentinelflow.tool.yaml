@@ -10,11 +10,11 @@ spec:
   version: 0.1.0
   capabilities:
     - name: asset.subdomain.discovery
-      description: P5.6 fixture-only local synthetic example validation; real subdomain discovery is disabled-future/P7 placeholder
+      description: Disabled-future/P7 placeholder; local fixture examples are retained for compatibility validation only
       risk: low
       requiresApproval: false
     - name: passive.subdomain.discovery
-      description: Reads local fixture/cache subdomain observations only; live public intelligence providers are disabled-future/P7 placeholders
+      description: Disabled-future/P7 placeholder; local fixture/cache observations are retained for compatibility validation only
       risk: low
       requiresApproval: false
     - name: active.subdomain.dictionary
@@ -36,7 +36,7 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
-  sentinelflow.io/p5_6_status: fixture-only
+  sentinelflow.io/p5_6_status: disabled-future
   sentinelflow.io/disabledFuture: real-asset-discovery
   sentinelflow.io/category: asset.subdomain
   sentinelflow.io/riskLevel: low
@@ -45,10 +45,10 @@ extensions:
   sentinelflow.io/capabilities:
     - name: passive subdomain discovery
       impact: read_only
-      p5_6_status: fixture-only
+      p5_6_status: disabled-future-local-fixture-only
     - name: active dictionary DNS enumeration
       impact: low_impact
-      p5_6_status: disabled-p7-placeholder
+      p5_6_status: disabled-future
       disabledFuture: true
       requiresPolicyFlag: allow_active_verify
   sentinelflow.io/controls:

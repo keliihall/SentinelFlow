@@ -74,5 +74,5 @@ spec:
     rateLimitPerMinute: 60
 extensions:
   sentinelflow.io/exampleOnly: "true"
-  sentinelflow.io/p5_6_status: disabled-p7-placeholder
+  sentinelflow.io/p5_6_status: disabled-future
   sentinelflow.io/highRiskNotice: "P7 placeholder only; P5.6 must not enable active verification or high-risk probing."

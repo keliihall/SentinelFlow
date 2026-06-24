@@ -1,7 +1,7 @@
 # http-probe-plus
 
 `http-probe-plus` is an official SentinelFlow command plugin for HTTP fixture
-and cache validation. In P5.6 it is `disabled-p7-placeholder`: live HTTP/HTTPS
+and cache validation. In P5.6 it is `disabled-future`: live HTTP/HTTPS
 probing is not available.
 
 It reports status code, redirect target, title, server header, content type,

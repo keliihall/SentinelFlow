@@ -157,9 +157,11 @@ normalize output, evaluate Policy independently, or bypass Core.
 workflow.
 
 - Authorization scope is always generated as `fixture:local-only`.
-- Allowed targets are limited to `example.com` or `example.test`.
-- 快速检查 creates one `subdomain-discovery-plus` step using a local fixture
-  file and `passive.subdomain.discovery`.
+- Allowed targets are limited to `example.com`, `example.test`,
+  `fixture.local`, or `fixture.example`.
+- 快速检查 creates one local `example-echo` framework smoke step. It does not
+  run asset discovery, DNS resolution, port probing, service probing, or live
+  external intelligence.
 - The generated task never includes `real:`, `tcp_connect`, `public_resolver`,
   FOFA/Shodan/Censys/crt.sh live providers, `authorized_assessment`, or active
   verification enabled by default.
@@ -169,9 +171,8 @@ workflow.
 
 Real-target submission is blocked twice:
 
-- Frontend task generation accepts only `example.com` / `example.test` fixture
-  targets and asserts the serialized TaskSpec has no P7 active-discovery
-  markers.
+- Frontend task generation accepts only the four local fixture targets and
+  asserts the serialized TaskSpec has no P7 active-discovery markers.
 - `parse_task_request()` rejects `real:` authorization scopes after protocol
   validation. Direct API callers therefore cannot bypass the browser check.
 

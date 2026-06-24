@@ -1,9 +1,9 @@
 # dns-resolve-plus
 
 `dns-resolve-plus` is an official SentinelFlow command plugin for DNS
-fixture/cache validation. In P5.6 it is `disabled-p7-placeholder` /
-`disabled-future`: live external DNS-intel, system resolver, public resolver,
-and authoritative trace execution are not available.
+fixture/cache validation. In P5.6 it is `disabled-future`: live external
+DNS-intel, system resolver, public resolver, and authoritative trace execution
+are not available.
 
 ## Modes
 

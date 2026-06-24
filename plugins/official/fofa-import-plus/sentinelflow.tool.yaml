@@ -33,7 +33,7 @@ spec:
   inputSchema: schemas/input.schema.json
   outputSchema: schemas/output.schema.json
 extensions:
-  sentinelflow.io/p5_6_status: disabled-p7-placeholder
+  sentinelflow.io/p5_6_status: disabled-future
   sentinelflow.io/category: data.import
   sentinelflow.io/riskLevel: low
   sentinelflow.io/safetyProfile: controlled-target-derived-exposure-intel-import

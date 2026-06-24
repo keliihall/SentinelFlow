@@ -4,7 +4,10 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
   WEB_BOUNDARY,
+  P5_6_FORBIDDEN_MARKERS,
+  P5_6_FIXTURE_TARGETS,
   buildSimpleCheckTaskSpec,
+  assertP56FixtureOnlyTaskSpec,
   validateDomain,
   qualityPresentation,
   taskAndReportMessage,
@@ -39,15 +42,21 @@ test("Quick Run 只生成 P5.6 fixture-only TaskSpec", () => {
   assert.equal(task.spec.authorizationScope, "fixture:local-only");
   assert.equal(task.spec.policy.allowedTargets[0], "example.com");
   assert.deepEqual(task.spec.policy.targetPatterns, ["domain:example.com", "domain:*.example.com"]);
+  assert.equal(task.spec.targets[0].input.target.value, "example.com");
+  assert.equal(task.spec.targets[0].input.target.metadata.fixture, true);
+  assert.equal(task.spec.targets[0].input.target.metadata.p5_6_status, "fixture-only");
   assert.equal(task.spec.steps.length, 1);
-  assert.equal(task.spec.steps[0].toolRef, "subdomain-discovery-plus");
-  assert.equal(task.spec.steps[0].capability, "passive.subdomain.discovery");
+  assert.equal(task.spec.steps[0].toolRef, "example-echo");
+  assert.equal(task.spec.steps[0].capability, "echo");
+  assert.equal(task.metadata.labels.purpose, "p5_6_fixture_quick_run");
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowActiveVerify, false);
   assert.equal(task.extensions["sentinelflow.io/web-console"].allowHighRisk, false);
   assert.equal(task.extensions["sentinelflow.io/web-console"].p5_6_status, "fixture-only");
-  assert.match(text, /fixture\.passive\.example\.com\.json/i);
-  assert.match(text, /"sources":\["fixture"\]/i);
-  assert.match(text, /"mode":"fixture"/);
+  assert.deepEqual(task.extensions["sentinelflow.io/web-console"].allowedTargets, P5_6_FIXTURE_TARGETS);
+  assert.match(text, /fixture:local-only/i);
+  assert.match(text, /p5_6_fixture_quick_run/i);
+  assert.match(text, /fixture-only/i);
+  assert.equal(assertP56FixtureOnlyTaskSpec(task), true);
 });
 
 test("Quick Run 不生成 P7 真实发现和主动探测字段", () => {
@@ -56,17 +65,39 @@ test("Quick Run 不生成 P7 真实发现和主动探测字段", () => {
     {timestamp: "20260618090000"}
   );
   const text = serialized(task);
-  assert.doesNotMatch(text, /real:/i);
-  assert.doesNotMatch(text, /tcp_connect/i);
-  assert.doesNotMatch(text, /public_resolver/i);
-  assert.doesNotMatch(text, /shodan/i);
-  assert.doesNotMatch(text, /fofa/i);
-  assert.doesNotMatch(text, /censys/i);
-  assert.doesNotMatch(text, /crtsh/i);
-  assert.doesNotMatch(text, /authorized_assessment/i);
-  assert.doesNotMatch(text, /"allow_active_verify":true/i);
-  assert.doesNotMatch(text, /"allowActiveVerify":true/i);
-  assert.doesNotMatch(text, /"active":\{[^}]*"enabled":true/i);
+  for (const token of P5_6_FORBIDDEN_MARKERS) {
+    assert.doesNotMatch(text.toLowerCase(), new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").toLowerCase()), token);
+  }
+});
+
+test("Quick Run 拒绝真实目标", () => {
+  for (const domain of ["weikan.net.cn", "company.com", "internal.corp", "customer.invalid"]) {
+    assert.throws(
+      () => buildSimpleCheckTaskSpec({domain, mode: "quick", authorizationConfirmed: true}),
+      /P5\.6 quick run only supports local fixtures/
+    );
+  }
+});
+
+test("standard 和 deep 在 P5.6 禁用到 P7", () => {
+  for (const mode of ["standard", "deep"]) {
+    assert.throws(
+      () => buildSimpleCheckTaskSpec({domain: "example.com", mode, authorizationConfirmed: true}),
+      /disabled until P7/
+    );
+  }
+});
+
+test("Quick Run 支持的 target 仅限本地 fixture allowlist", () => {
+  for (const domain of P5_6_FIXTURE_TARGETS) {
+    const validation = validateDomain(domain);
+    assert.equal(validation.valid, true, domain);
+    const task = buildSimpleCheckTaskSpec({domain, mode: "quick", authorizationConfirmed: true}, {timestamp: "20260618090000"});
+    assert.equal(task.spec.authorizationScope, "fixture:local-only");
+    assert.equal(task.spec.targets[0].input.target.value, domain);
+    assert.equal(task.spec.targets[0].input.target.metadata.p5_6_status, "fixture-only");
+    assert.equal(assertP56FixtureOnlyTaskSpec(task), true);
+  }
 });
 
 test("表单校验提供普通用户可读提示", () => {
@@ -75,16 +106,18 @@ test("表单校验提供普通用户可读提示", () => {
   assert.equal(validateDomain("https://example.com/path").valid, false);
   assert.match(validateDomain("https://example.com/path").message, /不需要填写/);
   assert.equal(validateDomain("customer.invalid").valid, false);
-  assert.match(validateDomain("customer.invalid").message, /P5\.6/);
+  assert.match(validateDomain("customer.invalid").message, /P5\.6 quick run only supports local fixtures/);
   assert.equal(validateDomain("example.com").valid, true);
   assert.equal(validateDomain("example.test").valid, true);
+  assert.equal(validateDomain("fixture.local").valid, true);
+  assert.equal(validateDomain("fixture.example").valid, true);
   assert.throws(
     () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "quick", authorizationConfirmed: false}),
     /确认/
   );
   assert.throws(
     () => buildSimpleCheckTaskSpec({domain: "example.com", mode: "standard", authorizationConfirmed: true}),
-    /P5\.6/
+    /disabled until P7/
   );
 });
 

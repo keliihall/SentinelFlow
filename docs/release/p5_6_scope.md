@@ -48,6 +48,12 @@ delivery of real asset discovery or real scanning. Any current real-target or
 active-verification path requires an explicit scope review before release and
 must remain default-deny.
 
+Web Quick Run is limited to local fixture smoke validation. It may only generate
+`fixture:local-only` TaskSpecs for `example.com`, `example.test`,
+`fixture.local`, or `fixture.example`; it must not call discovery/probing plus
+plugins, public resolvers, active verification, port/service probes, or live
+external intelligence providers.
+
 ## Architecture Constraints
 
 1. The product name is `SentinelFlow`; the CLI binary is `sentinelflow`.

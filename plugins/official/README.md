@@ -8,21 +8,22 @@ P5.6 status is explicit:
 
 - `fixture-only`: may run only against local fixtures, mock/import data, or
   already-normalized SentinelFlow results.
-- `disabled-p7-placeholder`: kept for manifest/API compatibility and future P7
+- `disabled-future`: kept for manifest/API compatibility and future P7
   design, but not available as a P5.6 runtime capability.
 
 No P5.6 official plugin is a default real asset discovery, active scanner,
 public resolver verifier, port prober, service prober, or live external
 intelligence provider.
 
-- `subdomain-discovery-plus` is `fixture-only` only for Web Quick Run local
-  fixtures in P5.6. Real subdomain discovery, live CT/provider discovery, and
-  active DNS dictionary verification are `disabled-future` P7 placeholders.
+- `subdomain-discovery-plus` keeps local fixture compatibility for validation
+  only. It is not used by Web Quick Run and is `disabled-future` for P5.6
+  runtime capability; real subdomain discovery, live CT/provider discovery, and
+  active DNS dictionary verification are P7 proposals.
 - `subdomain-discovery`, `crtsh-subdomain-plus`, `dns-resolve-plus`,
   `ip-enrichment-plus`, `http-probe-plus`, `web-fingerprint-plus`,
   `tls-certificate-check-plus`, `fofa-import-plus`, `shodan-import-plus`,
   `censys-import-plus`, `port-probe-plus`, and `service-detect-plus` are
-  `disabled-p7-placeholder` in P5.6.
+  `disabled-future` in P5.6.
 - `nessus-import-plus` imports bounded Nessus XML, JSON, or CSV report fixtures
   into normalized vulnerability findings without invoking scanners or connecting
   to targets.

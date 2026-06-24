@@ -21,7 +21,7 @@ spec:
           type: domain
           value: example.test
           metadata:
-            p5_6_status: disabled-p7-placeholder
+            p5_6_status: disabled-future
         options:
           mode: dry_run
           passive:
@@ -63,7 +63,7 @@ spec:
           type: domain
           value: example.test
           metadata:
-            p5_6_status: disabled-p7-placeholder
+            p5_6_status: disabled-future
         options:
           mode: hybrid
           passive:
@@ -105,7 +105,7 @@ spec:
           type: domain
           value: example.test
           metadata:
-            p5_6_status: disabled-p7-placeholder
+            p5_6_status: disabled-future
         inputs:
           domains: []
           findings: []
@@ -167,7 +167,7 @@ spec:
           type: domain
           value: example.test
           metadata:
-            p5_6_status: disabled-p7-placeholder
+            p5_6_status: disabled-future
         inputs:
           addresses: []
           findings: []
@@ -227,7 +227,7 @@ spec:
           type: service
           value: example.test:443
           metadata:
-            p5_6_status: disabled-p7-placeholder
+            p5_6_status: disabled-future
         inputs:
           services: []
           findings: []

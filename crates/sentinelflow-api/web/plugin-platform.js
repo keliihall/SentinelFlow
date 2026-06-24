@@ -14,9 +14,10 @@
       name: "子域名发现",
       purpose: "P5.6 仅使用 example.com / example.test 本地 fixture；真实子域名发现是 disabled-future P7 placeholder。",
       audience: "交付人员、安全工程师",
-      standalone: true,
+      standalone: false,
       workflow: false,
-      p5_6_status: "fixture-only"
+      disabled: true,
+      p5_6_status: "disabled-future"
     },
     "dns-resolve-plus": {
       name: "DNS 解析",
@@ -25,7 +26,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "port-probe-plus": {
       name: "端口检查",
@@ -34,7 +35,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "service-detect-plus": {
       name: "服务识别",
@@ -43,7 +44,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "http-probe-plus": {
       name: "网站探活",
@@ -52,7 +53,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "web-fingerprint-plus": {
       name: "网站指纹识别",
@@ -61,7 +62,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "tls-certificate-check-plus": {
       name: "TLS 证书检查",
@@ -70,7 +71,7 @@
       standalone: false,
       workflow: false,
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder"
+      p5_6_status: "disabled-future"
     },
     "markdown-report-plus": {
       name: "报告生成",
@@ -90,7 +91,7 @@
       duration: "约 3–10 分钟",
       risk: "P5.6 disabled",
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder",
+      p5_6_status: "disabled-future",
       steps: [
         ["subdomain-discovery-plus", "查找子域名"],
         ["dns-resolve-plus", "确认域名解析"],
@@ -105,7 +106,7 @@
       duration: "约 1–5 分钟",
       risk: "P5.6 disabled",
       disabled: true,
-      p5_6_status: "disabled-p7-placeholder",
+      p5_6_status: "disabled-future",
       steps: [
         ["http-probe-plus", "网站探活"],
         ["web-fingerprint-plus", "识别网站技术"],
@@ -131,7 +132,7 @@
     const spec = manifest.spec || {};
     const capabilities = spec.capabilities || [];
     const extensions = manifest.extensions || {};
-    const p56 = extensions["sentinelflow.io/p5_6_status"] || copy.p5_6_status || "disabled-p7-placeholder";
+    const p56 = extensions["sentinelflow.io/p5_6_status"] || copy.p5_6_status || "disabled-future";
     const risks = capabilities.map((capability) => String(capability.risk || "low"));
     const riskOrder = ["info", "low", "medium", "high", "critical"];
     risks.sort((a, b) => riskOrder.indexOf(b) - riskOrder.indexOf(a));
@@ -142,7 +143,7 @@
       audience: copy.audience || "安全工程师",
       standalone: copy.standalone !== false,
       workflow: copy.workflow !== false,
-      disabled: Boolean(copy.disabled || p56 === "disabled-p7-placeholder"),
+      disabled: Boolean(copy.disabled || p56 === "disabled-future"),
       p5_6_status: p56,
       risk: risks[0] || "low",
       manifest
@@ -150,20 +151,6 @@
   }
 
   function buildStandalonePluginTaskSpec(pluginId, input, options) {
-    if (pluginId === "subdomain-discovery-plus") {
-      const workflowTask = Simple.buildSimpleCheckTaskSpec(input, options);
-      const step = workflowTask.spec.steps[0];
-      workflowTask.metadata.name = workflowTask.metadata.name.replace("web-", "plugin-subdomain-");
-      workflowTask.metadata.labels.taskType = "plugin";
-      workflowTask.metadata.labels.pluginId = pluginId;
-      workflowTask.spec.steps = [step];
-      workflowTask.spec.policy.maxConcurrency = 1;
-      workflowTask.extensions["sentinelflow.io/web-console"].taskType = "plugin";
-      workflowTask.extensions["sentinelflow.io/web-console"].pluginId = pluginId;
-      Simple.assertP56FixtureOnly(workflowTask);
-      return workflowTask;
-    }
-
     throw new Error("P5.6 中该插件运行入口为 disabled P7 placeholder；请使用 fixture-only Quick Run 或导入型本地 fixture。");
   }
 
@@ -183,7 +170,7 @@
     };
     if (!next.steps.some(([id]) => id === pluginId)) {
       const copy = PLUGIN_COPY[pluginId] || {};
-      if (copy.disabled || copy.p5_6_status === "disabled-p7-placeholder" || copy.workflow === false) {
+      if (copy.disabled || copy.p5_6_status === "disabled-future" || copy.workflow === false) {
         throw new Error("P5.6 工作流不能加入真实发现、主动探测或外部情报 P7 placeholder 插件。");
       }
       next.steps.push([pluginId, (PLUGIN_COPY[pluginId] || {}).name || pluginId]);

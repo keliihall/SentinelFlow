@@ -1,10 +1,10 @@
 # Subdomain Discovery Plus
 
-`subdomain-discovery-plus` is an official SentinelFlow command plugin for P5.6
-fixture-only subdomain validation. It uses deterministic local fixture input for
-`example.com` / `example.test`; real subdomain discovery, live Certificate
+`subdomain-discovery-plus` is an official SentinelFlow compatibility plugin with
+local fixture examples. In P5.6 it is `disabled-future` as a runtime capability:
+Web Quick Run does not use it, and real subdomain discovery, live Certificate
 Transparency lookup, external providers, and active DNS dictionary verification
-are `disabled-future` P7 placeholders.
+are P7 proposals.
 
 The plugin is independent from `plugins/official/subdomain-discovery/` and does
 not replace or modify the passive-only plugin.

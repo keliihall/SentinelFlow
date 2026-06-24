@@ -26,6 +26,7 @@ targets. **P7 之前不实现真实资产发现和真实扫描。**
 | P56-G06 | Policy/Audit/Approval coverage | Policy crate tests and `tests/e2e/p5_5_security/run.sh` | Default deny, target boundary, high-risk Approval lifecycle, RBAC denial, critical Audit, parser rejection, and bypass attempts pass. |
 | P56-G07 | Report redaction | `cargo test -p sentinelflow-report --all-features reports_redact_sensitive_evidence_and_error_text` | Sensitive fixture values do not appear in generated reports. |
 | P56-G08 | Web unit smoke | `node --test crates/sentinelflow-api/web/*.test.js` | All checked-in Web JavaScript tests pass. |
+| P56-G10 | Web Quick Run fixture-only scope guard | `scripts/p5_6_scope_guard.sh` | Production Web builder accepts only local fixture targets, rejects real targets and standard/deep modes, and generated TaskSpec contains no P7 forbidden tokens. |
 | P56-G09 | Web/API basic smoke | `tests/e2e/p5_5_smoke.sh` | Console, login, plugin lifecycle, task flow, normalized result, report, Audit, and SSE smoke pass. |
 
 `scripts/p5_6_gates.sh` is the canonical ordering and invocation. Existing

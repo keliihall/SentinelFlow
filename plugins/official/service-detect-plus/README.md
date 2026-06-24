@@ -1,9 +1,9 @@
 # service-detect-plus
 
 `service-detect-plus` is an official SentinelFlow command plugin for service
-fixture/cache validation. In P5.6 it is `disabled-p7-placeholder` /
-`disabled-future`: active service probing and live external
-fingerprint/intelligence provider calls are not available.
+fixture/cache validation. In P5.6 it is `disabled-future`: active service
+probing and live external fingerprint/intelligence provider calls are not
+available.
 
 ## Modes And Depth
 
