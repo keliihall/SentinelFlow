@@ -95,11 +95,11 @@ release decision requires the complete aggregate script.
 
 ## CI Adoption
 
-The P5.6 release commit must invoke `scripts/p5_6_gates.sh` from
-`.github/workflows/ci.yml` rather than maintain a second drifting command list.
-This baseline task creates the gate; CI wiring may be performed by a focused
-follow-up task to avoid changing release behavior while the gate is first
-measured.
+The P5.6 CI workflow invokes `scripts/p5_6_gates.sh` from
+`.github/workflows/ci.yml` rather than maintaining a second drifting command
+list. The workflow also performs `cargo build --workspace --all-features`
+before the aggregate gate and prints `P5_6_GATE=scripts/p5_6_gates.sh` as
+release evidence.
 
 ## Failure Handling
 

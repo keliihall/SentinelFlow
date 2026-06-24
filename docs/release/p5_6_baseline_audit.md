@@ -115,7 +115,7 @@ Plugin directory
 | P56-R08 | High | Static development tokens/passwords can be used while binding beyond localhost; CORS is permissive. | Must add non-local startup guardrails and production authentication/CORS configuration before P6. |
 | P56-R09 | Medium | Report rendering redacts sensitive-looking values, but sensitivity classification before persistence and every export path is incomplete. | Must close before real data is accepted; keep report redaction gate mandatory. |
 | P56-R10 | Medium | Web tests are mostly static Node tests and API-driven E2E; there is no full browser navigation/accessibility suite. | Acceptable during early P5.6; add a stable browser smoke gate before P5.6 completion. |
-| P56-R11 | Medium | CI invokes individual P5.5 scripts and omits `--all-features`; release criteria can drift from local documentation. | Closed by adopting the aggregate P5.6 gate in CI in a follow-up task. |
+| P56-R11 | Medium | CI previously invoked individual P5.5 scripts and omitted `--all-features`; release criteria could drift from local documentation. | Closed: CI now builds `--all-features` and invokes `scripts/p5_6_gates.sh` as the single aggregate release gate. |
 | P56-R12 | Medium | Integration tests are dispersed and `tests/integration/` contains no executable suite. | Acceptable if the aggregate gate remains authoritative; converge test ownership during P5.6. |
 | P56-R13 | Medium | Docker image is large, runs without an explicit non-root user, and is not a hardened production image. | P6 prerequisite, not a blocker for local P5.6 development. |
 | P56-R14 | Medium | Scheduler and SQLite workspace assume a single process/node; recovery and concurrency are not production-grade. | Accepted for P5.6 single-node scope; must be addressed or explicitly constrained before P6 production use. |
@@ -234,9 +234,10 @@ Run date: 2026-06-18
 | P56-G05 Plugin Manifest validation | pass | Registry contract tests passed and all 32 discovered plugin Manifests passed CLI validation. |
 | P56-G06 Policy/Audit/Approval coverage | pass | Four Policy tests and 22 P5.5 security checks passed. |
 | P56-G07 Report redaction | pass | Sensitive evidence/error fixture test passed. |
-| P56-G08 Web unit smoke | pass | 12 Node tests passed. |
+| P56-G08 Web unit smoke | pass | Checked-in Web Node tests passed. |
 | P56-G09 Web/API basic smoke | pass | The Console-to-report flow completed with two normalized findings. |
 | Aggregate `scripts/p5_6_gates.sh` | pass | All P56-G01 through P56-G09 gates passed in one serial aggregate run. |
+| Public CI wiring | configured | `.github/workflows/ci.yml` prints `P5_6_GATE=scripts/p5_6_gates.sh`, runs `cargo build --workspace --all-features`, and invokes the aggregate gate directly. Public GitHub Actions success evidence is the CI run for the wiring commit. |
 
 P56-G04 was closed without removing or weakening its checks. The served
 `simple-check.js` asset now exports a machine-readable Web boundary contract

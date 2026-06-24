@@ -34,6 +34,7 @@ jobs:
         run: |
           echo "SentinelFlow CI workflow: ${GITHUB_WORKFLOW}"
           echo "CI_COMMIT_SHA=${GITHUB_SHA}"
+          echo "P5_6_GATE=scripts/p5_6_gates.sh"
           echo "SentinelFlow CI ref: ${GITHUB_REF}"
 
       - name: Show tool versions
@@ -41,35 +42,10 @@ jobs:
           rustc --version
           cargo --version
           python3 --version
-          docker --version
-          docker compose version
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+          node --version
 
       - name: Build workspace
-        run: cargo build --workspace
+        run: cargo build --workspace --all-features
 
-      - name: Lint workspace
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Test workspace
-        run: cargo test --workspace
-
-      - name: P5.5 smoke gate
-        run: tests/e2e/p5_5_smoke.sh
-
-      - name: P5.5 consistency gate
-        run: tests/e2e/p5_5_consistency.sh
-
-      - name: P5.5 full-flow gate
-        run: tests/e2e/p5_5_full_flow/run.sh
-
-      - name: P5.5 security gate
-        run: tests/e2e/p5_5_security/run.sh
-
-      - name: P5.5 reliability gate
-        run: tests/e2e/p5_5_reliability/run.sh
-
-      - name: P5.5 deployment gate
-        run: tests/e2e/p5_5_deployment/run.sh
+      - name: P5.6 aggregate gate
+        run: scripts/p5_6_gates.sh
